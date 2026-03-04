@@ -26,6 +26,10 @@ const BENCHMARKS = {
     Residencial: { iptu_m2: 10, vacancy_days: 35, maintenance_annual_m2: 35, cap_rate: 0.065 },
     Comercial:   { iptu_m2: 16, vacancy_days: 52, maintenance_annual_m2: 48, cap_rate: 0.082 },
   },
+  "Americana": {
+    Residencial: { iptu_m2: 8, vacancy_days: 30, maintenance_annual_m2: 32, cap_rate: 0.068 },
+    Comercial:   { iptu_m2: 14, vacancy_days: 45, maintenance_annual_m2: 45, cap_rate: 0.085 },
+  },
 };
 
 // ─── FIPEZAP M²/BAIRRO ────────────────────────────────────────────────────────
@@ -63,6 +67,35 @@ const FIPEZAP_M2 = {
   "_default_São Paulo":    { res: 11915, com: 8800, var12m: 0.0456, fonte: "FipeZAP média SP fev/2026" },
   "_default_Campinas":     { res: 7500,  com: 5500, var12m: 0.038,  fonte: "FipeZAP Campinas 2025" },
   "_default_Santo André":  { res: 6000,  com: 4500, var12m: 0.025,  fonte: "FipeZAP Santo André 2025" },
+  // ── AMERICANA ─────────────────────────────────────────────────────────────
+  // Fonte: ZAP Imóveis, VivaReal, Camerro Imóveis, A Fortaleza Imóveis — dez/2025
+  // Média geral Americana residencial: ~R$4.400/m² (AgentImóvel dez/2025)
+  "Jardim São Paulo":           { res: 5800, com: 4200, var12m: 0.035, fonte: "ZAP/VivaReal Americana 2025" },
+  "Jardim Terramérica I":       { res: 5200, com: 3800, var12m: 0.032, fonte: "ZAP/VivaReal Americana 2025" },
+  "Jardim Terramérica II":      { res: 5000, com: 3600, var12m: 0.030, fonte: "ZAP/VivaReal Americana 2025" },
+  "Terramérica":                { res: 5500, com: 4000, var12m: 0.036, fonte: "ZAP/VivaReal Americana 2025" },
+  "Vila Mathiesen":             { res: 4800, com: 3500, var12m: 0.028, fonte: "ZAP/VivaReal Americana 2025" },
+  "Vila Jones":                 { res: 4200, com: 3000, var12m: 0.025, fonte: "ZAP/VivaReal Americana 2025" },
+  "Vila Galo":                  { res: 3800, com: 2800, var12m: 0.022, fonte: "ZAP/VivaReal Americana 2025" },
+  "Jardim Brasil":              { res: 4500, com: 3300, var12m: 0.028, fonte: "ZAP/VivaReal Americana 2025" },
+  "Jardim da Paz":              { res: 3600, com: 2600, var12m: 0.020, fonte: "ZAP Americana 2025" },
+  "Jardim Recanto":             { res: 3800, com: 2800, var12m: 0.022, fonte: "ZAP Americana 2025" },
+  "Jardim São Pedro":           { res: 4000, com: 2900, var12m: 0.025, fonte: "ZAP Americana 2025" },
+  "Parque Gramado":             { res: 4600, com: 3400, var12m: 0.030, fonte: "ZAP/VivaReal Americana 2025" },
+  "Parque Residencial Nardini": { res: 4400, com: 3200, var12m: 0.028, fonte: "ZAP Americana 2025" },
+  "Cidade Jardim":              { res: 5000, com: 3700, var12m: 0.032, fonte: "ZAP/VivaReal Americana 2025" },
+  "Jardim Ipiranga":            { res: 4200, com: 3000, var12m: 0.025, fonte: "ZAP Americana 2025" },
+  "Jardim Boer":                { res: 3900, com: 2800, var12m: 0.022, fonte: "ZAP Americana 2025" },
+  "São Manoel":                 { res: 3700, com: 2700, var12m: 0.020, fonte: "ZAP Americana 2025" },
+  "Remanso Azul":               { res: 4800, com: 3500, var12m: 0.030, fonte: "ZAP Americana 2025" },
+  "Jardim Jaguari":             { res: 4300, com: 3100, var12m: 0.026, fonte: "ZAP Americana 2025" },
+  "Balneário Riviera":          { res: 4500, com: 3300, var12m: 0.028, fonte: "ZAP Americana 2025" },
+  "Antônio Zanaga":             { res: 3800, com: 2800, var12m: 0.022, fonte: "ZAP Americana 2025" },
+  "Nielsen Ville":              { res: 4200, com: 3000, var12m: 0.025, fonte: "ZAP Americana 2025" },
+  "Machadinho":                 { res: 3500, com: 2500, var12m: 0.020, fonte: "ZAP Americana 2025" },
+  "Jardim das Orquídeas":       { res: 4000, com: 2900, var12m: 0.024, fonte: "ZAP Americana 2025" },
+  "Centro Americana":           { res: 5000, com: 4500, var12m: 0.030, fonte: "ZAP Americana 2025" },
+  "_default_Americana":         { res: 4400, com: 3200, var12m: 0.028, fonte: "AgentImóvel Americana dez/2025" },
 };
 
 function getFipeZAP(neighborhood, city, type) {
@@ -360,7 +393,7 @@ function EditModal({ prop, onSave, onClose }) {
               <div style={{ gridColumn: "1/-1" }}><Field label="NOME" k="name" /></div>
               <div style={{ gridColumn: "1/-1" }}><Field label="ENDEREÇO" k="address" /></div>
               <Field label="BAIRRO" k="neighborhood" />
-              <Field label="CIDADE" k="city" options={["São Paulo", "Campinas", "Santo André"]} />
+              <Field label="CIDADE" k="city" options={["São Paulo", "Campinas", "Santo André", "Americana"]} />
               <Field label="TIPO" k="type" options={["Residencial", "Comercial"]} />
               <Field label="STATUS" k="status" options={["Ocupado", "Vago"]} />
               <Field label="ÁREA (m²)" k="size" type="number" />
@@ -1424,7 +1457,7 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete }) {
 
 // ─── DECISION PAGES ───────────────────────────────────────────────────────────
 const RETROFIT_POTENTIAL = { "Jardins":{ multiplier:1.8, demand:"Alta" }, "Itaim Bibi":{ multiplier:1.9, demand:"Muito Alta" }, "Vila Olímpia":{ multiplier:1.7, demand:"Alta" }, "Pinheiros":{ multiplier:1.6, demand:"Alta" }, "Bela Vista":{ multiplier:1.5, demand:"Média-Alta" }, "Cerqueira César":{ multiplier:1.7, demand:"Alta" }, "Jardim Paulista":{ multiplier:1.8, demand:"Alta" }, "Jardim América":{ multiplier:1.9, demand:"Muito Alta" }, "Jardim Europa":{ multiplier:2.0, demand:"Muito Alta" }, "Morumbi":{ multiplier:1.6, demand:"Alta" }, "Consolação":{ multiplier:1.4, demand:"Média" }, "Vila Nova Conceição":{ multiplier:1.8, demand:"Alta" }, "Cambuí":{ multiplier:1.3, demand:"Média" }, "Centro":{ multiplier:1.1, demand:"Baixa" }, "Nova Campinas":{ multiplier:1.4, demand:"Média" }, "Vila Guiomar":{ multiplier:1.0, demand:"Baixa" } };
-const MARKET_APPRECIATION = { "São Paulo":{ Residencial:0.082, Comercial:0.045 }, "Campinas":{ Residencial:0.065, Comercial:0.038 }, "Santo André":{ Residencial:0.055, Comercial:0.030 } };
+const MARKET_APPRECIATION = { "São Paulo":{ Residencial:0.082, Comercial:0.045 }, "Campinas":{ Residencial:0.065, Comercial:0.038 }, "Santo André":{ Residencial:0.055, Comercial:0.030 }, "Americana":{ Residencial:0.028, Comercial:0.022 } };
 
 function buildDecision(prop) {
   const bm=BENCHMARKS[prop.city]?.[prop.type]||BENCHMARKS["São Paulo"][prop.type], retro=RETROFIT_POTENTIAL[prop.neighborhood]||{ multiplier:1.3, demand:"Média" }, appreciation=MARKET_APPRECIATION[prop.city]?.[prop.type]||0.06, marketCapRate=bm.cap_rate;
@@ -1683,7 +1716,7 @@ function AddImovelModal({ onSave, onClose, nextId }) {
                   {NEIGHBORHOODS.map(n => <option key={n}>{n}</option>)}
                 </select>
               </div>
-              <Field label="CIDADE" k="city" options={["São Paulo", "Campinas", "Santo André"]} />
+              <Field label="CIDADE" k="city" options={["São Paulo", "Campinas", "Santo André", "Americana"]} />
               <Field label="TIPO" k="type" options={["Residencial", "Comercial"]} />
               <Field label="STATUS" k="status" options={["Ocupado", "Vago"]} />
               <Field label="ÁREA (m²) *" k="size" type="number" placeholder="Ex: 85" />
