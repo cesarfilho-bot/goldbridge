@@ -1730,7 +1730,7 @@ ${PROPS.map(p => `ID:${p.id} | ${p.name} | ${p.neighborhood}, ${p.city} | ${p.ty
       if (line.startsWith("**") && line.endsWith("**")) return <div key={i} style={{ fontWeight: 800, color: T.goldBright, marginTop: 8 }}>{line.slice(2,-2)}</div>;
       if (line.startsWith("- ") || line.startsWith("• ")) return <div key={i} style={{ paddingLeft: 12, color: T.text, lineHeight: 1.6 }}>· {line.slice(2)}</div>;
       if (line === "") return <div key={i} style={{ height: 6 }} />;
-      return <div key={i} style={{ color: T.text, lineHeight: 1.7 }}>{line.replace(/\*\*(.*?)\*\*/g, (_, m) => m)}</div>;
+      return <div key={i} style={{ color: T.text, lineHeight: 1.7 }}>{line}</div>;
     });
   };
 
