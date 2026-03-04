@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, AreaChart, Area, Cell, PieChart, Pie,
@@ -1613,17 +1613,17 @@ Exemplos do que você pode me perguntar:
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const bottomRef = React.useRef(null);
+  const bottomRef = useRef(null);
 
   // Substitui o placeholder de contagem ao montar
-  React.useEffect(() => {
+  useEffect(() => {
     setMessages(prev => prev.map((m, i) => i === 0
       ? { ...m, content: m.content.replace("${0}", PROPS.length) }
       : m
     ));
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
