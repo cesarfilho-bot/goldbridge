@@ -1646,35 +1646,31 @@ Exemplos do que você pode me perguntar:
     const bairrosRanking = Object.entries(porBairro)
       .map(([b, d]) => ({ bairro: b, ...d, noiMedio: d.noi / d.count }))
       .sort((a, b) => b.noiMedio - a.noiMedio);
-
-    return `Você é a IA do Goldbridge Brasil, um sistema de gestão de portfólio imobiliário.
-Você tem acesso aos dados reais do portfólio do usuário. Responda sempre em português brasileiro, de forma direta, analítica e profissional. Use dados concretos nas respostas.
-
-=== RESUMO DO PORTFÓLIO ===
-Total de imóveis: ${total}
-NOI anual total: R$ ${totalNOI.toLocaleString("pt-BR")}
-Receita anual total: R$ ${totalReceita.toLocaleString("pt-BR")}
-Despesas anuais totais: R$ ${totalDespesas.toLocaleString("pt-BR")}
-Margem NOI média: ${((totalNOI/totalReceita)*100).toFixed(1)}%
-Imóveis vagos: ${vagos.length} (${((vagos.length/total)*100).toFixed(1)}%)
-
-=== IMÓVEIS COM MAIOR LEAKAGE (TOP 5) ===
-${altoLeakage.slice(0,5).map(p => `${p.name} (${p.neighborhood}): Leakage ${p.leakage}/100, NOI R$${p.noi.toLocaleString("pt-BR")}/ano, Vacância ${p.vacancyDays}d`).join("\n")}
-
-=== PIORES NOI ===
-${baixoNOI.map(p => `${p.name} (${p.neighborhood}): NOI R$${p.noi.toLocaleString("pt-BR")}/ano, Margem ${(p.noiPct*100).toFixed(1)}%, Leakage ${p.leakage}`).join("\n")}
-
-=== MELHORES NOI ===
-${altoNOI.map(p => `${p.name} (${p.neighborhood}): NOI R$${p.noi.toLocaleString("pt-BR")}/ano, Margem ${(p.noiPct*100).toFixed(1)}%, Aluguel R$${p.rent.toLocaleString("pt-BR")}/mês`).join("\n")}
-
-=== DESEMPENHO POR BAIRRO ===
-${bairrosRanking.slice(0,8).map(b => `${b.bairro}: ${b.count} imóvel(is), NOI médio R$${b.noiMedio.toLocaleString("pt-BR")}/ano`).join("\n")}
-
-=== IMÓVEIS VAGOS ===
-${vagos.length > 0 ? vagos.map(p => `${p.name} (${p.neighborhood}): Aluguel R$${p.rent.toLocaleString("pt-BR")}/mês`).join("\n") : "Nenhum imóvel vago"}
-
-=== TODOS OS IMÓVEIS ===
-${PROPS.map(p => `ID:${p.id} | ${p.name} | ${p.neighborhood}, ${p.city} | ${p.type} | ${p.status} | Área:${p.size}m² | Aluguel:R$${p.rent}/mês | NOI:R$${p.noi}/ano | Margem:${(p.noiPct*100).toFixed(1)}% | Vacância:${p.vacancyDays}d | Leakage:${p.leakage} | Obras:${(p.obras||[]).length}`).join("\n")}`;
+    const NL = "\n";
+    const lines = [
+      "Voce e a IA do Goldbridge Brasil, sistema de gestao de portfolio imobiliario.",
+      "Responda sempre em portugues brasileiro, de forma direta e analitica. Use dados concretos.",
+      NL + "=== RESUMO DO PORTFOLIO ===",
+      "Total de imoveis: " + total,
+      "NOI anual total: R$ " + totalNOI.toLocaleString("pt-BR"),
+      "Receita anual: R$ " + totalReceita.toLocaleString("pt-BR"),
+      "Despesas anuais: R$ " + totalDespesas.toLocaleString("pt-BR"),
+      "Margem NOI media: " + ((totalNOI/totalReceita)*100).toFixed(1) + "%",
+      "Imoveis vagos: " + vagos.length,
+      NL + "=== MAIOR LEAKAGE (TOP 5) ===",
+      ...altoLeakage.slice(0,5).map(p => p.name + " (" + p.neighborhood + "): Leakage " + p.leakage + "/100, NOI R$" + p.noi.toLocaleString("pt-BR") + "/ano"),
+      NL + "=== PIORES NOI ===",
+      ...baixoNOI.map(p => p.name + " (" + p.neighborhood + "): NOI R$" + p.noi.toLocaleString("pt-BR") + "/ano, Margem " + (p.noiPct*100).toFixed(1) + "%"),
+      NL + "=== MELHORES NOI ===",
+      ...altoNOI.map(p => p.name + " (" + p.neighborhood + "): NOI R$" + p.noi.toLocaleString("pt-BR") + "/ano, Aluguel R$" + p.rent.toLocaleString("pt-BR") + "/mes"),
+      NL + "=== BAIRROS ===",
+      ...bairrosRanking.slice(0,8).map(b => b.bairro + ": " + b.count + " imovel(is), NOI medio R$" + b.noiMedio.toLocaleString("pt-BR") + "/ano"),
+      NL + "=== IMOVEIS VAGOS ===",
+      vagos.length > 0 ? vagos.map(p => p.name + " (" + p.neighborhood + ")").join(", ") : "Nenhum",
+      NL + "=== TODOS OS IMOVEIS ===",
+      ...PROPS.map(p => "ID:" + p.id + " | " + p.name + " | " + p.neighborhood + " | " + p.type + " | " + p.status + " | " + p.size + "m2 | R$" + p.rent + "/mes | NOI:R$" + p.noi + "/ano | Margem:" + (p.noiPct*100).toFixed(1) + "% | Leakage:" + p.leakage),
+    ];
+    return lines.join(NL);
   };
 
   const send = async () => {
