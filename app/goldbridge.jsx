@@ -1185,7 +1185,7 @@ function PageDashboard({ PROPS, onNav, onProp }) {
 }
 
 // ─── NOI PAGE ─────────────────────────────────────────────────────────────────
-function PageNOI({ PROPS, onProp, onNav, onEdit, onObras }) {
+function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
   const [sortCol, setSortCol] = useState("noi");
   const [sortDir, setSortDir] = useState(-1);
   const [filterType, setFilterType] = useState("");
@@ -1204,6 +1204,7 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
         <div><div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>ANÁLISE</div><h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>NOI por Imóvel</h1></div>
+        <button style={{ ...S.btn, display: "flex", alignItems: "center", gap: 8 }} onClick={onAdd}>+ Adicionar Imóvel</button>
       </div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
         <input placeholder="Buscar imóvel, bairro ou endereço..." style={{ ...S.input, maxWidth: 280 }} value={search} onChange={e => setSearch(e.target.value)} />
@@ -1239,6 +1240,7 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras }) {
                     <div style={{ display: "flex", gap: 6 }}>
                       <button title="Editar" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onEdit(p); }}>✏️</button>
                       <button title="Obras" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onObras(p); }}>🔨</button>
+                      <button title="Remover" style={{ background: T.s3, border: `1px solid ${T.redDim}`, color: T.red, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onDelete(p); }}>🗑</button>
                     </div>
                   </td>
                 </tr>
@@ -1247,6 +1249,14 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras }) {
           </tbody>
         </table>
       </div>
+      {PROPS.length === 0 && (
+        <div style={{ ...S.card, textAlign: "center", padding: "60px 20px" }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🏢</div>
+          <div style={{ color: T.text, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Nenhum imóvel no portfólio</div>
+          <div style={{ color: T.muted, fontSize: 14, marginBottom: 24 }}>Adicione o primeiro imóvel para começar</div>
+          <button style={S.btn} onClick={onAdd}>+ Adicionar Imóvel</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1320,7 +1330,7 @@ function PageLeakage({ PROPS }) {
 }
 
 // ─── DETAIL PAGE ──────────────────────────────────────────────────────────────
-function PageDetail({ prop, onBack, onEdit, onObras }) {
+function PageDetail({ prop, onBack, onEdit, onObras, onDelete }) {
   if (!prop) return null;
   const obrasCount = (prop.obras || []).length, obrasEmAndamento = (prop.obras || []).filter(o => o.status === "Em andamento"), totalOrcado = (prop.obras || []).reduce((s, o) => s + (o.orcado || 0), 0), totalExecutado = (prop.obras || []).reduce((s, o) => s + (o.executado || 0), 0);
   const opportunities = [];
@@ -1344,6 +1354,7 @@ function PageDetail({ prop, onBack, onEdit, onObras }) {
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <button style={S.btnGhost} onClick={() => onEdit(prop)}>✏️ Editar</button>
           <button style={S.btnGhost} onClick={() => onObras(prop)}>🔨 Obras {obrasCount > 0 ? `(${obrasCount})` : ""}</button>
+          <button style={S.btnDanger} onClick={() => onDelete(prop)}>🗑 Remover</button>
         </div>
         <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ color: T.muted, fontSize: 11, marginBottom: 4 }}>LEAKAGE</div><div style={{ color: prop.leakage > 60 ? T.red : prop.leakage > 30 ? T.amber : T.green, fontSize: 40, fontWeight: 900, ...S.mono, lineHeight: 1 }}>{prop.leakage}</div></div>
       </div>
@@ -1582,14 +1593,188 @@ const NAV = [
   { id: "report",    label: "Relatório Bank-Ready", icon: "⬡" },
 ];
 
+// ─── ADD IMOVEL MODAL ─────────────────────────────────────────────────────────
+function AddImovelModal({ onSave, onClose, nextId }) {
+  const [form, setForm] = useState({
+    name: "", address: "", neighborhood: "Itaim Bibi", city: "São Paulo",
+    type: "Residencial", status: "Ocupado", size: "", rent: "",
+    iptu: "", maintMonthly: "", insurance: "", admin: "", vacancyDays: "0",
+  });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const NEIGHBORHOODS = Object.keys(FIPEZAP_M2).filter(k => !k.startsWith("_default"));
+
+  const handleSave = () => {
+    if (!form.size || !form.rent) return;
+    const bm = BENCHMARKS[form.city]?.[form.type] || BENCHMARKS["São Paulo"][form.type];
+    const size = parseFloat(form.size) || 0;
+    const rent = parseFloat(form.rent) || 0;
+    const iptu = parseFloat(form.iptu) || Math.round(bm.iptu_m2 * size);
+    const maintMonthly = parseFloat(form.maintMonthly) || Math.round(bm.maintenance_annual_m2 * size / 12);
+    const insurance = parseFloat(form.insurance) || Math.round(rent * 0.025 * 12);
+    const admin = parseFloat(form.admin) || Math.round(rent * 0.08);
+    const vacancyDays = parseFloat(form.vacancyDays) || 0;
+    const annualRent = rent * 12;
+    const vacancyCost = Math.round((rent / 30) * vacancyDays);
+    const totalIncome = annualRent - vacancyCost;
+    const totalExpenses = iptu + maintMonthly * 12 + insurance + admin * 12;
+    const noi = totalIncome - totalExpenses;
+    const noiPct = noi / (totalIncome || 1);
+    const iptuBenchmark = Math.round(bm.iptu_m2 * size);
+    const iptuDelta = Math.round(((iptu - iptuBenchmark) / iptuBenchmark) * 100);
+    const maintBenchmark = Math.round(bm.maintenance_annual_m2 * size / 12);
+    const maintDelta = Math.round(((maintMonthly - maintBenchmark) / maintBenchmark) * 100);
+    const vacancyDelta = vacancyDays - bm.vacancy_days;
+    let leakage = 0;
+    if (iptuDelta > 20) leakage += Math.min(35, iptuDelta * 0.7);
+    if (vacancyDays > bm.vacancy_days) leakage += Math.min(35, vacancyDelta * 0.5);
+    if (maintDelta > 30) leakage += Math.min(20, maintDelta * 0.4);
+    if (noiPct < 0.5) leakage += 20;
+    leakage = Math.min(98, Math.max(2, Math.round(leakage)));
+    const months = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+    const monthlyData = months.map(m => {
+      const exp = Math.round((iptu / 12) + maintMonthly + (insurance / 12) + admin);
+      return { month: m, receita: rent, despesas: exp, noi: rent - exp };
+    });
+    onSave({
+      id: nextId, name: form.name || `${form.type === "Comercial" ? "Sala Comercial" : "Apartamento"} ${String(nextId).padStart(3, "0")}`,
+      address: form.address, neighborhood: form.neighborhood, city: form.city, state: "SP",
+      type: form.type, status: form.status, size, rent, iptu, maintMonthly, insurance, admin,
+      vacancyDays, vacancyCost, totalIncome, totalExpenses, noi, noiPct, leakage,
+      iptuBenchmark, iptuDelta, maintBenchmark, maintDelta,
+      vacancyBenchmark: bm.vacancy_days, vacancyDelta, monthlyData, isProblematic: false,
+      obras: [], valorMercado: 0, valorCompra: 0, anoCompra: null,
+    });
+  };
+
+  const Field = ({ label, k, type = "text", options, placeholder }) => (
+    <div>
+      <label style={S.label}>{label}</label>
+      {options ? (
+        <select style={S.sel} value={form[k]} onChange={e => set(k, e.target.value)}>
+          {options.map(o => <option key={o}>{o}</option>)}
+        </select>
+      ) : (
+        <input type={type} style={S.input} value={form[k]} placeholder={placeholder}
+          onChange={e => set(k, e.target.value)} />
+      )}
+    </div>
+  );
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#00000099", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: T.s1, border: `1px solid ${T.borderMid}`, borderRadius: 18, width: "100%", maxWidth: 660, maxHeight: "92vh", overflow: "auto" }}>
+        <div style={{ padding: "24px 28px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: T.s1, zIndex: 1 }}>
+          <div>
+            <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>NOVO IMÓVEL</div>
+            <div style={{ color: T.text, fontWeight: 800, fontSize: 17, marginTop: 2 }}>Adicionar ao Portfólio</div>
+          </div>
+          <button style={{ background: T.s3, border: "none", color: T.muted, borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 18 }} onClick={onClose}>×</button>
+        </div>
+        <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 20 }}>
+          <div>
+            <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>IDENTIFICAÇÃO</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ gridColumn: "1/-1" }}><Field label="NOME DO IMÓVEL" k="name" placeholder="Ex: Apartamento Jardins, Sala Faria Lima..." /></div>
+              <div style={{ gridColumn: "1/-1" }}><Field label="ENDEREÇO" k="address" placeholder="Ex: Rua Oscar Freire, 1200" /></div>
+              <div>
+                <label style={S.label}>BAIRRO</label>
+                <select style={S.sel} value={form.neighborhood} onChange={e => set("neighborhood", e.target.value)}>
+                  {NEIGHBORHOODS.map(n => <option key={n}>{n}</option>)}
+                </select>
+              </div>
+              <Field label="CIDADE" k="city" options={["São Paulo", "Campinas", "Santo André"]} />
+              <Field label="TIPO" k="type" options={["Residencial", "Comercial"]} />
+              <Field label="STATUS" k="status" options={["Ocupado", "Vago"]} />
+              <Field label="ÁREA (m²) *" k="size" type="number" placeholder="Ex: 85" />
+            </div>
+          </div>
+          <div>
+            <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>DADOS FINANCEIROS</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="ALUGUEL MENSAL (R$) *" k="rent" type="number" placeholder="Ex: 4500" />
+              <Field label="DIAS VACÂNCIA/ANO" k="vacancyDays" type="number" placeholder="0" />
+              <Field label="IPTU ANUAL (R$)" k="iptu" type="number" placeholder="Calculado automaticamente" />
+              <Field label="MANUTENÇÃO MENSAL (R$)" k="maintMonthly" type="number" placeholder="Calculado automaticamente" />
+              <Field label="SEGURO ANUAL (R$)" k="insurance" type="number" placeholder="Calculado automaticamente" />
+              <Field label="TAXA ADM. MENSAL (R$)" k="admin" type="number" placeholder="Calculado automaticamente" />
+            </div>
+          </div>
+          <div style={{ padding: 14, background: T.s2, borderRadius: 10, border: `1px solid ${T.border}` }}>
+            <div style={{ color: T.muted, fontSize: 12 }}>
+              💡 Campos marcados com * são obrigatórios. Os demais são calculados automaticamente com base nos benchmarks do bairro selecionado.
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: "16px 28px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 12, justifyContent: "flex-end" }}>
+          <button style={S.btnGhost} onClick={onClose}>Cancelar</button>
+          <button style={{ ...S.btn, opacity: (!form.size || !form.rent) ? 0.5 : 1 }} onClick={handleSave}>+ Adicionar Imóvel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── DELETE CONFIRM MODAL ─────────────────────────────────────────────────────
+function DeleteConfirmModal({ prop, onConfirm, onClose }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#00000099", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: T.s1, border: `1px solid ${T.red}40`, borderRadius: 18, width: "100%", maxWidth: 420, padding: 32 }}>
+        <div style={{ fontSize: 32, marginBottom: 12, textAlign: "center" }}>🗑</div>
+        <div style={{ color: T.text, fontWeight: 800, fontSize: 18, textAlign: "center", marginBottom: 8 }}>Remover Imóvel?</div>
+        <div style={{ color: T.muted, fontSize: 14, textAlign: "center", marginBottom: 6 }}>{prop.name}</div>
+        <div style={{ color: T.dim, fontSize: 12, textAlign: "center", marginBottom: 24 }}>{prop.neighborhood} · {prop.city}</div>
+        <div style={{ padding: 12, background: T.s2, borderRadius: 8, marginBottom: 24 }}>
+          <div style={{ color: T.amber, fontSize: 12, textAlign: "center" }}>⚠️ Esta ação não pode ser desfeita. Todos os dados incluindo obras serão removidos.</div>
+        </div>
+        <div style={{ display: "flex", gap: 12 }}>
+          <button style={{ ...S.btnGhost, flex: 1 }} onClick={onClose}>Cancelar</button>
+          <button style={{ ...S.btnDanger, flex: 1, background: T.red + "18" }} onClick={onConfirm}>Sim, remover</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
+function loadProps() {
+  try {
+    const saved = localStorage.getItem("goldbridge_props");
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  return INITIAL_PROPS;
+}
+
 export default function App() {
   const [logged, setLogged] = useState(false);
   const [page, setPage] = useState("dashboard");
   const [selectedProp, setSelectedProp] = useState(null);
-  const [props, setProps] = useState(INITIAL_PROPS);
+  const [props, setPropsState] = useState(loadProps);
   const [editingProp, setEditingProp] = useState(null);
   const [obrasProps, setObrasProps] = useState(null);
+  const [addingImovel, setAddingImovel] = useState(false);
+  const [deletingProp, setDeletingProp] = useState(null);
+
+  const setProps = (updater) => {
+    setPropsState(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      try { localStorage.setItem("goldbridge_props", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  const handleAddImovel = (newProp) => {
+    setProps(prev => [...prev, newProp]);
+    setAddingImovel(false);
+  };
+
+  const handleDeleteImovel = (prop) => setDeletingProp(prop);
+
+  const confirmDelete = () => {
+    setProps(prev => prev.filter(p => p.id !== deletingProp.id));
+    setDeletingProp(null);
+    if (selectedProp?.id === deletingProp.id) { setSelectedProp(null); setPage("noi"); }
+  };
 
   if (!logged) return <Login onLogin={() => setLogged(true)} />;
 
@@ -1598,15 +1783,16 @@ export default function App() {
   const handleSaveEdit = (updatedProp) => { setProps(prev => prev.map(p => p.id === updatedProp.id ? updatedProp : p)); setEditingProp(null); if (selectedProp?.id === updatedProp.id) setSelectedProp(updatedProp); };
   const handleObras = (prop) => setObrasProps(props.find(p => p.id === prop.id) || prop);
   const handleSaveObras = (updatedProp) => { setProps(prev => prev.map(p => p.id === updatedProp.id ? updatedProp : p)); if (selectedProp?.id === updatedProp.id) setSelectedProp(updatedProp); };
+  const nextId = props.length > 0 ? Math.max(...props.map(p => p.id)) + 1 : 1;
 
   const content = {
     dashboard: <PageDashboard PROPS={props} onNav={nav} onProp={setSelectedProp} />,
-    noi:       <PageNOI PROPS={props} onProp={setSelectedProp} onNav={nav} onEdit={handleEdit} onObras={handleObras} />,
+    noi:       <PageNOI PROPS={props} onProp={setSelectedProp} onNav={nav} onEdit={handleEdit} onObras={handleObras} onDelete={handleDeleteImovel} onAdd={() => setAddingImovel(true)} />,
     obras:     <PageObras PROPS={props} onUpdateProps={setProps} />,
     mercado:   <PageValorMercado PROPS={props} onUpdateProps={setProps} />,
     leakage:   <PageLeakage PROPS={props} />,
     decision:  <PageDecision PROPS={props} onProp={setSelectedProp} onNav={nav} />,
-    detail:    <PageDetail prop={selectedProp} onBack={() => nav("noi")} onEdit={handleEdit} onObras={handleObras} />,
+    detail:    <PageDetail prop={selectedProp} onBack={() => nav("noi")} onEdit={handleEdit} onObras={handleObras} onDelete={handleDeleteImovel} />,
     report:    <PageReport PROPS={props} />,
   }[page] || <PageDashboard PROPS={props} onNav={nav} onProp={setSelectedProp} />;
 
@@ -1624,6 +1810,8 @@ export default function App() {
 
       {editingProp && <EditModal prop={editingProp} onSave={handleSaveEdit} onClose={() => setEditingProp(null)} />}
       {obrasProps && <ObrasModal prop={obrasProps} onSave={handleSaveObras} onClose={() => setObrasProps(null)} />}
+      {addingImovel && <AddImovelModal nextId={nextId} onSave={handleAddImovel} onClose={() => setAddingImovel(false)} />}
+      {deletingProp && <DeleteConfirmModal prop={deletingProp} onConfirm={confirmDelete} onClose={() => setDeletingProp(null)} />}
 
       <div style={{ display: "flex", minHeight: "100vh" }}>
         {/* Sidebar */}
@@ -1650,7 +1838,11 @@ export default function App() {
           </nav>
           <div style={{ padding: "14px 22px", borderTop: `1px solid ${T.border}` }}>
             <div style={{ color: T.dim, fontSize: 11, marginBottom: 4 }}>gestao@familyoffice.com.br</div>
-            <button style={{ color: T.dim, fontSize: 11, background: "none", border: "none", cursor: "pointer", padding: 0 }} onClick={() => setLogged(false)}>Sair →</button>
+            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+              <button style={{ color: T.dim, fontSize: 11, background: "none", border: "none", cursor: "pointer", padding: 0 }} onClick={() => setLogged(false)}>Sair →</button>
+              <span style={{ color: T.border }}>|</span>
+              <button style={{ color: T.redDim, fontSize: 11, background: "none", border: "none", cursor: "pointer", padding: 0 }} onClick={() => { if(window.confirm("Resetar portfólio para os dados demo?")) { localStorage.removeItem("goldbridge_props"); window.location.reload(); } }}>Reset demo</button>
+            </div>
           </div>
         </div>
 
