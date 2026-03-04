@@ -1659,28 +1659,22 @@ Margem NOI média: ${((totalNOI/totalReceita)*100).toFixed(1)}%
 Imóveis vagos: ${vagos.length} (${((vagos.length/total)*100).toFixed(1)}%)
 
 === IMÓVEIS COM MAIOR LEAKAGE (TOP 5) ===
-${altoLeakage.slice(0,5).map(p => `${p.name} (${p.neighborhood}): Leakage ${p.leakage}/100, NOI R$${p.noi.toLocaleString("pt-BR")}/ano, Vacância ${p.vacancyDays}d`).join("
-")}
+${altoLeakage.slice(0,5).map(p => `${p.name} (${p.neighborhood}): Leakage ${p.leakage}/100, NOI R$${p.noi.toLocaleString("pt-BR")}/ano, Vacância ${p.vacancyDays}d`).join("\n")}
 
 === PIORES NOI ===
-${baixoNOI.map(p => `${p.name} (${p.neighborhood}): NOI R$${p.noi.toLocaleString("pt-BR")}/ano, Margem ${(p.noiPct*100).toFixed(1)}%, Leakage ${p.leakage}`).join("
-")}
+${baixoNOI.map(p => `${p.name} (${p.neighborhood}): NOI R$${p.noi.toLocaleString("pt-BR")}/ano, Margem ${(p.noiPct*100).toFixed(1)}%, Leakage ${p.leakage}`).join("\n")}
 
 === MELHORES NOI ===
-${altoNOI.map(p => `${p.name} (${p.neighborhood}): NOI R$${p.noi.toLocaleString("pt-BR")}/ano, Margem ${(p.noiPct*100).toFixed(1)}%, Aluguel R$${p.rent.toLocaleString("pt-BR")}/mês`).join("
-")}
+${altoNOI.map(p => `${p.name} (${p.neighborhood}): NOI R$${p.noi.toLocaleString("pt-BR")}/ano, Margem ${(p.noiPct*100).toFixed(1)}%, Aluguel R$${p.rent.toLocaleString("pt-BR")}/mês`).join("\n")}
 
 === DESEMPENHO POR BAIRRO ===
-${bairrosRanking.slice(0,8).map(b => `${b.bairro}: ${b.count} imóvel(is), NOI médio R$${b.noiMedio.toLocaleString("pt-BR")}/ano`).join("
-")}
+${bairrosRanking.slice(0,8).map(b => `${b.bairro}: ${b.count} imóvel(is), NOI médio R$${b.noiMedio.toLocaleString("pt-BR")}/ano`).join("\n")}
 
 === IMÓVEIS VAGOS ===
-${vagos.length > 0 ? vagos.map(p => `${p.name} (${p.neighborhood}): Aluguel R$${p.rent.toLocaleString("pt-BR")}/mês`).join("
-") : "Nenhum imóvel vago"}
+${vagos.length > 0 ? vagos.map(p => `${p.name} (${p.neighborhood}): Aluguel R$${p.rent.toLocaleString("pt-BR")}/mês`).join("\n") : "Nenhum imóvel vago"}
 
 === TODOS OS IMÓVEIS ===
-${PROPS.map(p => `ID:${p.id} | ${p.name} | ${p.neighborhood}, ${p.city} | ${p.type} | ${p.status} | Área:${p.size}m² | Aluguel:R$${p.rent}/mês | NOI:R$${p.noi}/ano | Margem:${(p.noiPct*100).toFixed(1)}% | Vacância:${p.vacancyDays}d | Leakage:${p.leakage} | Obras:${(p.obras||[]).length}`).join("
-")}`;
+${PROPS.map(p => `ID:${p.id} | ${p.name} | ${p.neighborhood}, ${p.city} | ${p.type} | ${p.status} | Área:${p.size}m² | Aluguel:R$${p.rent}/mês | NOI:R$${p.noi}/ano | Margem:${(p.noiPct*100).toFixed(1)}% | Vacância:${p.vacancyDays}d | Leakage:${p.leakage} | Obras:${(p.obras||[]).length}`).join("\n")}`;
   };
 
   const send = async () => {
