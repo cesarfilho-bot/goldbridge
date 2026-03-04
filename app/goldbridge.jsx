@@ -1594,6 +1594,227 @@ ${totalObras>0?`<h2>Obras Cadastradas</h2><table><tr><th>Imóvel</th><th>Obra</t
   );
 }
 
+
+// ─── PAGE IA ──────────────────────────────────────────────────────────────────
+function PageIA({ PROPS }) {
+  const [messages, setMessages] = useState([
+    {
+      role: "assistant",
+      content: `Olá! Sou a IA do Goldbridge. Tenho acesso completo ao seu portfólio de **${0} imóveis** e posso responder perguntas sobre NOI, cap rate, vacância, leakage e muito mais.
+
+Exemplos do que você pode me perguntar:
+- "Qual imóvel está me dando mais prejuízo?"
+- "Quais imóveis têm vacância acima do benchmark?"
+- "Onde estou perdendo mais dinheiro?"
+- "Qual bairro tem melhor cap rate?"
+- "Quais imóveis devo priorizar para reforma?"`,
+      ts: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+    }
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const bottomRef = React.useRef(null);
+
+  // Substitui o placeholder de contagem ao montar
+  React.useEffect(() => {
+    setMessages(prev => prev.map((m, i) => i === 0
+      ? { ...m, content: m.content.replace("${0}", PROPS.length) }
+      : m
+    ));
+  }, []);
+
+  React.useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  const buildContext = () => {
+    const total = PROPS.length;
+    const totalNOI = PROPS.reduce((s, p) => s + p.noi, 0);
+    const totalReceita = PROPS.reduce((s, p) => s + p.totalIncome, 0);
+    const totalDespesas = PROPS.reduce((s, p) => s + p.totalExpenses, 0);
+    const vagos = PROPS.filter(p => p.status === "Vago");
+    const altoLeakage = PROPS.filter(p => p.leakage > 60).sort((a,b) => b.leakage - a.leakage);
+    const baixoNOI = [...PROPS].sort((a,b) => a.noi - b.noi).slice(0, 5);
+    const altoNOI = [...PROPS].sort((a,b) => b.noi - a.noi).slice(0, 5);
+    const porBairro = {};
+    PROPS.forEach(p => {
+      if (!porBairro[p.neighborhood]) porBairro[p.neighborhood] = { count: 0, noi: 0, receita: 0 };
+      porBairro[p.neighborhood].count++;
+      porBairro[p.neighborhood].noi += p.noi;
+      porBairro[p.neighborhood].receita += p.totalIncome;
+    });
+    const bairrosRanking = Object.entries(porBairro)
+      .map(([b, d]) => ({ bairro: b, ...d, noiMedio: d.noi / d.count }))
+      .sort((a, b) => b.noiMedio - a.noiMedio);
+
+    return `Você é a IA do Goldbridge Brasil, um sistema de gestão de portfólio imobiliário.
+Você tem acesso aos dados reais do portfólio do usuário. Responda sempre em português brasileiro, de forma direta, analítica e profissional. Use dados concretos nas respostas.
+
+=== RESUMO DO PORTFÓLIO ===
+Total de imóveis: ${total}
+NOI anual total: R$ ${totalNOI.toLocaleString("pt-BR")}
+Receita anual total: R$ ${totalReceita.toLocaleString("pt-BR")}
+Despesas anuais totais: R$ ${totalDespesas.toLocaleString("pt-BR")}
+Margem NOI média: ${((totalNOI/totalReceita)*100).toFixed(1)}%
+Imóveis vagos: ${vagos.length} (${((vagos.length/total)*100).toFixed(1)}%)
+
+=== IMÓVEIS COM MAIOR LEAKAGE (TOP 5) ===
+${altoLeakage.slice(0,5).map(p => `${p.name} (${p.neighborhood}): Leakage ${p.leakage}/100, NOI R$${p.noi.toLocaleString("pt-BR")}/ano, Vacância ${p.vacancyDays}d`).join("
+")}
+
+=== PIORES NOI ===
+${baixoNOI.map(p => `${p.name} (${p.neighborhood}): NOI R$${p.noi.toLocaleString("pt-BR")}/ano, Margem ${(p.noiPct*100).toFixed(1)}%, Leakage ${p.leakage}`).join("
+")}
+
+=== MELHORES NOI ===
+${altoNOI.map(p => `${p.name} (${p.neighborhood}): NOI R$${p.noi.toLocaleString("pt-BR")}/ano, Margem ${(p.noiPct*100).toFixed(1)}%, Aluguel R$${p.rent.toLocaleString("pt-BR")}/mês`).join("
+")}
+
+=== DESEMPENHO POR BAIRRO ===
+${bairrosRanking.slice(0,8).map(b => `${b.bairro}: ${b.count} imóvel(is), NOI médio R$${b.noiMedio.toLocaleString("pt-BR")}/ano`).join("
+")}
+
+=== IMÓVEIS VAGOS ===
+${vagos.length > 0 ? vagos.map(p => `${p.name} (${p.neighborhood}): Aluguel R$${p.rent.toLocaleString("pt-BR")}/mês`).join("
+") : "Nenhum imóvel vago"}
+
+=== TODOS OS IMÓVEIS ===
+${PROPS.map(p => `ID:${p.id} | ${p.name} | ${p.neighborhood}, ${p.city} | ${p.type} | ${p.status} | Área:${p.size}m² | Aluguel:R$${p.rent}/mês | NOI:R$${p.noi}/ano | Margem:${(p.noiPct*100).toFixed(1)}% | Vacância:${p.vacancyDays}d | Leakage:${p.leakage} | Obras:${(p.obras||[]).length}`).join("
+")}`;
+  };
+
+  const send = async () => {
+    if (!input.trim() || loading) return;
+    const userMsg = { role: "user", content: input.trim(), ts: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) };
+    setMessages(prev => [...prev, userMsg]);
+    setInput("");
+    setLoading(true);
+
+    const history = messages.filter(m => m.role !== "system").map(m => ({ role: m.role, content: m.content }));
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: buildContext(),
+          messages: [...history, { role: "user", content: input.trim() }],
+        }),
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || "Erro ao processar resposta.";
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: text,
+        ts: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+      }]);
+    } catch {
+      setMessages(prev => [...prev, { role: "assistant", content: "Erro de conexão. Tente novamente.", ts: "" }]);
+    }
+    setLoading(false);
+  };
+
+  const SUGESTOES = [
+    "Qual imóvel está me dando mais prejuízo?",
+    "Quais imóveis têm vacância acima do benchmark?",
+    "Onde estou perdendo mais dinheiro?",
+    "Qual bairro tem melhor desempenho?",
+    "Quais imóveis priorizar para reforma?",
+    "Me dê um resumo executivo do portfólio",
+  ];
+
+  const renderMsg = (text) => {
+    return text.split("\n").map((line, i) => {
+      if (line.startsWith("**") && line.endsWith("**")) return <div key={i} style={{ fontWeight: 800, color: T.goldBright, marginTop: 8 }}>{line.slice(2,-2)}</div>;
+      if (line.startsWith("- ") || line.startsWith("• ")) return <div key={i} style={{ paddingLeft: 12, color: T.text, lineHeight: 1.6 }}>· {line.slice(2)}</div>;
+      if (line === "") return <div key={i} style={{ height: 6 }} />;
+      return <div key={i} style={{ color: T.text, lineHeight: 1.7 }}>{line.replace(/\*\*(.*?)\*\*/g, (_, m) => m)}</div>;
+    });
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", gap: 0 }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
+        <div>
+          <div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>INTELIGÊNCIA ARTIFICIAL</div>
+          <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>IA do Portfólio</h1>
+          <div style={{ color: T.muted, fontSize: 13, marginTop: 4 }}>Análise em linguagem natural · {PROPS.length} imóveis no contexto</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: T.s1, border: `1px solid ${T.green}40`, borderRadius: 10 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: T.green }} />
+          <span style={{ color: T.green, fontSize: 12, fontWeight: 700 }}>IA Ativa</span>
+        </div>
+      </div>
+
+      {/* Chat area */}
+      <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column", gap: 16, paddingBottom: 16 }}>
+        {messages.map((m, i) => (
+          <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+              {m.role === "assistant" && <div style={{ width: 22, height: 22, borderRadius: "50%", background: T.goldGlow, border: `1px solid ${T.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>✦</div>}
+              <span style={{ color: T.dim, fontSize: 11 }}>{m.role === "assistant" ? "Goldbridge IA" : "Você"} · {m.ts}</span>
+            </div>
+            <div style={{
+              maxWidth: "80%", padding: "14px 18px",
+              background: m.role === "user" ? T.goldGlow : T.s1,
+              border: `1px solid ${m.role === "user" ? T.gold + "60" : T.border}`,
+              borderRadius: m.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+              fontSize: 14,
+            }}>
+              {m.role === "assistant" ? renderMsg(m.content) : <span style={{ color: T.text }}>{m.content}</span>}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 22, height: 22, borderRadius: "50%", background: T.goldGlow, border: `1px solid ${T.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>✦</div>
+            <div style={{ padding: "12px 18px", background: T.s1, border: `1px solid ${T.border}`, borderRadius: "18px 18px 18px 4px", display: "flex", gap: 6, alignItems: "center" }}>
+              {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: T.gold, opacity: 0.6, animation: `pulse 1.2s ${i*0.2}s infinite` }} />)}
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Sugestões */}
+      {messages.length <= 1 && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          {SUGESTOES.map(s => (
+            <button key={s} style={{ background: T.s2, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 20, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Bricolage Grotesque', sans-serif" }}
+              onClick={() => { setInput(s); }}>
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Input */}
+      <div style={{ display: "flex", gap: 10, padding: "16px 0 0", borderTop: `1px solid ${T.border}` }}>
+        <input
+          style={{ ...S.input, flex: 1, fontSize: 14, padding: "14px 18px" }}
+          placeholder="Pergunte sobre o seu portfólio..."
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
+        />
+        <button
+          style={{ ...S.btn, padding: "14px 24px", fontSize: 15, opacity: (!input.trim() || loading) ? 0.5 : 1 }}
+          onClick={send}
+          disabled={!input.trim() || loading}
+        >
+          ↑
+        </button>
+      </div>
+      <div style={{ color: T.dim, fontSize: 11, textAlign: "center", marginTop: 8 }}>Enter para enviar · A IA tem acesso a todos os dados do portfólio</div>
+
+      <style>{`@keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1} }`}</style>
+    </div>
+  );
+}
+
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function Login({ onLogin }) {
   const [email, setEmail] = useState("gestao@familyoffice.com.br"), [pw, setPw] = useState("");
@@ -1624,6 +1845,7 @@ const NAV = [
   { id: "leakage",   label: "Leakage Finder",      icon: "◎" },
   { id: "decision",  label: "Decisão por Imóvel",  icon: "⟁" },
   { id: "report",    label: "Relatório Bank-Ready", icon: "⬡" },
+  { id: "ia",        label: "IA do Portfólio",      icon: "✦" },
 ];
 
 // ─── ADD IMOVEL MODAL ─────────────────────────────────────────────────────────
@@ -1827,6 +2049,7 @@ export default function App() {
     decision:  <PageDecision PROPS={props} onProp={setSelectedProp} onNav={nav} />,
     detail:    <PageDetail prop={selectedProp} onBack={() => nav("noi")} onEdit={handleEdit} onObras={handleObras} onDelete={handleDeleteImovel} />,
     report:    <PageReport PROPS={props} />,
+    ia:        <PageIA PROPS={props} />,
   }[page] || <PageDashboard PROPS={props} onNav={nav} onProp={setSelectedProp} />;
 
   return (
