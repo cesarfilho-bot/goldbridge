@@ -233,6 +233,53 @@ function buildInsights(PROPS) {
     const totalWaste = maintProblems.reduce((s, p) => s + (p.maintMonthly - p.maintBenchmark) * 12, 0);
     insights.push({ id: 3, type: "maintenance", severity: "média", icon: "🔧", title: "Manutenção com Custo Anômalo", description: `${maintProblems.length} imóveis com custo de manutenção acima de 140% do benchmark.`, metric: `Excesso anual: ${fmt.brl(totalWaste)}`, props: maintProblems.slice(0, 5), impactMin: Math.round(totalWaste * 0.5), impactMax: Math.round(totalWaste * 0.9), actions: ["Solicitar laudo técnico para imóveis com manutenção recorrente", "Comparar custo de reforma preventiva vs manutenção contínua", "Revisar contratos com prestadores", "Implantar check-list de vistoria semestral"], benchmark: "Fonte: ABNT NBR 5674 2024" });
   }
+  // Aluguel abaixo do potencial de mercado
+  const aluguelBaixo = PROPS.filter(p => {
+    const vm = p.marketValueManual > 0 ? p.marketValueManual : p.valorMercado > 0 ? p.valorMercado : 0;
+    if (!vm) return false;
+    const yieldEsp = p.type === "Comercial" ? 0.007 : 0.005;
+    const esperado = vm * yieldEsp;
+    const atual = p.rent - (p.descontoAluguel || 0);
+    return (esperado - atual) > atual * 0.08;
+  }).sort((a, b) => {
+    const vmA = a.marketValueManual > 0 ? a.marketValueManual : a.valorMercado || 0;
+    const vmB = b.marketValueManual > 0 ? b.marketValueManual : b.valorMercado || 0;
+    const espA = vmA * (a.type === "Comercial" ? 0.007 : 0.005);
+    const espB = vmB * (b.type === "Comercial" ? 0.007 : 0.005);
+    return (espB - (b.rent - (b.descontoAluguel||0))) - (espA - (a.rent - (a.descontoAluguel||0)));
+  });
+  if (aluguelBaixo.length > 0) {
+    const totalPotencial = aluguelBaixo.reduce((s, p) => {
+      const vm = p.marketValueManual > 0 ? p.marketValueManual : p.valorMercado || 0;
+      const esp = vm * (p.type === "Comercial" ? 0.007 : 0.005);
+      const atual = p.rent - (p.descontoAluguel || 0);
+      return s + Math.max(0, esp - atual) * 12;
+    }, 0);
+    insights.push({ id: 5, type: "aluguel_baixo", severity: "alta", icon: "💰", title: "Aluguel Abaixo do Potencial de Mercado", description: `${aluguelBaixo.length} imóvel(is) com aluguel defasado em relação ao valor de mercado informado.`, metric: `Receita adicional potencial: ${fmt.brlK(totalPotencial)}/ano`, props: aluguelBaixo.slice(0, 5), impactMin: Math.round(totalPotencial * 0.5), impactMax: Math.round(totalPotencial), actions: ["Revisar valor do aluguel na próxima renovação de contrato", "Verificar índice de reajuste aplicado (IGPM acumulado)", "Negociar reajuste gradual com o inquilino", "Considerar rescisão e novo contrato a valor de mercado"], benchmark: "Rentabilidade bruta: 0,5% residencial · 0,7% comercial" });
+  }
+
+  // Aluguel abaixo do potencial de mercado
+  const aluguelBaixo = PROPS.filter(p => {
+    const vm = p.marketValueManual > 0 ? p.marketValueManual : p.valorMercado > 0 ? p.valorMercado : 0;
+    if (!vm) return false;
+    const yieldEsp = p.type === "Comercial" ? 0.007 : 0.005;
+    const esperado = vm * yieldEsp;
+    const atual = p.rent - (p.descontoAluguel || 0);
+    return (esperado - atual) > atual * 0.08;
+  }).sort((a, b) => {
+    const getGap = p => { const vm = p.marketValueManual > 0 ? p.marketValueManual : p.valorMercado || 0; return vm * (p.type === "Comercial" ? 0.007 : 0.005) - (p.rent - (p.descontoAluguel||0)); };
+    return getGap(b) - getGap(a);
+  });
+  if (aluguelBaixo.length > 0) {
+    const totalPotencial = aluguelBaixo.reduce((s, p) => {
+      const vm = p.marketValueManual > 0 ? p.marketValueManual : p.valorMercado || 0;
+      const esp = vm * (p.type === "Comercial" ? 0.007 : 0.005);
+      const atual = p.rent - (p.descontoAluguel || 0);
+      return s + Math.max(0, esp - atual) * 12;
+    }, 0);
+    insights.push({ id: 5, type: "aluguel_baixo", severity: "alta", icon: "💰", title: "Aluguel Abaixo do Potencial de Mercado", description: `${aluguelBaixo.length} imóvel(is) com aluguel defasado em relação ao valor de mercado informado.`, metric: `Receita adicional potencial: ${fmt.brlK(totalPotencial)}/ano`, props: aluguelBaixo.slice(0, 5), impactMin: Math.round(totalPotencial * 0.5), impactMax: Math.round(totalPotencial), actions: ["Revisar valor do aluguel na próxima renovação de contrato", "Verificar índice de reajuste aplicado (IGPM acumulado)", "Negociar reajuste gradual com o inquilino", "Considerar rescisão e novo contrato a valor de mercado"], benchmark: "Rentabilidade bruta: 0,5% residencial · 0,7% comercial" });
+  }
+
   const noiProblems = PROPS.filter(p => p.noiPct < 0.45 && p.totalIncome > 0).sort((a, b) => a.noiPct - b.noiPct);
   if (noiProblems.length > 0) {
     insights.push({ id: 4, type: "noi", severity: "alta", icon: "📉", title: "NOI Abaixo de 45%", description: `${noiProblems.length} imóveis com margem NOI insuficiente.`, metric: `NOI médio do grupo: ${fmt.pct(noiProblems.reduce((s,p) => s + p.noiPct, 0) / noiProblems.length)}`, props: noiProblems.slice(0, 5), impactMin: Math.round(noiProblems.reduce((s, p) => s + p.noi * 0.1, 0)), impactMax: Math.round(noiProblems.reduce((s, p) => s + p.noi * 0.25, 0)), actions: ["Análise detalhada por imóvel", "Revisar reajuste de aluguel pelo IGPM acumulado", "Renegociar contratos de serviço", "Avaliar desinvestimento em imóveis com NOI < 40% por 12+ meses"], benchmark: "Padrão: NOI entre 55–70% (ABRAII 2024)" });
@@ -1424,6 +1471,8 @@ function PageLeakage({ PROPS }) {
                                 {ins.type === "vacancy" && <div style={{ color: T.amber, fontSize: 13, fontWeight: 700 }}>{p.vacancyDays}d</div>}
                                 {ins.type === "maintenance" && <div style={{ color: T.amber, fontSize: 13, fontWeight: 700 }}>+{p.maintDelta}%</div>}
                                 {ins.type === "noi" && <div style={{ color: T.red, fontSize: 13, fontWeight: 700 }}>{fmt.pct(p.noiPct)}</div>}
+                                {ins.type === "aluguel_baixo" && <div style={{ color: T.amber, fontSize: 13, fontWeight: 700 }}>{fmt.brl(p.rent - (p.descontoAluguel||0))}/mês</div>}
+                                {ins.type === "aluguel_baixo" && <div style={{ color: T.amber, fontSize: 13, fontWeight: 700 }}>{fmt.brl(p.rent - (p.descontoAluguel||0))}/mês</div>}
                               </div>
                             </div>
                           </div>
@@ -1455,6 +1504,17 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete }) {
   if (!prop) return null;
   const obrasCount = (prop.obras || []).length, obrasEmAndamento = (prop.obras || []).filter(o => o.status === "Em andamento"), totalOrcado = (prop.obras || []).reduce((s, o) => s + (o.orcado || 0), 0), totalExecutado = (prop.obras || []).reduce((s, o) => s + (o.executado || 0), 0);
   const opportunities = [];
+  // Verificar aluguel vs valor de mercado
+  const vmRef = (prop.marketValueManual > 0 ? prop.marketValueManual : prop.valorMercado > 0 ? prop.valorMercado : 0);
+  if (vmRef > 0) {
+    const yieldEsperado = prop.type === "Comercial" ? 0.007 : 0.005;
+    const aluguelEsperado = vmRef * yieldEsperado;
+    const aluguelAtual = prop.rent - (prop.descontoAluguel || 0);
+    const defasagem = aluguelEsperado - aluguelAtual;
+    if (defasagem > aluguelAtual * 0.08) {
+      opportunities.push({ icon: "💰", color: T.amber, title: "Aluguel Abaixo do Potencial de Mercado", desc: `Aluguel atual: ${fmt.brl(aluguelAtual)}/mês. Com rentabilidade de ${prop.type === "Comercial" ? "0,7%" : "0,5%"} sobre ${fmt.brlK(vmRef)}, o esperado seria ${fmt.brl(Math.round(aluguelEsperado))}/mês. Potencial de reajuste: ${fmt.brl(Math.round(defasagem))}/mês (${fmt.brlK(Math.round(defasagem * 12))}/ano).` });
+    }
+  }
   // IPTU benchmark removido
   if (prop.vacancyDays > prop.vacancyBenchmark) opportunities.push({ icon: "🏠", color: T.red, title: "Vacância Acima da Média", desc: `${prop.vacancyDays} dias vagos vs benchmark ${prop.vacancyBenchmark} dias.` });
   if (prop.maintDelta > 40) opportunities.push({ icon: "🔧", color: T.amber, title: "Manutenção com Custo Anômalo", desc: `R$${prop.maintMonthly}/mês — ${prop.maintDelta}% acima do benchmark.` });
