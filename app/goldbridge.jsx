@@ -625,7 +625,6 @@ function ObrasPorImovel({ prop, onBack, onSave, bmForTipo }) {
   const rem = (id) => save(obras.filter(o=>o.id!==id));
   const totalOrc=obras.reduce((s,o)=>s+(o.orcado||0),0), totalExec=obras.reduce((s,o)=>s+(o.executado||0),0), varTotal=totalExec-totalOrc;
   const ESPECIALIDADES = ["Elétrica","Hidráulica","Pintura","Alvenaria","Marcenaria","Serralheria","Ar condicionado","Limpeza","Outros"];
-  const ESPECIALIDADES = ["Elétrica","Hidráulica","Pintura","Alvenaria","Marcenaria","Serralheria","Ar condicionado","Limpeza","Outros"];
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
       <div style={{ display:"flex", alignItems:"flex-start", gap:14 }}>
