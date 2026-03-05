@@ -371,18 +371,7 @@ function EditModal({ prop, onSave, onClose }) {
     const proximoReajuste = form.contratoInicio ? (() => { const d = new Date(form.contratoInicio); const now = new Date(); let y = now.getFullYear(); if (new Date(y, d.getMonth(), d.getDate()) <= now) y++; return new Date(y, d.getMonth(), d.getDate()).toLocaleDateString("pt-BR"); })() : "";
     onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: Number(form.admin), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual) });
   };
-  const Field = ({ label, k, type = "text", options }) => (
-    <div>
-      <label style={S.label}>{label}</label>
-      {options ? (
-        <select style={S.sel} value={form[k]} onChange={e => set(k, e.target.value)}>
-          {options.map(o => <option key={o}>{o}</option>)}
-        </select>
-      ) : (
-        <input type={type} style={S.input} value={form[k]} onChange={e => type === "number" ? num(k, e.target.value) : set(k, e.target.value)} />
-      )}
-    </div>
-  );
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000088", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div style={{ background: T.s1, border: `1px solid ${T.borderMid}`, borderRadius: 18, width: "100%", maxWidth: 640, maxHeight: "90vh", overflow: "auto" }}>
@@ -397,26 +386,26 @@ function EditModal({ prop, onSave, onClose }) {
           <div>
             <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>IDENTIFICAÇÃO</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div style={{ gridColumn: "1/-1" }}><Field label="NOME" k="name" /></div>
-              <div style={{ gridColumn: "1/-1" }}><Field label="ENDEREÇO" k="address" /></div>
-              <Field label="BAIRRO" k="neighborhood" />
-              <Field label="CIDADE" k="city" options={["São Paulo", "Campinas", "Santo André", "Americana"]} />
-              <Field label="TIPO" k="type" options={["Residencial", "Comercial"]} />
-              <Field label="STATUS" k="status" options={["Ocupado", "Vago"]} />
-              <Field label="ÁREA (m²)" k="size" type="number" />
+              <div style={{ gridColumn: "1/-1" }}><div><label style={S.label}>NOME</label><input style={S.input} value={form.name} onChange={e=>set("name",e.target.value)} /></div></div>
+              <div style={{ gridColumn: "1/-1" }}><div><label style={S.label}>ENDEREÇO</label><input style={S.input} value={form.address} onChange={e=>set("address",e.target.value)} /></div></div>
+              <div><label style={S.label}>BAIRRO</label><input style={S.input} value={form.neighborhood} onChange={e=>set("neighborhood",e.target.value)} /></div>
+              <div><label style={S.label}>CIDADE</label><select style={S.sel} value={form.city} onChange={e=>set("city",e.target.value)}>{["São Paulo","Campinas","Santo André","Americana"].map(o=><option key={o}>{o}</option>)}</select></div>
+              <div><label style={S.label}>TIPO</label><select style={S.sel} value={form.type} onChange={e=>set("type",e.target.value)}>{["Residencial","Comercial"].map(o=><option key={o}>{o}</option>)}</select></div>
+              <div><label style={S.label}>STATUS</label><select style={S.sel} value={form.status} onChange={e=>set("status",e.target.value)}>{["Ocupado","Vago"].map(o=><option key={o}>{o}</option>)}</select></div>
+              <div><label style={S.label}>ÁREA (m²)</label><input type="number" style={S.input} value={form.size} onChange={e=>set("size",e.target.value)} /></div>
             </div>
           </div>
           <div>
             <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>DADOS FINANCEIROS</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <Field label="ALUGUEL MENSAL (R$)" k="rent" type="number" />
-              <Field label="DESCONTO NO ALUGUEL (R$/mês)" k="descontoAluguel" type="number" />
-              <Field label="IPTU ANUAL (R$)" k="iptu" type="number" />
-              <Field label="MANUTENÇÃO MENSAL (R$)" k="maintMonthly" type="number" />
-              <Field label="SEGURO ANUAL (R$)" k="insurance" type="number" />
-              <Field label="TAXA ADM. MENSAL (R$)" k="admin" type="number" />
-              <Field label="DIAS DE VACÂNCIA/ANO" k="vacancyDays" type="number" />
-              <Field label="VALOR DE MERCADO MANUAL (R$)" k="marketValueManual" type="number" />
+              <div><label style={S.label}>ALUGUEL MENSAL (R$)</label><input type="number" style={S.input} value={form.rent} onChange={e=>set("rent",e.target.value)} /></div>
+              <div><label style={S.label}>DESCONTO NO ALUGUEL (R$/mês)</label><input type="number" style={S.input} value={form.descontoAluguel} onChange={e=>set("descontoAluguel",e.target.value)} /></div>
+              <div><label style={S.label}>IPTU ANUAL (R$)</label><input type="number" style={S.input} value={form.iptu} onChange={e=>set("iptu",e.target.value)} /></div>
+              <div><label style={S.label}>MANUTENÇÃO MENSAL (R$)</label><input type="number" style={S.input} value={form.maintMonthly} onChange={e=>set("maintMonthly",e.target.value)} /></div>
+              <div><label style={S.label}>SEGURO ANUAL (R$)</label><input type="number" style={S.input} value={form.insurance} onChange={e=>set("insurance",e.target.value)} /></div>
+              <div><label style={S.label}>TAXA ADM. MENSAL (R$)</label><input type="number" style={S.input} value={form.admin} onChange={e=>set("admin",e.target.value)} /></div>
+              <div><label style={S.label}>DIAS DE VACÂNCIA/ANO</label><input type="number" style={S.input} value={form.vacancyDays} onChange={e=>set("vacancyDays",e.target.value)} /></div>
+              <div><label style={S.label}>VALOR DE MERCADO MANUAL (R$)</label><input type="number" style={S.input} value={form.marketValueManual} onChange={e=>set("marketValueManual",e.target.value)} /></div>
             </div>
           </div>
           <div>
@@ -427,17 +416,17 @@ function EditModal({ prop, onSave, onClose }) {
             </div>
             {form.hasCondominio && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <Field label="COND. MENSAL (R$)" k="condoFee" type="number" />
-                <Field label="FUNDO DE RESERVA MENSAL (R$)" k="fundoReserva" type="number" />
-                <Field label="CHAMADA EXTRA MENSAL (R$)" k="chamadaExtra" type="number" />
+                <div><label style={S.label}>COND. MENSAL (R$)</label><input type="number" style={S.input} value={form.condoFee} onChange={e=>set("condoFee",e.target.value)} /></div>
+                <div><label style={S.label}>FUNDO DE RESERVA MENSAL (R$)</label><input type="number" style={S.input} value={form.fundoReserva} onChange={e=>set("fundoReserva",e.target.value)} /></div>
+                <div><label style={S.label}>CHAMADA EXTRA MENSAL (R$)</label><input type="number" style={S.input} value={form.chamadaExtra} onChange={e=>set("chamadaExtra",e.target.value)} /></div>
               </div>
             )}
           </div>
           <div>
             <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>CONTRATO</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <Field label="DURAÇÃO DO CONTRATO (anos)" k="contratoAnos" type="number" />
-              <Field label="DATA DE INÍCIO DO CONTRATO" k="contratoInicio" type="date" />
+              <div><label style={S.label}>DURAÇÃO DO CONTRATO (anos)</label><input type="number" style={S.input} value={form.contratoAnos} onChange={e=>set("contratoAnos",e.target.value)} /></div>
+              <div><label style={S.label}>DATA DE INÍCIO DO CONTRATO</label><input type="date" style={S.input} value={form.contratoInicio} onChange={e=>set("contratoInicio",e.target.value)} /></div>
             </div>
             {form.contratoInicio && (
               <div style={{ marginTop: 10, padding: "10px 14px", background: T.s3, borderRadius: 8, color: T.muted, fontSize: 12 }}>
@@ -1989,19 +1978,7 @@ function AddImovelModal({ onSave, onClose, nextId }) {
     });
   };
 
-  const Field = ({ label, k, type = "text", options, placeholder }) => (
-    <div>
-      <label style={S.label}>{label}</label>
-      {options ? (
-        <select style={S.sel} value={form[k]} onChange={e => set(k, e.target.value)}>
-          {options.map(o => <option key={o}>{o}</option>)}
-        </select>
-      ) : (
-        <input type={type} style={S.input} value={form[k]} placeholder={placeholder}
-          onChange={e => set(k, e.target.value)} />
-      )}
-    </div>
-  );
+
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000099", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -2017,29 +1994,29 @@ function AddImovelModal({ onSave, onClose, nextId }) {
           <div>
             <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>IDENTIFICAÇÃO</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div style={{ gridColumn: "1/-1" }}><Field label="NOME DO IMÓVEL" k="name" placeholder="Ex: Apartamento Jardins, Sala Faria Lima..." /></div>
-              <div style={{ gridColumn: "1/-1" }}><Field label="ENDEREÇO" k="address" placeholder="Ex: Rua Oscar Freire, 1200" /></div>
+              <div style={{ gridColumn: "1/-1" }}><div><label style={S.label}>NOME DO IMÓVEL</label><input style={S.input} value={form.name} placeholder="Ex: Apartamento Jardins, Sala Faria Lima..." onChange={e=>set("name",e.target.value)} /></div></div>
+              <div style={{ gridColumn: "1/-1" }}><div><label style={S.label}>ENDEREÇO</label><input style={S.input} value={form.address} placeholder="Ex: Rua Oscar Freire, 1200" onChange={e=>set("address",e.target.value)} /></div></div>
               <div>
                 <label style={S.label}>BAIRRO</label>
                 <select style={S.sel} value={form.neighborhood} onChange={e => set("neighborhood", e.target.value)}>
                   {NEIGHBORHOODS.map(n => <option key={n}>{n}</option>)}
                 </select>
               </div>
-              <Field label="CIDADE" k="city" options={["São Paulo", "Campinas", "Santo André", "Americana"]} />
-              <Field label="TIPO" k="type" options={["Residencial", "Comercial"]} />
-              <Field label="STATUS" k="status" options={["Ocupado", "Vago"]} />
-              <Field label="ÁREA (m²) *" k="size" type="number" placeholder="Ex: 85" />
+              <div><label style={S.label}>CIDADE</label><select style={S.sel} value={form.city} onChange={e=>set("city",e.target.value)}>{["São Paulo","Campinas","Santo André","Americana"].map(o=><option key={o}>{o}</option>)}</select></div>
+              <div><label style={S.label}>TIPO</label><select style={S.sel} value={form.type} onChange={e=>set("type",e.target.value)}>{["Residencial","Comercial"].map(o=><option key={o}>{o}</option>)}</select></div>
+              <div><label style={S.label}>STATUS</label><select style={S.sel} value={form.status} onChange={e=>set("status",e.target.value)}>{["Ocupado","Vago"].map(o=><option key={o}>{o}</option>)}</select></div>
+              <div><label style={S.label}>ÁREA (m²) *</label><input type="number" style={S.input} value={form.size} placeholder="Ex: 85" onChange={e=>set("size",e.target.value)} /></div>
             </div>
           </div>
           <div>
             <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>DADOS FINANCEIROS</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <Field label="ALUGUEL MENSAL (R$) *" k="rent" type="number" placeholder="Ex: 4500" />
-              <Field label="DIAS VACÂNCIA/ANO" k="vacancyDays" type="number" placeholder="0" />
-              <Field label="IPTU ANUAL (R$)" k="iptu" type="number" placeholder="Calculado automaticamente" />
-              <Field label="MANUTENÇÃO MENSAL (R$)" k="maintMonthly" type="number" placeholder="Calculado automaticamente" />
-              <Field label="SEGURO ANUAL (R$)" k="insurance" type="number" placeholder="Calculado automaticamente" />
-              <Field label="TAXA ADM. MENSAL (R$)" k="admin" type="number" placeholder="Calculado automaticamente" />
+              <div><label style={S.label}>ALUGUEL MENSAL (R$) *</label><input type="number" style={S.input} value={form.rent} placeholder="Ex: 4500" onChange={e=>set("rent",e.target.value)} /></div>
+              <div><label style={S.label}>DIAS VACÂNCIA/ANO</label><input type="number" style={S.input} value={form.vacancyDays} placeholder="0" onChange={e=>set("vacancyDays",e.target.value)} /></div>
+              <div><label style={S.label}>IPTU ANUAL (R$)</label><input type="number" style={S.input} value={form.iptu} placeholder="Calculado automaticamente" onChange={e=>set("iptu",e.target.value)} /></div>
+              <div><label style={S.label}>MANUTENÇÃO MENSAL (R$)</label><input type="number" style={S.input} value={form.maintMonthly} placeholder="Calculado automaticamente" onChange={e=>set("maintMonthly",e.target.value)} /></div>
+              <div><label style={S.label}>SEGURO ANUAL (R$)</label><input type="number" style={S.input} value={form.insurance} placeholder="Calculado automaticamente" onChange={e=>set("insurance",e.target.value)} /></div>
+              <div><label style={S.label}>TAXA ADM. MENSAL (R$)</label><input type="number" style={S.input} value={form.admin} placeholder="Calculado automaticamente" onChange={e=>set("admin",e.target.value)} /></div>
             </div>
           </div>
           <div style={{ padding: 14, background: T.s2, borderRadius: 10, border: `1px solid ${T.border}` }}>
