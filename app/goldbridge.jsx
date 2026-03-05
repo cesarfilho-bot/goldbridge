@@ -258,28 +258,6 @@ function buildInsights(PROPS) {
     insights.push({ id: 5, type: "aluguel_baixo", severity: "alta", icon: "💰", title: "Aluguel Abaixo do Potencial de Mercado", description: `${aluguelBaixo.length} imóvel(is) com aluguel defasado em relação ao valor de mercado informado.`, metric: `Receita adicional potencial: ${fmt.brlK(totalPotencial)}/ano`, props: aluguelBaixo.slice(0, 5), impactMin: Math.round(totalPotencial * 0.5), impactMax: Math.round(totalPotencial), actions: ["Revisar valor do aluguel na próxima renovação de contrato", "Verificar índice de reajuste aplicado (IGPM acumulado)", "Negociar reajuste gradual com o inquilino", "Considerar rescisão e novo contrato a valor de mercado"], benchmark: "Rentabilidade bruta: 0,5% residencial · 0,7% comercial" });
   }
 
-  // Aluguel abaixo do potencial de mercado
-  const aluguelBaixo = PROPS.filter(p => {
-    const vm = p.marketValueManual > 0 ? p.marketValueManual : p.valorMercado > 0 ? p.valorMercado : 0;
-    if (!vm) return false;
-    const yieldEsp = p.type === "Comercial" ? 0.007 : 0.005;
-    const esperado = vm * yieldEsp;
-    const atual = p.rent - (p.descontoAluguel || 0);
-    return (esperado - atual) > atual * 0.08;
-  }).sort((a, b) => {
-    const getGap = p => { const vm = p.marketValueManual > 0 ? p.marketValueManual : p.valorMercado || 0; return vm * (p.type === "Comercial" ? 0.007 : 0.005) - (p.rent - (p.descontoAluguel||0)); };
-    return getGap(b) - getGap(a);
-  });
-  if (aluguelBaixo.length > 0) {
-    const totalPotencial = aluguelBaixo.reduce((s, p) => {
-      const vm = p.marketValueManual > 0 ? p.marketValueManual : p.valorMercado || 0;
-      const esp = vm * (p.type === "Comercial" ? 0.007 : 0.005);
-      const atual = p.rent - (p.descontoAluguel || 0);
-      return s + Math.max(0, esp - atual) * 12;
-    }, 0);
-    insights.push({ id: 5, type: "aluguel_baixo", severity: "alta", icon: "💰", title: "Aluguel Abaixo do Potencial de Mercado", description: `${aluguelBaixo.length} imóvel(is) com aluguel defasado em relação ao valor de mercado informado.`, metric: `Receita adicional potencial: ${fmt.brlK(totalPotencial)}/ano`, props: aluguelBaixo.slice(0, 5), impactMin: Math.round(totalPotencial * 0.5), impactMax: Math.round(totalPotencial), actions: ["Revisar valor do aluguel na próxima renovação de contrato", "Verificar índice de reajuste aplicado (IGPM acumulado)", "Negociar reajuste gradual com o inquilino", "Considerar rescisão e novo contrato a valor de mercado"], benchmark: "Rentabilidade bruta: 0,5% residencial · 0,7% comercial" });
-  }
-
   const noiProblems = PROPS.filter(p => p.noiPct < 0.45 && p.totalIncome > 0).sort((a, b) => a.noiPct - b.noiPct);
   if (noiProblems.length > 0) {
     insights.push({ id: 4, type: "noi", severity: "alta", icon: "📉", title: "NOI Abaixo de 45%", description: `${noiProblems.length} imóveis com margem NOI insuficiente.`, metric: `NOI médio do grupo: ${fmt.pct(noiProblems.reduce((s,p) => s + p.noiPct, 0) / noiProblems.length)}`, props: noiProblems.slice(0, 5), impactMin: Math.round(noiProblems.reduce((s, p) => s + p.noi * 0.1, 0)), impactMax: Math.round(noiProblems.reduce((s, p) => s + p.noi * 0.25, 0)), actions: ["Análise detalhada por imóvel", "Revisar reajuste de aluguel pelo IGPM acumulado", "Renegociar contratos de serviço", "Avaliar desinvestimento em imóveis com NOI < 40% por 12+ meses"], benchmark: "Padrão: NOI entre 55–70% (ABRAII 2024)" });
