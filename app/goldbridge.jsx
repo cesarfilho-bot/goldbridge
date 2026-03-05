@@ -162,7 +162,7 @@ function buildPortfolio() {
     const maintBenchmark = Math.round(bm.maintenance_annual_m2 * size / 12);
     const maintDelta = ((maintMonthly - maintBenchmark) / maintBenchmark) * 100;
     let leakage = 0;
-    if (iptuDelta > 20) leakage += Math.min(35, iptuDelta * 0.7);
+    // IPTU leakage removido — benchmark não comparável por imóvel
     if (vacancyDays > bm.vacancy_days) leakage += Math.min(35, vacancyDelta * 0.5);
     if (maintDelta > 30) leakage += Math.min(20, maintDelta * 0.4);
     if (noiPct < 0.5) leakage += 20;
@@ -222,11 +222,7 @@ const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "
 
 function buildInsights(PROPS) {
   const insights = [];
-  const iptuProblems = PROPS.filter(p => p.iptuDelta > 25).sort((a, b) => b.iptuDelta - a.iptuDelta);
-  if (iptuProblems.length > 0) {
-    const totalWaste = iptuProblems.reduce((s, p) => s + (p.iptu - p.iptuBenchmark), 0);
-    insights.push({ id: 1, type: "iptu", severity: "alta", icon: "📋", title: "IPTU Acima do Benchmark", description: `${iptuProblems.length} imóveis com IPTU acima do padrão.`, metric: `Excesso médio: +${Math.round(iptuProblems.reduce((s,p) => s + p.iptuDelta, 0) / iptuProblems.length)}%`, props: iptuProblems.slice(0, 5), impactMin: Math.round(totalWaste * 0.7), impactMax: Math.round(totalWaste * 1.2), actions: ["Solicitar revisão do valor venal junto à Prefeitura", "Verificar se área cadastrada no IPTU corresponde à área real", "Avaliar recurso administrativo", "Contratar despachante especializado em revisão de IPTU"], benchmark: "Fonte: SECOVI-SP, PMSP 2024" });
-  }
+  // IPTU benchmark removido — varia por valor venal individual, não comparável por bairro
   const vacProblems = PROPS.filter(p => p.vacancyDays > p.vacancyBenchmark * 1.5).sort((a, b) => b.vacancyCost - a.vacancyCost);
   if (vacProblems.length > 0) {
     const totalCost = vacProblems.reduce((s, p) => s + p.vacancyCost, 0);
@@ -340,6 +336,14 @@ function EditModal({ prop, onSave, onClose }) {
     city: prop.city, type: prop.type, status: prop.status, size: prop.size,
     rent: prop.rent, iptu: prop.iptu, maintMonthly: prop.maintMonthly,
     insurance: prop.insurance, admin: prop.admin, vacancyDays: prop.vacancyDays,
+    hasCondominio: prop.hasCondominio || false,
+    condoFee: prop.condoFee || 0,
+    fundoReserva: prop.fundoReserva || 0,
+    chamadaExtra: prop.chamadaExtra || 0,
+    descontoAluguel: prop.descontoAluguel || 0,
+    contratoAnos: prop.contratoAnos || 1,
+    contratoInicio: prop.contratoInicio || "",
+    marketValueManual: prop.marketValueManual || 0,
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const num = (k, v) => set(k, parseFloat(v) || 0);
@@ -348,7 +352,9 @@ function EditModal({ prop, onSave, onClose }) {
     const annualRent = form.rent * 12;
     const vacancyCost = Math.round((form.rent / 30) * form.vacancyDays);
     const totalIncome = annualRent - vacancyCost;
-    const totalExpenses = form.iptu + form.maintMonthly * 12 + form.insurance + form.admin * 12;
+    const condoAnnual = form.hasCondominio ? (Number(form.condoFee) + Number(form.fundoReserva) + Number(form.chamadaExtra)) * 12 : 0;
+    const descontoAnual = Number(form.descontoAluguel) * 12;
+    const totalExpenses = form.iptu + form.maintMonthly * 12 + form.insurance + form.admin * 12 + condoAnnual + descontoAnual;
     const noi = totalIncome - totalExpenses;
     const noiPct = noi / (totalIncome || 1);
     const iptuBenchmark = Math.round(bm.iptu_m2 * form.size);
@@ -357,12 +363,13 @@ function EditModal({ prop, onSave, onClose }) {
     const maintDelta = Math.round(((form.maintMonthly - maintBenchmark) / maintBenchmark) * 100);
     const vacancyDelta = form.vacancyDays - bm.vacancy_days;
     let leakage = 0;
-    if (iptuDelta > 20) leakage += Math.min(35, iptuDelta * 0.7);
+    // IPTU leakage removido — benchmark não comparável por imóvel
     if (form.vacancyDays > bm.vacancy_days) leakage += Math.min(35, vacancyDelta * 0.5);
     if (maintDelta > 30) leakage += Math.min(20, maintDelta * 0.4);
     if (noiPct < 0.5) leakage += 20;
     leakage = Math.min(98, Math.max(2, Math.round(leakage)));
-    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: Number(form.admin), vacancyDays: Number(form.vacancyDays), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage });
+    const proximoReajuste = form.contratoInicio ? (() => { const d = new Date(form.contratoInicio); const now = new Date(); let y = now.getFullYear(); if (new Date(y, d.getMonth(), d.getDate()) <= now) y++; return new Date(y, d.getMonth(), d.getDate()).toLocaleDateString("pt-BR"); })() : "";
+    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: Number(form.admin), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual) });
   };
   const Field = ({ label, k, type = "text", options }) => (
     <div>
@@ -403,12 +410,42 @@ function EditModal({ prop, onSave, onClose }) {
             <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>DADOS FINANCEIROS</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <Field label="ALUGUEL MENSAL (R$)" k="rent" type="number" />
+              <Field label="DESCONTO NO ALUGUEL (R$/mês)" k="descontoAluguel" type="number" />
               <Field label="IPTU ANUAL (R$)" k="iptu" type="number" />
               <Field label="MANUTENÇÃO MENSAL (R$)" k="maintMonthly" type="number" />
               <Field label="SEGURO ANUAL (R$)" k="insurance" type="number" />
               <Field label="TAXA ADM. MENSAL (R$)" k="admin" type="number" />
               <Field label="DIAS DE VACÂNCIA/ANO" k="vacancyDays" type="number" />
+              <Field label="VALOR DE MERCADO MANUAL (R$)" k="marketValueManual" type="number" />
             </div>
+          </div>
+          <div>
+            <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>CONDOMÍNIO</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <input type="checkbox" id="hasCondominio" checked={form.hasCondominio} onChange={e => set("hasCondominio", e.target.checked)} style={{ width: 16, height: 16, accentColor: T.gold, cursor: "pointer" }} />
+              <label htmlFor="hasCondominio" style={{ color: T.muted, fontSize: 13, cursor: "pointer" }}>Este imóvel tem condomínio</label>
+            </div>
+            {form.hasCondominio && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <Field label="COND. MENSAL (R$)" k="condoFee" type="number" />
+                <Field label="FUNDO DE RESERVA MENSAL (R$)" k="fundoReserva" type="number" />
+                <Field label="CHAMADA EXTRA MENSAL (R$)" k="chamadaExtra" type="number" />
+              </div>
+            )}
+          </div>
+          <div>
+            <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>CONTRATO</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="DURAÇÃO DO CONTRATO (anos)" k="contratoAnos" type="number" />
+              <Field label="DATA DE INÍCIO DO CONTRATO" k="contratoInicio" type="date" />
+            </div>
+            {form.contratoInicio && (
+              <div style={{ marginTop: 10, padding: "10px 14px", background: T.s3, borderRadius: 8, color: T.muted, fontSize: 12 }}>
+                📅 Próximo reajuste: <span style={{ color: T.gold, fontWeight: 700 }}>
+                  {(() => { const d = new Date(form.contratoInicio); const now = new Date(); let y = now.getFullYear(); if (new Date(y, d.getMonth(), d.getDate()) <= now) y++; return new Date(y, d.getMonth(), d.getDate()).toLocaleDateString("pt-BR"); })()}
+                </span> · Normalmente pelo IGPM acumulado
+              </div>
+            )}
           </div>
         </div>
         <div style={{ padding: "16px 28px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 12, justifyContent: "flex-end" }}>
@@ -561,8 +598,20 @@ function MatMaoCard({ obras, bmForTipo }) {
 function ObrasPorImovel({ prop, onBack, onSave, bmForTipo }) {
   const [obras, setObras] = useState(prop.obras || []);
   const [adding, setAdding] = useState(false);
+  const [tab, setTab] = useState("obras");
+  const [prestadores, setPrestadores] = useState(prop.prestadores || []);
+  const [addingPrest, setAddingPrest] = useState(false);
+  const [newPrest, setNewPrest] = useState({ nome:"", especialidade:"", telefone:"", email:"", avaliacao:"", notas:"" });
   const [newO, setNewO] = useState({ descricao:"", tipo:"Corretiva", status:"Planejada", orcado:"", executado:"", pct_mat:"", pct_mao:"", inicio:"", fim:"", notas:"", bm_ref:"" });
-  const save = (list) => { setObras(list); onSave({ ...prop, obras:list }); };
+  const save = (list) => { setObras(list); onSave({ ...prop, obras:list, prestadores }); };
+  const savePrest = (list) => { setPrestadores(list); onSave({ ...prop, obras, prestadores: list }); };
+  const addPrestador = () => {
+    if (!newPrest.nome) return;
+    savePrest([...prestadores, { id: Date.now(), ...newPrest }]);
+    setAddingPrest(false);
+    setNewPrest({ nome:"", especialidade:"", telefone:"", email:"", avaliacao:"", notas:"" });
+  };
+  const remPrest = (id) => savePrest(prestadores.filter(p => p.id !== id));
   const addObra = () => {
     if (!newO.descricao) return;
     const bm = OBRA_BM[newO.bm_ref] || bmForTipo(newO.tipo);
@@ -575,6 +624,8 @@ function ObrasPorImovel({ prop, onBack, onSave, bmForTipo }) {
   const upd = (id, k, v) => save(obras.map(o => { if (o.id!==id) return o; const nums=["orcado","executado","pct_mat","pct_mao"]; return { ...o, [k]:nums.includes(k)?(parseFloat(v)||0):v }; }));
   const rem = (id) => save(obras.filter(o=>o.id!==id));
   const totalOrc=obras.reduce((s,o)=>s+(o.orcado||0),0), totalExec=obras.reduce((s,o)=>s+(o.executado||0),0), varTotal=totalExec-totalOrc;
+  const ESPECIALIDADES = ["Elétrica","Hidráulica","Pintura","Alvenaria","Marcenaria","Serralheria","Ar condicionado","Limpeza","Outros"];
+  const ESPECIALIDADES = ["Elétrica","Hidráulica","Pintura","Alvenaria","Marcenaria","Serralheria","Ar condicionado","Limpeza","Outros"];
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
       <div style={{ display:"flex", alignItems:"flex-start", gap:14 }}>
@@ -590,13 +641,62 @@ function ObrasPorImovel({ prop, onBack, onSave, bmForTipo }) {
         <div style={S.card}><div style={{ color:T.muted, fontSize:10, fontWeight:700, letterSpacing:1, marginBottom:6 }}>TOTAL ORÇADO</div><div style={{ color:T.gold, fontSize:22, fontWeight:800, ...S.mono }}>{fmt.brlK(totalOrc)}</div><div style={{ color:T.dim, fontSize:11, marginTop:4 }}>{obras.length} obra(s)</div></div>
         <div style={{ ...S.card, border:`1px solid ${varTotal>0?T.red+"40":T.border}` }}><div style={{ color:T.muted, fontSize:10, fontWeight:700, letterSpacing:1, marginBottom:6 }}>VARIAÇÃO</div><div style={{ color:varTotal>0?T.red:T.green, fontSize:22, fontWeight:800, ...S.mono }}>{varTotal>0?"+":""}{fmt.brlK(varTotal)}</div><div style={{ color:T.dim, fontSize:11, marginTop:4 }}>{totalOrc>0?`${((varTotal/totalOrc)*100).toFixed(1)}% do orçado`:"—"}</div></div>
       </div>
-      {obras.filter(o=>(o.orcado||0)>0).length>0 && <MatMaoCard obras={obras} bmForTipo={bmForTipo} />}
-      {obras.length===0&&!adding&&(
-        <div style={{ ...S.card, textAlign:"center", padding:"40px 20px" }}><div style={{ fontSize:40, marginBottom:10 }}>🔨</div><div style={{ color:T.text, fontSize:15, fontWeight:600, marginBottom:6 }}>Nenhuma obra cadastrada</div></div>
-      )}
-      {obras.map(obra => <ObraCard key={obra.id} obra={obra} prop={prop} bmForTipo={bmForTipo} onUpd={(k,v)=>upd(obra.id,k,v)} onRem={()=>rem(obra.id)} />)}
-      {adding && <NovaObraForm form={newO} setForm={setNewO} onAdd={addObra} onCancel={()=>setAdding(false)} propSize={prop.size} bmForTipo={bmForTipo} />}
-      {!adding && <button style={{ ...S.btnGhost, width:"100%", padding:14 }} onClick={()=>setAdding(true)}>+ Adicionar Obra / Reforma</button>}
+      <div style={{ display:"flex", gap:8, borderBottom:`1px solid ${T.border}`, paddingBottom:0 }}>
+        {[{ id:"obras", label:"🔨 Obras" }, { id:"prestadores", label:"👷 Prestadores" }].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{ background:"none", border:"none", borderBottom:`2px solid ${tab===t.id?T.gold:"transparent"}`, color:tab===t.id?T.gold:T.muted, fontWeight:700, fontSize:13, padding:"8px 18px", cursor:"pointer", fontFamily:"inherit", marginBottom:-1 }}>{t.label}</button>
+        ))}
+      </div>
+      {tab === "obras" && <>
+        {obras.filter(o=>(o.orcado||0)>0).length>0 && <MatMaoCard obras={obras} bmForTipo={bmForTipo} />}
+        {obras.length===0&&!adding&&(
+          <div style={{ ...S.card, textAlign:"center", padding:"40px 20px" }}><div style={{ fontSize:40, marginBottom:10 }}>🔨</div><div style={{ color:T.text, fontSize:15, fontWeight:600, marginBottom:6 }}>Nenhuma obra cadastrada</div></div>
+        )}
+        {obras.map(obra => <ObraCard key={obra.id} obra={obra} prop={prop} bmForTipo={bmForTipo} onUpd={(k,v)=>upd(obra.id,k,v)} onRem={()=>rem(obra.id)} />)}
+        {adding && <NovaObraForm form={newO} setForm={setNewO} onAdd={addObra} onCancel={()=>setAdding(false)} propSize={prop.size} bmForTipo={bmForTipo} />}
+        {!adding && <button style={{ ...S.btnGhost, width:"100%", padding:14 }} onClick={()=>setAdding(true)}>+ Adicionar Obra / Reforma</button>}
+      </>}
+      {tab === "prestadores" && <>
+        {prestadores.length === 0 && !addingPrest && (
+          <div style={{ ...S.card, textAlign:"center", padding:"40px 20px" }}><div style={{ fontSize:40, marginBottom:10 }}>👷</div><div style={{ color:T.text, fontSize:15, fontWeight:600, marginBottom:6 }}>Nenhum prestador cadastrado</div><div style={{ color:T.muted, fontSize:13 }}>Adicione eletricistas, pintores, encanadores e outros prestadores de serviço.</div></div>
+        )}
+        {prestadores.map(p => (
+          <div key={p.id} style={{ ...S.card, border:`1px solid ${T.borderMid}` }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+              <div style={{ flex:1 }}>
+                <div style={{ color:T.text, fontWeight:700, fontSize:15, marginBottom:4 }}>{p.nome}</div>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
+                  <span style={S.badge(T.blue)}>{p.especialidade}</span>
+                  {p.avaliacao && <span style={S.badge(T.gold)}>{"⭐".repeat(Math.min(5, parseInt(p.avaliacao)||0))} {p.avaliacao}/5</span>}
+                </div>
+                <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
+                  {p.telefone && <div style={{ color:T.muted, fontSize:12 }}>📞 {p.telefone}</div>}
+                  {p.email && <div style={{ color:T.muted, fontSize:12 }}>✉️ {p.email}</div>}
+                </div>
+                {p.notas && <div style={{ color:T.dim, fontSize:12, marginTop:8, padding:"8px 12px", background:T.s3, borderRadius:8 }}>{p.notas}</div>}
+              </div>
+              <button style={{ background:"none", border:"none", color:T.dim, cursor:"pointer", fontSize:16 }} onClick={() => remPrest(p.id)}>🗑</button>
+            </div>
+          </div>
+        ))}
+        {addingPrest && (
+          <div style={{ ...S.card, border:`1px solid ${T.gold}40` }}>
+            <div style={{ color:T.gold, fontSize:12, fontWeight:700, letterSpacing:1, marginBottom:14 }}>NOVO PRESTADOR</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+              <div style={{ gridColumn:"1/-1" }}><div style={S.label}>NOME</div><input style={S.input} value={newPrest.nome} onChange={e=>setNewPrest(f=>({...f,nome:e.target.value}))} placeholder="Ex: João Silva" /></div>
+              <div><div style={S.label}>ESPECIALIDADE</div><select style={S.sel} value={newPrest.especialidade} onChange={e=>setNewPrest(f=>({...f,especialidade:e.target.value}))}><option value="">Selecionar...</option>{ESPECIALIDADES.map(e=><option key={e}>{e}</option>)}</select></div>
+              <div><div style={S.label}>AVALIAÇÃO (1-5)</div><input type="number" min="1" max="5" style={S.input} value={newPrest.avaliacao} onChange={e=>setNewPrest(f=>({...f,avaliacao:e.target.value}))} placeholder="5" /></div>
+              <div><div style={S.label}>TELEFONE</div><input style={S.input} value={newPrest.telefone} onChange={e=>setNewPrest(f=>({...f,telefone:e.target.value}))} placeholder="(19) 99999-9999" /></div>
+              <div><div style={S.label}>EMAIL</div><input style={S.input} value={newPrest.email} onChange={e=>setNewPrest(f=>({...f,email:e.target.value}))} placeholder="joao@email.com" /></div>
+              <div style={{ gridColumn:"1/-1" }}><div style={S.label}>NOTAS</div><input style={S.input} value={newPrest.notas} onChange={e=>setNewPrest(f=>({...f,notas:e.target.value}))} placeholder="Confiável, rápido, bom preço..." /></div>
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button style={S.btn} onClick={addPrestador}>Salvar Prestador</button>
+              <button style={S.btnGhost} onClick={()=>setAddingPrest(false)}>Cancelar</button>
+            </div>
+          </div>
+        )}
+        {!addingPrest && <button style={{ ...S.btnGhost, width:"100%", padding:14 }} onClick={()=>setAddingPrest(true)}>+ Adicionar Prestador</button>}
+      </>}
     </div>
   );
 }
@@ -1683,12 +1783,10 @@ Exemplos do que você pode me perguntar:
     const history = messages.filter(m => m.role !== "system").map(m => ({ role: m.role, content: m.content }));
 
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
           system: buildContext(),
           messages: [...history, { role: "user", content: input.trim() }],
         }),
@@ -1871,7 +1969,7 @@ function AddImovelModal({ onSave, onClose, nextId }) {
     const maintDelta = Math.round(((maintMonthly - maintBenchmark) / maintBenchmark) * 100);
     const vacancyDelta = vacancyDays - bm.vacancy_days;
     let leakage = 0;
-    if (iptuDelta > 20) leakage += Math.min(35, iptuDelta * 0.7);
+    // IPTU leakage removido — benchmark não comparável por imóvel
     if (vacancyDays > bm.vacancy_days) leakage += Math.min(35, vacancyDelta * 0.5);
     if (maintDelta > 30) leakage += Math.min(20, maintDelta * 0.4);
     if (noiPct < 0.5) leakage += 20;
