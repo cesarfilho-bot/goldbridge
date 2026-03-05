@@ -354,7 +354,6 @@ function EditModal({ prop, onSave, onClose }) {
     const descontoAnual = Number(form.descontoAluguel) * 12;
     const totalIncome = annualRent - vacancyCost - descontoAnual;
     const condoAnnual = form.hasCondominio ? (Number(form.condoFee) + Number(form.fundoReserva) + Number(form.chamadaExtra)) * 12 : 0;
-    const descontoAnual = Number(form.descontoAluguel) * 12;
     const totalExpenses = form.iptu + form.maintMonthly * 12 + form.insurance + form.admin * 12 + condoAnnual;
     const noi = totalIncome - totalExpenses;
     const noiPct = noi / (totalIncome || 1);
