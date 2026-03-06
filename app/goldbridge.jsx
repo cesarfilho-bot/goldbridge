@@ -1011,12 +1011,13 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
   const totalGanho     = propsComValor.filter(p => p.valorCompra > 0).reduce((s, p) => s + (p.ganhoCapital || 0), 0);
 
   const saveEdit = () => {
-    onUpdateProps(prev => prev.map(p => p.id !== editingId ? p : {
+    const newProps = PROPS.map(p => p.id !== editingId ? p : {
       ...p,
       valorMercado: parseFloat(editForm.valorMercado) || 0,
       valorCompra:  parseFloat(editForm.valorCompra)  || 0,
       anoCompra:    editForm.anoCompra || null,
-    }));
+    });
+    onUpdateProps(newProps);
     setEditingId(null);
   };
 
@@ -2536,15 +2537,17 @@ export default function App() {
     if (selectedProp?.id === updatedProp.id) setSelectedProp(updatedProp);
   };
 
-  const handleUpdateProps = async (newProps) => {
-    // Find changed props and save them
+  const handleUpdateProps = async (newPropsOrUpdater) => {
+    const newProps = typeof newPropsOrUpdater === "function" ? newPropsOrUpdater(props) : newPropsOrUpdater;
+    // Find changed props and save to Supabase
     newProps.forEach(async np => {
       const old = props.find(p => p.id === np.id);
-      if (old && JSON.stringify(old.pagamentos) !== JSON.stringify(np.pagamentos)) {
+      if (!old) return;
+      if (JSON.stringify(old.pagamentos) !== JSON.stringify(np.pagamentos)) {
         await supabase.from("imoveis").update({ pagamentos: np.pagamentos }).eq("id", np.id).eq("user_id", user.id);
       }
-      if (old && JSON.stringify(old.valorMercado) !== JSON.stringify(np.valorMercado)) {
-        await supabase.from("imoveis").update({ valor_mercado: np.valorMercado, valor_compra: np.valorCompra, ano_compra: np.anoCompra }).eq("id", np.id).eq("user_id", user.id);
+      if (old.valorMercado !== np.valorMercado || old.valorCompra !== np.valorCompra || old.anoCompra !== np.anoCompra) {
+        await supabase.from("imoveis").update({ valor_mercado: np.valorMercado||0, valor_compra: np.valorCompra||0, ano_compra: np.anoCompra||null }).eq("id", np.id).eq("user_id", user.id);
       }
     });
     setPropsRaw(newProps);
