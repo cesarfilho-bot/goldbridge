@@ -222,6 +222,7 @@ function computePort(props) {
   };
   PORT.noiPct = PORT.noi / PORT.receita;
   PORT.lucroLiquido = props.reduce((s, p) => s + (p.lucroLiquido||p.noi), 0);
+  PORT.lucroLiquidoPct = PORT.lucroLiquido / (PORT.receita || 1);
   PORT.leakageScore = Math.round(props.reduce((s, p) => s + p.leakage, 0) / props.length);
   return PORT;
 }
@@ -1315,7 +1316,7 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
 
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
         <KPI label="Receita Bruta" value={fmt.brlK(PORT.receita)} sub="últimos 12 meses" />
-        <KPI label="Lucro Líquido" value={fmt.brlK(PORT.lucroLiquido||PORT.noi)} sub={`Margem: ${fmt.pct(PORT.noiPct)}`} color={T.green} delta={3.2} />
+        <KPI label="Lucro Líquido" value={fmt.brlK(PORT.lucroLiquido||PORT.noi)} sub={`Margem: ${fmt.pct(PORT.lucroLiquidoPct||PORT.noiPct)}`} color={T.green} delta={3.2} />
         <KPI label="Custo Vacância" value={fmt.brlK(PORT.vacancyCost)} color={T.amber} sub={`${PROPS.filter(p => p.status === "Vago").length} imóveis vagos`} warn />
         <div style={{ ...S.card, minWidth: 180, flex: 1, cursor: "pointer" }} onClick={() => onNav("mercado")}>
           <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>VALOR DE MERCADO EST.</div>
@@ -1451,7 +1452,7 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
                     </td>
                     <td style={{ ...S.td, ...S.mono, color: T.red }} onClick={() => { onProp(p); onNav("detail"); }}>{p.ir > 0 ? fmt.brl(p.ir) : <span style={{ color: T.dim }}>—</span>}</td>
                     <td style={{ ...S.td, ...S.mono, color: (p.lucroLiquido||p.noi) > 0 ? T.green : T.red, fontWeight: 700 }} onClick={() => { onProp(p); onNav("detail"); }}>{fmt.brl(p.lucroLiquido||p.noi)}</td>
-                    <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={{ color: p.noiPct > 0.55 ? T.green : p.noiPct > 0.4 ? T.amber : T.red, fontSize: 12, fontWeight: 700, ...S.mono }}>{fmt.pct(p.noiPct)}</span></td>
+                    <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={{ color: (p.lucroLiquidoPct||p.noiPct) > 0.45 ? T.green : (p.lucroLiquidoPct||p.noiPct) > 0.3 ? T.amber : T.red, fontSize: 12, fontWeight: 700, ...S.mono }}>{fmt.pct(p.lucroLiquidoPct||p.noiPct)}</span></td>
                     <td style={{ ...S.td, color: p.vacancyDays > p.vacancyBenchmark ? T.amber : T.muted }} onClick={() => { onProp(p); onNav("detail"); }}>{p.vacancyDays}d</td>
                     <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={{ color: p.leakage > 60 ? T.red : p.leakage > 30 ? T.amber : T.green, fontSize: 13, fontWeight: 800, ...S.mono }}>{p.leakage}</span></td>
                     <td style={S.td}>{obrasCount > 0 ? <span style={S.badge(obrasAtivas > 0 ? T.amber : T.muted)}>🔨 {obrasCount}{obrasAtivas > 0 ? ` (${obrasAtivas} ativ.)` : ""}</span> : <span style={{ color: T.dim, fontSize: 11 }}>—</span>}</td>
@@ -1627,7 +1628,7 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete }) {
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
         <KPI label="Receita 12m" value={fmt.brlK(prop.totalIncome)} size="md" />
         <KPI label="Despesas 12m" value={fmt.brlK(prop.totalExpenses)} color={T.red} size="md" />
-        <KPI label="Lucro Líquido 12m" value={fmt.brlK(prop.lucroLiquido||prop.noi)} sub={`Margem: ${fmt.pct(prop.noiPct)}`} color={(prop.lucroLiquido||prop.noi) > 0 ? T.green : T.red} size="md" />
+        <KPI label="Lucro Líquido 12m" value={fmt.brlK(prop.lucroLiquido||prop.noi)} sub={`Margem líq.: ${fmt.pct(prop.lucroLiquidoPct||prop.noiPct)}`} color={(prop.lucroLiquido||prop.noi) > 0 ? T.green : T.red} size="md" />
         <KPI label="Vacância" value={`${prop.vacancyDays}d`} sub={`Benchmark: ${prop.vacancyBenchmark}d`} color={prop.vacancyDays > prop.vacancyBenchmark ? T.amber : T.muted} size="md" warn={prop.vacancyDays > prop.vacancyBenchmark} />
       </div>
       {obrasCount > 0 && (
@@ -2511,6 +2512,7 @@ function recalcProp(prop, BENCHMARKS) {
   const deducoesPF = (prop.admin||0)*12 + (prop.iptu||0) + condoAnnual;
   const ir = calcIR(totalIncome, totalExpenses, prop.regimeFiscal || "PF", deducoesPF);
   const lucroLiquido = noi - ir;
+  const lucroLiquidoPct = lucroLiquido / (totalIncome || 1);
   const iptuBenchmark = Math.round(bm.iptu_m2 * (prop.size||0));
   const iptuDelta = iptuBenchmark > 0 ? Math.round(((prop.iptu||0) - iptuBenchmark) / iptuBenchmark * 100) : 0;
   const maintBenchmark = Math.round(bm.maintenance_annual_m2 * (prop.size||0) / 12);
@@ -2521,7 +2523,7 @@ function recalcProp(prop, BENCHMARKS) {
   if (maintDelta > 30) leakage += Math.min(20, maintDelta * 0.4);
   if (noiPct < 0.5) leakage += 20;
   leakage = Math.min(98, Math.max(2, Math.round(leakage)));
-  return { ...prop, vacancyCost, totalIncome, totalExpenses, noi, noiPct, ir, lucroLiquido, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage };
+  return { ...prop, vacancyCost, totalIncome, totalExpenses, noi, noiPct, ir, lucroLiquido, lucroLiquidoPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage };
 }
 
 export default function App() {
