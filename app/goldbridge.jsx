@@ -267,7 +267,7 @@ function buildInsights(PROPS) {
 
   const noiProblems = PROPS.filter(p => p.noiPct < 0.45 && p.totalIncome > 0).sort((a, b) => a.noiPct - b.noiPct);
   if (noiProblems.length > 0) {
-    insights.push({ id: 4, type: "noi", severity: "alta", icon: "📉", title: "NOI Abaixo de 45%", description: `${noiProblems.length} imóveis com margem NOI insuficiente.`, metric: `NOI médio do grupo: ${fmt.pct(noiProblems.reduce((s,p) => s + p.noiPct, 0) / noiProblems.length)}`, props: noiProblems.slice(0, 5), impactMin: Math.round(noiProblems.reduce((s, p) => s + p.noi * 0.1, 0)), impactMax: Math.round(noiProblems.reduce((s, p) => s + p.noi * 0.25, 0)), actions: ["Análise detalhada por imóvel", "Revisar reajuste de aluguel pelo IGPM acumulado", "Renegociar contratos de serviço", "Avaliar desinvestimento em imóveis com NOI < 40% por 12+ meses"], benchmark: "Padrão: NOI entre 55–70% (ABRAII 2024)" });
+    insights.push({ id: 4, type: "noi", severity: "alta", icon: "📉", title: "Margem Baixa (abaixo de 45%)", description: `${noiProblems.length} imóveis com margem operacional insuficiente.`, metric: `NOI médio do grupo: ${fmt.pct(noiProblems.reduce((s,p) => s + p.noiPct, 0) / noiProblems.length)}`, props: noiProblems.slice(0, 5), impactMin: Math.round(noiProblems.reduce((s, p) => s + p.noi * 0.1, 0)), impactMax: Math.round(noiProblems.reduce((s, p) => s + p.noi * 0.25, 0)), actions: ["Análise detalhada por imóvel", "Revisar reajuste de aluguel pelo IGPM acumulado", "Renegociar contratos de serviço", "Avaliar desinvestimento em imóveis com NOI < 40% por 12+ meses"], benchmark: "Padrão: NOI entre 55–70% (ABRAII 2024)" });
   }
   return insights;
 }
@@ -516,7 +516,7 @@ function PageObras({ PROPS, onUpdateProps }) {
         <div>
           <div style={{ color:T.muted, fontSize:11, letterSpacing:2, fontWeight:700, marginBottom:6 }}>GESTÃO DE OBRAS</div>
           <h1 style={{ color:T.text, fontSize:26, fontWeight:800, margin:0 }}>Obras & Reformas</h1>
-          <div style={{ color:T.muted, fontSize:13, marginTop:4 }}>Orçado × Real · Material × Mão de Obra · Impacto no NOI</div>
+          <div style={{ color:T.muted, fontSize:13, marginTop:4 }}>Orçado × Real · Material × Mão de Obra · Impacto no Resultado</div>
         </div>
         <button style={{ ...S.btn, display:"flex", alignItems:"center", gap:8 }} onClick={() => setView("estimador")}>🧮 Estimador de Custo</button>
       </div>
@@ -794,7 +794,7 @@ function ImpactoNOI({ obra, prop, bm }) {
   const payback=aumentoAnual>0?custo/aumentoAnual:null, noiAfter=prop.noi+aumentoAnual*0.85, ganhoVac=(bm.vac_reduz||0)*(prop.rent/30);
   return (
     <div style={{ padding:14, background:T.s2, borderRadius:10, border:`1px solid ${T.goldDim}40` }}>
-      <div style={{ color:T.gold, fontSize:11, fontWeight:700, letterSpacing:1, marginBottom:12 }}>💰 IMPACTO NO NOI</div>
+      <div style={{ color:T.gold, fontSize:11, fontWeight:700, letterSpacing:1, marginBottom:12 }}>💰 IMPACTO NO RESULTADO</div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px,1fr))", gap:10 }}>
         {[
           { lbl:"Custo da Obra", val:`-${fmt.brlK(custo)}`, color:T.red, sub:"impacto imediato" },
@@ -1034,7 +1034,7 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
         <div>
           <div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>INTELIGÊNCIA DE MERCADO</div>
-          <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Valor de Mercado</h1>
+          <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Valor da Carteira</h1>
           <div style={{ color: T.muted, fontSize: 13, marginTop: 4 }}>FipeZAP por bairro · Cap Rate · Valorização · Ganho de Capital</div>
         </div>
         <div style={{ color: T.dim, fontSize: 11, textAlign: "right" }}>
@@ -1225,7 +1225,30 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
 }
 
 // ─── DASHBOARD ───────────────────────────────────────────────────────────────
-function PageDashboard({ PROPS, onNav, onProp }) {
+function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
+  // Empty state
+  if (PROPS.length === 0) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", gap: 24, textAlign: "center" }}>
+        <div style={{ fontSize: 64 }}>🏠</div>
+        <div>
+          <h1 style={{ color: T.text, fontSize: 28, fontWeight: 900, margin: "0 0 12px" }}>Bem-vindo ao Goldbridge</h1>
+          <div style={{ color: T.muted, fontSize: 16, maxWidth: 400, lineHeight: 1.6 }}>Cadastre seu primeiro imóvel para começar a acompanhar seus aluguéis, despesas e rentabilidade.</div>
+        </div>
+        <button style={{ ...S.btn, padding: "16px 32px", fontSize: 16, borderRadius: 14 }} onClick={onAdd}>
+          + Adicionar meu primeiro imóvel
+        </button>
+        <div style={{ display: "flex", gap: 32, marginTop: 8 }}>
+          {[["💰","Controle de recebimentos"],["📊","Análise de rentabilidade"],["🔔","Alertas de reajuste"]].map(([icon, label]) => (
+            <div key={label} style={{ color: T.dim, fontSize: 13, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 24 }}>{icon}</span>{label}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   const PORT = computePort(PROPS);
   const PORT_MONTHLY = MONTHS.map((m, i) => ({ month: m, receita: PROPS.reduce((s, p) => s + p.monthlyData[i].receita, 0), despesas: PROPS.reduce((s, p) => s + p.monthlyData[i].despesas, 0), noi: PROPS.reduce((s, p) => s + p.monthlyData[i].noi, 0) }));
   const INSIGHTS = buildInsights(PROPS);
@@ -1252,14 +1275,14 @@ function PageDashboard({ PROPS, onNav, onProp }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
         <div>
           <div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>PORTFÓLIO · {PROPS.length} IMÓVEIS</div>
-          <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Visão Executiva</h1>
+          <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Visão Geral</h1>
         </div>
         <div style={{ color: T.dim, fontSize: 12 }}>{fmt.date()}</div>
       </div>
 
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
         <KPI label="Receita Bruta" value={fmt.brlK(PORT.receita)} sub="últimos 12 meses" />
-        <KPI label="NOI" value={fmt.brlK(PORT.noi)} sub={`Margem: ${fmt.pct(PORT.noiPct)}`} color={T.green} delta={3.2} />
+        <KPI label="Lucro Operacional" value={fmt.brlK(PORT.noi)} sub={`Margem: ${fmt.pct(PORT.noiPct)}`} color={T.green} delta={3.2} />
         <KPI label="Custo Vacância" value={fmt.brlK(PORT.vacancyCost)} color={T.amber} sub={`${PROPS.filter(p => p.status === "Vago").length} imóveis vagos`} warn />
         <div style={{ ...S.card, minWidth: 180, flex: 1, cursor: "pointer" }} onClick={() => onNav("mercado")}>
           <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>VALOR DE MERCADO EST.</div>
@@ -1278,8 +1301,8 @@ function PageDashboard({ PROPS, onNav, onProp }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
         <div style={S.card}>
-          <div style={{ color: T.text, fontWeight: 700, marginBottom: 4, fontSize: 15 }}>NOI Mensal — 2024</div>
-          <div style={{ color: T.muted, fontSize: 12, marginBottom: 16 }}>Receita vs NOI líquido</div>
+          <div style={{ color: T.text, fontWeight: 700, marginBottom: 4, fontSize: 15 }}>Lucro Operacional Mensal — 2024</div>
+          <div style={{ color: T.muted, fontSize: 12, marginBottom: 16 }}>Receita vs Lucro Operacional</div>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={PORT_MONTHLY}>
               <defs>
@@ -1313,7 +1336,7 @@ function PageDashboard({ PROPS, onNav, onProp }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div style={S.card}>
-          <div style={{ color: T.text, fontWeight: 700, marginBottom: 14, fontSize: 15 }}>Top 5 — Maior Leakage</div>
+          <div style={{ color: T.text, fontWeight: 700, marginBottom: 14, fontSize: 15 }}>Top 5 — Maior Risco</div>
           {topLeakage.map((p, i) => (
             <div key={p.id} onClick={() => { onProp(p); onNav("detail"); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0", borderBottom: i < 4 ? `1px solid ${T.border}40` : "none", cursor: "pointer" }}>
               <span style={{ color: T.dim, fontSize: 12, minWidth: 20, ...S.mono }}>{i + 1}</span>
@@ -1356,7 +1379,7 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-        <div><div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>ANÁLISE</div><h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>NOI por Imóvel</h1></div>
+        <div><div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>ANÁLISE</div><h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Imóveis</h1></div>
         <button style={{ ...S.btn, display: "flex", alignItems: "center", gap: 8 }} onClick={onAdd}>+ Adicionar Imóvel</button>
       </div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
@@ -1370,8 +1393,8 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
           <thead>
             <tr style={{ background: T.s2 }}>
               <Th col="id" label="#" /><th style={S.th}>Imóvel / Endereço</th><th style={S.th}>Tipo</th><th style={S.th}>Status</th>
-              <Th col="rent" label="Aluguel/mês" /><Th col="noi" label="NOI 12m" /><Th col="noiPct" label="Margem" />
-              <Th col="vacancyDays" label="Vacância" /><Th col="leakage" label="Leakage" /><th style={S.th}>Obras</th><th style={S.th}>Ações</th>
+              <Th col="rent" label="Aluguel/mês" /><Th col="noi" label="Lucro Op. 12m" /><Th col="noiPct" label="Margem" />
+              <Th col="vacancyDays" label="Vacância" /><Th col="leakage" label="Risco" /><th style={S.th}>Obras</th><th style={S.th}>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -1421,7 +1444,7 @@ function PageLeakage({ PROPS }) {
   const [expanded, setExpanded] = useState(1);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div><div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>MOTOR DE INTELIGÊNCIA</div><h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Leakage Finder</h1></div>
+      <div><div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>DIAGNÓSTICO</div><h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Alertas</h1></div>
       <div style={{ ...S.cardGold, display: "flex", gap: 32, alignItems: "center", flexWrap: "wrap" }}>
         <div><div style={{ color: T.goldDim, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>PERDA ESTIMADA ANUAL</div><div style={{ color: T.red, fontSize: 36, fontWeight: 900, ...S.mono }}>{fmt.brlK(TOTAL_MIN)}</div><div style={{ color: T.muted, fontSize: 13, marginTop: 4 }}>até {fmt.brlK(TOTAL_MAX)}</div></div>
         <div style={{ width: 1, height: 60, background: T.goldDim }} />
@@ -1503,7 +1526,7 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete }) {
   // IPTU benchmark removido
   if (prop.vacancyDays > prop.vacancyBenchmark) opportunities.push({ icon: "🏠", color: T.red, title: "Vacância Acima da Média", desc: `${prop.vacancyDays} dias vagos vs benchmark ${prop.vacancyBenchmark} dias.` });
   if (prop.maintDelta > 40) opportunities.push({ icon: "🔧", color: T.amber, title: "Manutenção com Custo Anômalo", desc: `R$${prop.maintMonthly}/mês — ${prop.maintDelta}% acima do benchmark.` });
-  if (prop.noiPct < 0.5) opportunities.push({ icon: "📉", color: T.red, title: "Margem NOI Abaixo do Padrão", desc: `NOI de ${fmt.pct(prop.noiPct)} abaixo do objetivo de 55%.` });
+  if (prop.noiPct < 0.5) opportunities.push({ icon: "📉", color: T.red, title: "Margem Operacional Abaixo do Padrão", desc: `NOI de ${fmt.pct(prop.noiPct)} abaixo do objetivo de 55%.` });
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
@@ -1527,7 +1550,7 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete }) {
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
         <KPI label="Receita 12m" value={fmt.brlK(prop.totalIncome)} size="md" />
         <KPI label="Despesas 12m" value={fmt.brlK(prop.totalExpenses)} color={T.red} size="md" />
-        <KPI label="NOI 12m" value={fmt.brlK(prop.noi)} sub={`Margem: ${fmt.pct(prop.noiPct)}`} color={prop.noi > 0 ? T.green : T.red} size="md" />
+        <KPI label="Lucro Operacional 12m" value={fmt.brlK(prop.noi)} sub={`Margem: ${fmt.pct(prop.noiPct)}`} color={prop.noi > 0 ? T.green : T.red} size="md" />
         <KPI label="Vacância" value={`${prop.vacancyDays}d`} sub={`Benchmark: ${prop.vacancyBenchmark}d`} color={prop.vacancyDays > prop.vacancyBenchmark ? T.amber : T.muted} size="md" warn={prop.vacancyDays > prop.vacancyBenchmark} />
       </div>
       {obrasCount > 0 && (
@@ -1635,7 +1658,7 @@ function PageDecision({ PROPS, onProp, onNav }) {
       </div>
       <div style={{ ...S.card, padding:0, overflow:"auto" }}>
         <table style={{ width:"100%", borderCollapse:"collapse" }}>
-          <thead><tr style={{ background:T.s2 }}>{["Imóvel","Tipo","NOI 12m","Manter","Vender","Retrofit","Reposicionar","RECOMENDAÇÃO"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <thead><tr style={{ background:T.s2 }}>{["Imóvel","Tipo","Lucro Operacional 12m","Manter","Vender","Retrofit","Reposicionar","RECOMENDAÇÃO"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
           <tbody>
             {filtered.map(p=>{ const d=p.decision, rec=DECISION_META[d.recommendation]; return (
               <tr key={p.id} style={{ cursor:"pointer" }} onMouseEnter={e=>e.currentTarget.style.background=T.s2} onMouseLeave={e=>e.currentTarget.style.background="transparent"} onClick={()=>setSelected(p)}>
@@ -1658,10 +1681,10 @@ function PageDecision({ PROPS, onProp, onNav }) {
 function PageDecisionDetail({ prop, onBack }) {
   const d=buildDecision(prop), rec=DECISION_META[d.recommendation];
   const options=[
-    { id:"keep", meta:DECISION_META.keep, score:d.keepScore, headline:`NOI pode chegar a ${fmt.brlK(d.improvedNOI)}/ano`, description:"Imóvel com potencial de melhoria sem desinvestimento.", numbers:[{ label:"NOI Atual",value:fmt.brl(prop.noi),color:T.muted },{ label:"NOI Otimizado",value:fmt.brl(d.improvedNOI),color:T.green },{ label:"Valor Implícito",value:fmt.brlK(d.impliedValue),color:T.muted }], actions:["Revisar IPTU","Resolver vacância com estratégia de preço","Consolidar contratos de manutenção","Negociar reajuste pelo IGPM"] },
+    { id:"keep", meta:DECISION_META.keep, score:d.keepScore, headline:`Lucro Op. pode chegar a ${fmt.brlK(d.improvedNOI)}/ano`, description:"Imóvel com potencial de melhoria sem desinvestimento.", numbers:[{ label:"Lucro Op. Atual",value:fmt.brl(prop.noi),color:T.muted },{ label:"Lucro Op. Otimizado",value:fmt.brl(d.improvedNOI),color:T.green },{ label:"Valor Implícito",value:fmt.brlK(d.impliedValue),color:T.muted }], actions:["Revisar IPTU","Resolver vacância com estratégia de preço","Consolidar contratos de manutenção","Negociar reajuste pelo IGPM"] },
     { id:"sell", meta:DECISION_META.sell, score:d.sellScore, headline:`Valor estimado: ${fmt.brlK(d.saleValue)}`, description:"Capital pode ser realocado em ativo de maior retorno.", numbers:[{ label:"Valor (conservador)",value:fmt.brlK(d.saleValue),color:T.red },{ label:"Valor (otimista)",value:fmt.brlK(d.saleValueOptimistic),color:T.amber },{ label:"Retorno Reinvestido",value:fmt.brl(d.reinvestReturn)+"/ano",color:T.green }], actions:["Avaliação formal por corretor","Resolver pendências documentais","Definir estratégia: off-market ou corretora","Avaliar timing fiscal"] },
     { id:"retrofit", meta:DECISION_META.retrofit, score:d.retroScore, headline:`ROI ${d.retroROI.toFixed(0)}% · payback ${d.retroPayback.toFixed(1)} anos`, description:`Alta demanda em ${prop.neighborhood}.`, numbers:[{ label:"Custo Retrofit",value:fmt.brlK(d.retroCost),color:T.amber },{ label:"Aumento Aluguel",value:fmt.brl(d.retroRentIncrease)+"/mês",color:T.green },{ label:"ROI",value:d.retroROI.toFixed(0)+"%",color:T.gold }], actions:["3 orçamentos de construtoras","Arquiteto para laudo técnico","Verificar aprovações na Prefeitura","Calcular vacância durante obra"] },
-    { id:"reposition", meta:DECISION_META.reposition, score:d.reposScore, headline:`Como ${d.otherType.toLowerCase()}: ${fmt.brlK(d.reposValue)}`, description:`Mudança de uso pode aumentar NOI significativamente.`, numbers:[{ label:`Aluguel como ${d.otherType}`,value:fmt.brl(d.reposRentEstimate)+"/mês",color:T.blue },{ label:"NOI Projetado",value:fmt.brlK(d.reposNOI),color:T.blue },{ label:"Custo Adequação",value:fmt.brlK(d.reposCost),color:T.amber }], actions:["Verificar zoneamento","Consultar advogado imobiliário","Analisar demanda de mercado","Orçamento obras de adequação"] },
+    { id:"reposition", meta:DECISION_META.reposition, score:d.reposScore, headline:`Como ${d.otherType.toLowerCase()}: ${fmt.brlK(d.reposValue)}`, description:`Mudança de uso pode aumentar NOI significativamente.`, numbers:[{ label:`Aluguel como ${d.otherType}`,value:fmt.brl(d.reposRentEstimate)+"/mês",color:T.blue },{ label:"Lucro Op. Projetado",value:fmt.brlK(d.reposNOI),color:T.blue },{ label:"Custo Adequação",value:fmt.brlK(d.reposCost),color:T.amber }], actions:["Verificar zoneamento","Consultar advogado imobiliário","Analisar demanda de mercado","Orçamento obras de adequação"] },
   ];
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
@@ -1704,8 +1727,8 @@ function PageReport({ PROPS }) {
   const download = () => {
     const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${name} — Relatório</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Georgia',serif;color:#1a1a1a;padding:48px;max-width:900px;margin:0 auto}.header{display:flex;justify-content:space-between;padding-bottom:24px;border-bottom:3px solid #C8A84B;margin-bottom:32px}.logo{font-size:22px;font-weight:900;color:#C8A84B}h2{font-size:14px;color:#333;margin:28px 0 12px;padding-bottom:6px;border-bottom:1px solid #e5e5e5;text-transform:uppercase;letter-spacing:1px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}.kpi{background:#f8f6f0;border:1px solid #e8e0cc;border-radius:8px;padding:14px}.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:4px}.kpi-value{font-size:18px;font-weight:700;font-family:'Courier New',monospace}.green{color:#1a8a6a}.red{color:#c0392b}.amber{color:#d4890a}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#f0ede4;text-align:left;padding:8px 10px;border:1px solid #ddd;font-size:10px;text-transform:uppercase}td{padding:8px 10px;border:1px solid #eee;font-family:'Courier New',monospace}tr:nth-child(even) td{background:#fafaf8}.footer{margin-top:40px;padding-top:14px;border-top:1px solid #ddd;font-size:10px;color:#999;display:flex;justify-content:space-between}</style></head><body>
 <div class="header"><div><div class="logo">GOLDBRIDGE</div><div style="font-size:13px;font-weight:700;margin-top:6px">${name}</div></div><div style="text-align:right;font-size:12px;color:#666"><div>Jan–Dez 2024</div><div>Gerado: ${fmt.date()}</div><div>${PROPS.length} imóveis</div></div></div>
-<h2>Resumo Executivo</h2><div class="kpis"><div class="kpi"><div class="kpi-label">Receita Bruta</div><div class="kpi-value">${fmt.brlK(PORT.receita)}</div></div><div class="kpi"><div class="kpi-label">Despesas</div><div class="kpi-value red">${fmt.brlK(PORT.despesas)}</div></div><div class="kpi"><div class="kpi-label">NOI</div><div class="kpi-value green">${fmt.brlK(PORT.noi)}</div></div><div class="kpi"><div class="kpi-label">Valor de Mercado Est.</div><div class="kpi-value amber">${fmt.brlK(totalValorMercado)}</div></div></div>
-<h2>NOI Mensal</h2><table><tr><th>Mês</th><th>Receita</th><th>Despesas</th><th>NOI</th><th>Margem</th></tr>${PORT_MONTHLY.map(m=>`<tr><td>${m.month}/2024</td><td>${fmt.brl(m.receita)}</td><td style="color:#c0392b">${fmt.brl(m.despesas)}</td><td style="color:${m.noi>=0?"#1a8a6a":"#c0392b"};font-weight:700">${fmt.brl(m.noi)}</td><td>${fmt.pct(m.noi/m.receita)}</td></tr>`).join("")}</table>
+<h2>Resumo Executivo</h2><div class="kpis"><div class="kpi"><div class="kpi-label">Receita Bruta</div><div class="kpi-value">${fmt.brlK(PORT.receita)}</div></div><div class="kpi"><div class="kpi-label">Despesas</div><div class="kpi-value red">${fmt.brlK(PORT.despesas)}</div></div><div class="kpi"><div class="kpi-label">NOI</div><div class="kpi-value green">${fmt.brlK(PORT.noi)}</div></div><div class="kpi"><div class="kpi-label">Valor da Carteira Est.</div><div class="kpi-value amber">${fmt.brlK(totalValorMercado)}</div></div></div>
+<h2>Lucro Operacional Mensal</h2><table><tr><th>Mês</th><th>Receita</th><th>Despesas</th><th>NOI</th><th>Margem</th></tr>${PORT_MONTHLY.map(m=>`<tr><td>${m.month}/2024</td><td>${fmt.brl(m.receita)}</td><td style="color:#c0392b">${fmt.brl(m.despesas)}</td><td style="color:${m.noi>=0?"#1a8a6a":"#c0392b"};font-weight:700">${fmt.brl(m.noi)}</td><td>${fmt.pct(m.noi/m.receita)}</td></tr>`).join("")}</table>
 ${totalObras>0?`<h2>Obras Cadastradas</h2><table><tr><th>Imóvel</th><th>Obra</th><th>Tipo</th><th>Status</th><th>Orçado</th><th>Executado</th></tr>${PROPS.flatMap(p=>(p.obras||[]).map(o=>`<tr><td>${p.name}</td><td>${o.descricao}</td><td>${o.tipo}</td><td>${o.status}</td><td>${fmt.brl(o.orcado)}</td><td>${fmt.brl(o.executado)}</td></tr>`)).join("")}</table>`:""}
 <h2>Alertas</h2>${INSIGHTS.map(ins=>`<div style="margin-bottom:12px;padding:12px;background:#fff9f0;border-left:4px solid #C8A84B;border-radius:6px"><strong>${ins.icon} ${ins.title}</strong><p style="font-size:12px;color:#555;margin-top:4px">${ins.description}</p><p style="font-size:12px;color:#c0392b;font-weight:700;margin-top:2px">Impacto: ${fmt.brl(ins.impactMin)}–${fmt.brl(ins.impactMax)}/ano</p></div>`).join("")}
 <div class="footer"><div>Goldbridge Brasil · ${fmt.date()}</div><div>Confidencial</div></div></body></html>`;
@@ -1713,7 +1736,7 @@ ${totalObras>0?`<h2>Obras Cadastradas</h2><table><tr><th>Imóvel</th><th>Obra</t
   };
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
-      <div><div style={{ color:T.muted, fontSize:11, letterSpacing:2, fontWeight:700, marginBottom:6 }}>EXPORTAÇÃO</div><h1 style={{ color:T.text, fontSize:26, fontWeight:800, margin:0 }}>Relatório Bank-Ready</h1></div>
+      <div><div style={{ color:T.muted, fontSize:11, letterSpacing:2, fontWeight:700, marginBottom:6 }}>EXPORTAÇÃO</div><h1 style={{ color:T.text, fontSize:26, fontWeight:800, margin:0 }}>Relatórios</h1></div>
       <div style={S.card}>
         <div style={{ color:T.text, fontWeight:700, marginBottom:14, fontSize:15 }}>Configurar</div>
         <div style={{ display:"flex", flexDirection:"column", gap:12, maxWidth:480 }}>
@@ -1788,7 +1811,7 @@ Exemplos do que você pode me perguntar:
       "NOI anual total: R$ " + totalNOI.toLocaleString("pt-BR"),
       "Receita anual: R$ " + totalReceita.toLocaleString("pt-BR"),
       "Despesas anuais: R$ " + totalDespesas.toLocaleString("pt-BR"),
-      "Margem NOI media: " + ((totalNOI/totalReceita)*100).toFixed(1) + "%",
+      "Margem Operacional media: " + ((totalNOI/totalReceita)*100).toFixed(1) + "%",
       "Imoveis vagos: " + vagos.length,
       NL + "=== MAIOR LEAKAGE (TOP 5) ===",
       ...altoLeakage.slice(0,5).map(p => p.name + " (" + p.neighborhood + "): Leakage " + p.leakage + "/100, NOI R$" + p.noi.toLocaleString("pt-BR") + "/ano"),
@@ -2229,15 +2252,15 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
 
 // ─── NAV ──────────────────────────────────────────────────────────────────────
 const NAV = [
-  { id: "dashboard", label: "Visão Executiva",     icon: "◈" },
-  { id: "noi",       label: "NOI por Imóvel",      icon: "⊞" },
-  { id: "obras",     label: "Obras & Reformas",    icon: "🔨" },
-  { id: "mercado",   label: "Valor de Mercado",    icon: "🏦" },
-  { id: "leakage",   label: "Leakage Finder",      icon: "◎" },
-  { id: "decision",  label: "Decisão por Imóvel",  icon: "⟁" },
-  { id: "report",    label: "Relatório Bank-Ready", icon: "⬡" },
-  { id: "pagamentos", label: "Pagamentos",           icon: "💳" },
-  { id: "ia",        label: "IA do Portfólio",      icon: "✦" },
+  { id: "dashboard",  label: "Visão Geral",          icon: "◈" },
+  { id: "noi",        label: "Imóveis",               icon: "⊞" },
+  { id: "pagamentos", label: "Pagamentos",             icon: "💳" },
+  { id: "obras",      label: "Obras & Reformas",      icon: "🔨" },
+  { id: "mercado",    label: "Valor da Carteira",     icon: "🏦" },
+  { id: "leakage",    label: "Alertas",               icon: "◎" },
+  { id: "decision",   label: "Decisão por Imóvel",   icon: "⟁" },
+  { id: "ia",         label: "IA do Portfólio",       icon: "✦" },
+  { id: "report",     label: "Relatórios",            icon: "⬡" },
 ];
 
 // ─── ADD IMOVEL MODAL ─────────────────────────────────────────────────────────
@@ -2247,12 +2270,13 @@ function AddImovelModal({ onSave, onClose, nextId }) {
     type: "Residencial", status: "Ocupado", size: "", rent: "",
     iptu: "", maintMonthly: "", insurance: "", admin: "", vacancyDays: "0",
   });
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
   const NEIGHBORHOODS = Object.keys(FIPEZAP_M2).filter(k => !k.startsWith("_default"));
+  const canSave = form.name && form.rent;
 
   const handleSave = () => {
-    if (!form.size || !form.rent) return;
+    if (!canSave) return;
     const bm = BENCHMARKS[form.city]?.[form.type] || BENCHMARKS["São Paulo"][form.type];
     const size = parseFloat(form.size) || 0;
     const rent = parseFloat(form.rent) || 0;
@@ -2273,7 +2297,6 @@ function AddImovelModal({ onSave, onClose, nextId }) {
     const maintDelta = Math.round(((maintMonthly - maintBenchmark) / maintBenchmark) * 100);
     const vacancyDelta = vacancyDays - bm.vacancy_days;
     let leakage = 0;
-    // IPTU leakage removido — benchmark não comparável por imóvel
     if (vacancyDays > bm.vacancy_days) leakage += Math.min(35, vacancyDelta * 0.5);
     if (maintDelta > 30) leakage += Math.min(20, maintDelta * 0.4);
     if (noiPct < 0.5) leakage += 20;
@@ -2284,21 +2307,19 @@ function AddImovelModal({ onSave, onClose, nextId }) {
       return { month: m, receita: rent, despesas: exp, noi: rent - exp };
     });
     onSave({
-      id: nextId, name: form.name || `${form.type === "Comercial" ? "Sala Comercial" : "Apartamento"} ${String(nextId).padStart(3, "0")}`,
+      id: nextId, name: form.name,
       address: form.address, neighborhood: form.neighborhood, city: form.city, state: "SP",
       type: form.type, status: form.status, size, rent, iptu, maintMonthly, insurance, admin,
       vacancyDays, vacancyCost, totalIncome, totalExpenses, noi, noiPct, leakage,
       iptuBenchmark, iptuDelta, maintBenchmark, maintDelta,
       vacancyBenchmark: bm.vacancy_days, vacancyDelta, monthlyData, isProblematic: false,
-      obras: [], valorMercado: 0, valorCompra: 0, anoCompra: null,
+      obras: [], prestadores: [], pagamentos: {}, valorMercado: 0, valorCompra: 0, anoCompra: null,
     });
   };
 
-
-
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000099", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ background: T.s1, border: `1px solid ${T.borderMid}`, borderRadius: 18, width: "100%", maxWidth: 660, maxHeight: "92vh", overflow: "auto" }}>
+      <div style={{ background: T.s1, border: `1px solid ${T.borderMid}`, borderRadius: 18, width: "100%", maxWidth: 560, maxHeight: "92vh", overflow: "auto" }}>
         <div style={{ padding: "24px 28px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: T.s1, zIndex: 1 }}>
           <div>
             <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>NOVO IMÓVEL</div>
@@ -2306,44 +2327,52 @@ function AddImovelModal({ onSave, onClose, nextId }) {
           </div>
           <button style={{ background: T.s3, border: "none", color: T.muted, borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 18 }} onClick={onClose}>×</button>
         </div>
-        <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 20 }}>
-          <div>
-            <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>IDENTIFICAÇÃO</div>
+        <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 18 }}>
+
+          {/* Campos obrigatórios */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div><label style={S.label}>NOME DO IMÓVEL *</label><input style={S.input} value={form.name} placeholder="Ex: Apartamento Jardins, Sala Faria Lima..." onChange={e=>set("name",e.target.value)} autoFocus /></div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div style={{ gridColumn: "1/-1" }}><div><label style={S.label}>NOME DO IMÓVEL</label><input style={S.input} value={form.name} placeholder="Ex: Apartamento Jardins, Sala Faria Lima..." onChange={e=>set("name",e.target.value)} /></div></div>
-              <div style={{ gridColumn: "1/-1" }}><div><label style={S.label}>ENDEREÇO</label><input style={S.input} value={form.address} placeholder="Ex: Rua Oscar Freire, 1200" onChange={e=>set("address",e.target.value)} /></div></div>
-              <div>
-                <label style={S.label}>BAIRRO</label>
-                <select style={S.sel} value={form.neighborhood} onChange={e => set("neighborhood", e.target.value)}>
-                  {NEIGHBORHOODS.map(n => <option key={n}>{n}</option>)}
-                </select>
-              </div>
-              <div><label style={S.label}>CIDADE</label><select style={S.sel} value={form.city} onChange={e=>set("city",e.target.value)}>{["São Paulo","Campinas","Santo André","Americana"].map(o=><option key={o}>{o}</option>)}</select></div>
+              <div><label style={S.label}>ALUGUEL MENSAL (R$) *</label><input type="number" style={S.input} value={form.rent} placeholder="Ex: 4.500" onChange={e=>set("rent",e.target.value)} /></div>
               <div><label style={S.label}>TIPO</label><select style={S.sel} value={form.type} onChange={e=>set("type",e.target.value)}>{["Residencial","Comercial"].map(o=><option key={o}>{o}</option>)}</select></div>
               <div><label style={S.label}>STATUS</label><select style={S.sel} value={form.status} onChange={e=>set("status",e.target.value)}>{["Ocupado","Vago"].map(o=><option key={o}>{o}</option>)}</select></div>
-              <div><label style={S.label}>ÁREA (m²) *</label><input type="number" style={S.input} value={form.size} placeholder="Ex: 85" onChange={e=>set("size",e.target.value)} /></div>
+              <div>
+                <label style={S.label}>BAIRRO</label>
+                <select style={S.sel} value={form.neighborhood} onChange={e=>set("neighborhood",e.target.value)}>
+                  {NEIGHBORHOODS.map(n=><option key={n}>{n}</option>)}
+                </select>
+              </div>
             </div>
           </div>
-          <div>
-            <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>DADOS FINANCEIROS</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div><label style={S.label}>ALUGUEL MENSAL (R$) *</label><input type="number" style={S.input} value={form.rent} placeholder="Ex: 4500" onChange={e=>set("rent",e.target.value)} /></div>
-              <div><label style={S.label}>DIAS VACÂNCIA/ANO</label><input type="number" style={S.input} value={form.vacancyDays} placeholder="0" onChange={e=>set("vacancyDays",e.target.value)} /></div>
-              <div><label style={S.label}>IPTU ANUAL (R$)</label><input type="number" style={S.input} value={form.iptu} placeholder="Calculado automaticamente" onChange={e=>set("iptu",e.target.value)} /></div>
-              <div><label style={S.label}>MANUTENÇÃO MENSAL (R$)</label><input type="number" style={S.input} value={form.maintMonthly} placeholder="Calculado automaticamente" onChange={e=>set("maintMonthly",e.target.value)} /></div>
-              <div><label style={S.label}>SEGURO ANUAL (R$)</label><input type="number" style={S.input} value={form.insurance} placeholder="Calculado automaticamente" onChange={e=>set("insurance",e.target.value)} /></div>
-              <div><label style={S.label}>TAXA ADM. MENSAL (R$)</label><input type="number" style={S.input} value={form.admin} placeholder="Calculado automaticamente" onChange={e=>set("admin",e.target.value)} /></div>
+
+          {/* Campos opcionais */}
+          <button style={{ background: "none", border: `1px solid ${T.border}`, color: T.muted, borderRadius: 10, padding: "10px 16px", cursor: "pointer", fontFamily: "inherit", fontSize: 13, textAlign: "left", display: "flex", justifyContent: "space-between" }}
+            onClick={() => setShowAdvanced(v => !v)}>
+            <span>Dados adicionais (endereço, área, despesas)</span>
+            <span>{showAdvanced ? "▲ ocultar" : "▼ ver mais"}</span>
+          </button>
+
+          {showAdvanced && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div style={{ gridColumn: "1/-1" }}><label style={S.label}>ENDEREÇO</label><input style={S.input} value={form.address} placeholder="Ex: Rua Oscar Freire, 1200" onChange={e=>set("address",e.target.value)} /></div>
+                <div><label style={S.label}>CIDADE</label><select style={S.sel} value={form.city} onChange={e=>set("city",e.target.value)}>{["São Paulo","Campinas","Santo André","Americana"].map(o=><option key={o}>{o}</option>)}</select></div>
+                <div><label style={S.label}>ÁREA (m²)</label><input type="number" style={S.input} value={form.size} placeholder="Ex: 85" onChange={e=>set("size",e.target.value)} /></div>
+                <div><label style={S.label}>IPTU ANUAL (R$)</label><input type="number" style={S.input} value={form.iptu} placeholder="Auto" onChange={e=>set("iptu",e.target.value)} /></div>
+                <div><label style={S.label}>MANUTENÇÃO MENSAL (R$)</label><input type="number" style={S.input} value={form.maintMonthly} placeholder="Auto" onChange={e=>set("maintMonthly",e.target.value)} /></div>
+                <div><label style={S.label}>SEGURO ANUAL (R$)</label><input type="number" style={S.input} value={form.insurance} placeholder="Auto" onChange={e=>set("insurance",e.target.value)} /></div>
+                <div><label style={S.label}>TAXA ADM. MENSAL (R$)</label><input type="number" style={S.input} value={form.admin} placeholder="Auto" onChange={e=>set("admin",e.target.value)} /></div>
+                <div><label style={S.label}>DIAS VAGOS/ANO</label><input type="number" style={S.input} value={form.vacancyDays} placeholder="0" onChange={e=>set("vacancyDays",e.target.value)} /></div>
+              </div>
+              <div style={{ padding: 12, background: T.s2, borderRadius: 8 }}>
+                <div style={{ color: T.dim, fontSize: 12 }}>💡 Despesas não preenchidas são calculadas automaticamente com base nos benchmarks do bairro.</div>
+              </div>
             </div>
-          </div>
-          <div style={{ padding: 14, background: T.s2, borderRadius: 10, border: `1px solid ${T.border}` }}>
-            <div style={{ color: T.muted, fontSize: 12 }}>
-              💡 Campos marcados com * são obrigatórios. Os demais são calculados automaticamente com base nos benchmarks do bairro selecionado.
-            </div>
-          </div>
+          )}
         </div>
         <div style={{ padding: "16px 28px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 12, justifyContent: "flex-end" }}>
           <button style={S.btnGhost} onClick={onClose}>Cancelar</button>
-          <button style={{ ...S.btn, opacity: (!form.size || !form.rent) ? 0.5 : 1 }} onClick={handleSave}>+ Adicionar Imóvel</button>
+          <button style={{ ...S.btn, opacity: !canSave ? 0.5 : 1 }} onClick={handleSave} disabled={!canSave}>+ Adicionar Imóvel</button>
         </div>
       </div>
     </div>
@@ -2542,7 +2571,7 @@ export default function App() {
   const nextId = props.length > 0 ? Math.max(...props.map(p => p.id)) + 1 : 1;
 
   const content = {
-    dashboard: <PageDashboard PROPS={props} onNav={nav} onProp={setSelectedProp} />,
+    dashboard: <PageDashboard PROPS={props} onNav={nav} onProp={setSelectedProp} onAdd={() => setAddingImovel(true)} />,
     noi:       <PageNOI PROPS={props} onProp={setSelectedProp} onNav={nav} onEdit={handleEdit} onObras={(prop) => setObrasProps(props.find(p => p.id === prop.id) || prop)} onDelete={handleDeleteImovel} onAdd={() => setAddingImovel(true)} />,
     obras:     <PageObras PROPS={props} onUpdateProps={handleUpdateProps} />,
     mercado:   <PageValorMercado PROPS={props} onUpdateProps={handleUpdateProps} />,
