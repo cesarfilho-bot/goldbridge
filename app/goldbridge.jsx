@@ -1,4 +1,11 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+"use client";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 import {
   Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, AreaChart, Area, Cell, PieChart, Pie,
@@ -1931,20 +1938,75 @@ Exemplos do que você pode me perguntar:
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function Login({ onLogin }) {
-  const [email, setEmail] = useState("gestao@familyoffice.com.br"), [pw, setPw] = useState("");
+  const [mode, setMode] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const handleLogin = async () => {
+    setLoading(true); setError("");
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) setError(error.message === "Invalid login credentials" ? "Email ou senha incorretos." : error.message);
+    else onLogin(data.user);
+    setLoading(false);
+  };
+  const handleRegister = async () => {
+    if (!name) { setError("Digite seu nome."); return; }
+    if (password.length < 6) { setError("Senha deve ter no mínimo 6 caracteres."); return; }
+    setLoading(true); setError("");
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
+    if (error) setError(error.message);
+    else if (data.user && !data.user.confirmed_at) setSuccess("Verifique seu email para confirmar a conta.");
+    else onLogin(data.user);
+    setLoading(false);
+  };
+  const handleForgot = async () => {
+    setLoading(true); setError("");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    if (error) setError(error.message);
+    else setSuccess("Email de recuperação enviado!");
+    setLoading(false);
+  };
+
   return (
-    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", position:"relative", overflow:"hidden" }}>
+    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", position:"relative", overflow:"hidden", padding:24 }}>
       <div style={{ position:"absolute", inset:0, background:`radial-gradient(ellipse at 30% 50%, ${T.goldGlow} 0%, transparent 60%)` }} />
-      <div style={{ width:440, position:"relative", zIndex:1 }}>
-        <div style={{ textAlign:"center", marginBottom:40 }}><div style={{ color:T.gold, fontSize:32, fontWeight:900, letterSpacing:-1 }}>GOLDBRIDGE</div><div style={{ color:T.dim, fontSize:11, letterSpacing:4, marginTop:4 }}>BRASIL · PORTFOLIO INTELLIGENCE</div></div>
-        <div style={{ background:T.s1, border:`1px solid ${T.border}`, borderRadius:16, padding:40 }}>
-          <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-            <div><div style={S.label}>E-MAIL</div><input style={S.input} value={email} onChange={e=>setEmail(e.target.value)} /></div>
-            <div><div style={S.label}>SENHA</div><input type="password" placeholder="Qualquer senha para demo" style={S.input} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&onLogin()} /></div>
-            <button style={{ ...S.btn, width:"100%", padding:14, fontSize:15, marginTop:8 }} onClick={onLogin}>Entrar no Portfólio</button>
-          </div>
-          <div style={{ textAlign:"center", color:T.dim, fontSize:11, marginTop:20, lineHeight:1.6 }}>Acesso demonstrativo · {INITIAL_PROPS.length} imóveis<br/>Dados sintéticos baseados em benchmarks reais</div>
+      <div style={{ width:"100%", maxWidth:420, position:"relative", zIndex:1 }}>
+        <div style={{ textAlign:"center", marginBottom:40 }}>
+          <div style={{ color:T.gold, fontSize:32, fontWeight:900, letterSpacing:-1 }}>GOLDBRIDGE</div>
+          <div style={{ color:T.dim, fontSize:11, letterSpacing:4, marginTop:4 }}>BRASIL · PORTFOLIO INTELLIGENCE</div>
         </div>
+        <div style={{ background:T.s1, border:`1px solid ${T.borderMid}`, borderRadius:18, padding:"32px 28px" }}>
+          <div style={{ color:T.text, fontSize:20, fontWeight:800, marginBottom:4 }}>
+            {mode==="login"?"Entrar":mode==="register"?"Criar conta":"Recuperar senha"}
+          </div>
+          <div style={{ color:T.muted, fontSize:13, marginBottom:24 }}>
+            {mode==="login"?"Acesse seu portfólio":mode==="register"?"Comece a gerenciar seus imóveis":"Enviaremos um link para seu email"}
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            {mode==="register" && <input style={S.input} placeholder="Seu nome" value={name} onChange={e=>setName(e.target.value)} />}
+            <input style={S.input} placeholder="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} />
+            {mode!=="forgot" && <input style={S.input} placeholder="Senha" type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&(mode==="login"?handleLogin():handleRegister())} />}
+            {error && <div style={{ color:T.red, fontSize:13, padding:"10px 14px", background:T.redDim+"33", borderRadius:8 }}>{error}</div>}
+            {success && <div style={{ color:T.green, fontSize:13, padding:"10px 14px", background:T.green+"22", borderRadius:8 }}>{success}</div>}
+            <button style={{ ...S.btn, width:"100%", padding:14, fontSize:15, opacity:loading?0.7:1 }} onClick={mode==="login"?handleLogin:mode==="register"?handleRegister:handleForgot} disabled={loading}>
+              {loading?"Aguarde...":mode==="login"?"Entrar":mode==="register"?"Criar conta":"Enviar email"}
+            </button>
+          </div>
+          <div style={{ marginTop:20, display:"flex", flexDirection:"column", gap:10, alignItems:"center" }}>
+            {mode==="login" && <>
+              <button style={{ background:"none", border:"none", color:T.muted, fontSize:13, cursor:"pointer", fontFamily:"inherit" }} onClick={()=>{setMode("forgot");setError("");setSuccess("");}}>Esqueci minha senha</button>
+              <div style={{ color:T.dim, fontSize:13 }}>Não tem conta?{" "}
+                <button style={{ background:"none", border:"none", color:T.gold, fontSize:13, cursor:"pointer", fontFamily:"inherit", fontWeight:700 }} onClick={()=>{setMode("register");setError("");setSuccess("");}}>Criar conta gratuita</button>
+              </div>
+            </>}
+            {mode!=="login" && <button style={{ background:"none", border:"none", color:T.muted, fontSize:13, cursor:"pointer", fontFamily:"inherit" }} onClick={()=>{setMode("login");setError("");setSuccess("");}}>← Voltar para login</button>}
+          </div>
+        </div>
+        <div style={{ textAlign:"center", marginTop:20, color:T.dim, fontSize:11 }}>Seus dados são privados e criptografados.</div>
       </div>
     </div>
   );
@@ -2310,65 +2372,186 @@ function DeleteConfirmModal({ prop, onConfirm, onClose }) {
 }
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
-function loadProps() {
-  try {
-    const saved = localStorage.getItem("goldbridge_props");
-    if (saved) return JSON.parse(saved);
-  } catch {}
-  return INITIAL_PROPS;
+function recalcProp(prop, BENCHMARKS) {
+  const bm = BENCHMARKS[prop.city]?.[prop.type] || BENCHMARKS["São Paulo"][prop.type] || BENCHMARKS["São Paulo"]["Residencial"];
+  const annualRent = (prop.rent || 0) * 12;
+  const descontoAnual = (prop.descontoAluguel || 0) * 12;
+  const vacancyCost = Math.round(((prop.rent || 0) / 30) * (prop.vacancyDays || 0));
+  const totalIncome = annualRent - vacancyCost - descontoAnual;
+  const condoAnnual = prop.hasCondominio ? ((prop.condoFee||0)+(prop.fundoReserva||0)+(prop.chamadaExtra||0))*12 : 0;
+  const totalExpenses = (prop.iptu||0) + (prop.maintMonthly||0)*12 + (prop.insurance||0) + (prop.admin||0)*12 + condoAnnual;
+  const noi = totalIncome - totalExpenses;
+  const noiPct = noi / (totalIncome || 1);
+  const iptuBenchmark = Math.round(bm.iptu_m2 * (prop.size||0));
+  const iptuDelta = iptuBenchmark > 0 ? Math.round(((prop.iptu||0) - iptuBenchmark) / iptuBenchmark * 100) : 0;
+  const maintBenchmark = Math.round(bm.maintenance_annual_m2 * (prop.size||0) / 12);
+  const maintDelta = maintBenchmark > 0 ? Math.round(((prop.maintMonthly||0) - maintBenchmark) / maintBenchmark * 100) : 0;
+  const vacancyDelta = (prop.vacancyDays||0) - bm.vacancy_days;
+  let leakage = 0;
+  if (prop.vacancyDays > bm.vacancy_days) leakage += Math.min(35, vacancyDelta * 0.5);
+  if (maintDelta > 30) leakage += Math.min(20, maintDelta * 0.4);
+  if (noiPct < 0.5) leakage += 20;
+  leakage = Math.min(98, Math.max(2, Math.round(leakage)));
+  return { ...prop, vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage };
 }
 
 export default function App() {
-  const [logged, setLogged] = useState(false);
+  const [user, setUser] = useState(undefined); // undefined = loading, null = not logged
   const [page, setPage] = useState("dashboard");
   const [selectedProp, setSelectedProp] = useState(null);
-  const [props, setPropsState] = useState(loadProps);
+  const [props, setPropsRaw] = useState([]);
+  const [portfolioId, setPortfolioId] = useState(null);
+  const [dbLoading, setDbLoading] = useState(false);
   const [editingProp, setEditingProp] = useState(null);
   const [obrasProps, setObrasProps] = useState(null);
   const [addingImovel, setAddingImovel] = useState(false);
   const [deletingProp, setDeletingProp] = useState(null);
 
-  const setProps = (updater) => {
-    setPropsState(prev => {
+  // Check session on mount
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Load data when user logs in
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      setDbLoading(true);
+      // Get or create portfolio
+      let { data: port } = await supabase.from("portfolios").select("id").eq("user_id", user.id).single();
+      if (!port) {
+        const { data: newPort } = await supabase.from("portfolios").insert({ user_id: user.id, name: "Meu Portfólio" }).select("id").single();
+        port = newPort;
+      }
+      setPortfolioId(port.id);
+      // Load imoveis
+      const { data: rows } = await supabase.from("imoveis").select("*").eq("portfolio_id", port.id).order("created_at");
+      if (rows && rows.length > 0) {
+        const mapped = rows.map(r => recalcProp({
+          id: r.id, name: r.name, address: r.address||"", neighborhood: r.neighborhood||"",
+          city: r.city||"São Paulo", type: r.type||"Residencial", status: r.status||"Ocupado",
+          size: r.size||0, rent: r.rent||0, iptu: r.iptu||0, maintMonthly: r.maint_monthly||0,
+          insurance: r.insurance||0, admin: r.admin||0, vacancyDays: r.vacancy_days||0,
+          hasCondominio: r.has_condominio||false, condoFee: r.condo_fee||0,
+          fundoReserva: r.fundo_reserva||0, chamadaExtra: r.chamada_extra||0,
+          descontoAluguel: r.desconto_aluguel||0, contratoAnos: r.contrato_anos||1,
+          contratoInicio: r.contrato_inicio||"", marketValueManual: r.market_value_manual||0,
+          valorMercado: r.valor_mercado||0, valorCompra: r.valor_compra||0, anoCompra: r.ano_compra||null,
+          obras: r.obras||[], prestadores: r.prestadores||[], pagamentos: r.pagamentos||{},
+          monthlyData: r.monthly_data||[], diaVencimento: r.dia_vencimento||10,
+          proximoReajuste: r.proximo_reajuste||"",
+        }, BENCHMARKS));
+        setPropsRaw(mapped);
+      }
+      setDbLoading(false);
+    })();
+  }, [user]);
+
+  const toDB = (prop) => ({
+    portfolio_id: portfolioId, user_id: user.id,
+    name: prop.name, address: prop.address, neighborhood: prop.neighborhood,
+    city: prop.city, type: prop.type, status: prop.status, size: prop.size,
+    rent: prop.rent, iptu: prop.iptu, maint_monthly: prop.maintMonthly,
+    insurance: prop.insurance, admin: prop.admin, vacancy_days: prop.vacancyDays,
+    has_condominio: prop.hasCondominio||false, condo_fee: prop.condoFee||0,
+    fundo_reserva: prop.fundoReserva||0, chamada_extra: prop.chamadaExtra||0,
+    desconto_aluguel: prop.descontoAluguel||0, contrato_anos: prop.contratoAnos||1,
+    contrato_inicio: prop.contratoInicio||null, market_value_manual: prop.marketValueManual||0,
+    valor_mercado: prop.valorMercado||0, valor_compra: prop.valorCompra||0, ano_compra: prop.anoCompra||null,
+    obras: prop.obras||[], prestadores: prop.prestadores||[], pagamentos: prop.pagamentos||{},
+    monthly_data: prop.monthlyData||[], dia_vencimento: prop.diaVencimento||10,
+  });
+
+  const setProps = useCallback((updater) => {
+    setPropsRaw(prev => {
       const next = typeof updater === "function" ? updater(prev) : updater;
-      try { localStorage.setItem("goldbridge_props", JSON.stringify(next)); } catch {}
       return next;
     });
-  };
+  }, []);
 
-  const handleAddImovel = (newProp) => {
-    setProps(prev => [...prev, newProp]);
+  const handleAddImovel = async (newProp) => {
+    const { data } = await supabase.from("imoveis").insert(toDB(newProp)).select().single();
+    if (data) {
+      const withId = recalcProp({ ...newProp, id: data.id }, BENCHMARKS);
+      setPropsRaw(prev => [...prev, withId]);
+    }
     setAddingImovel(false);
   };
 
   const handleDeleteImovel = (prop) => setDeletingProp(prop);
 
-  const confirmDelete = () => {
-    setProps(prev => prev.filter(p => p.id !== deletingProp.id));
+  const confirmDelete = async () => {
+    await supabase.from("imoveis").delete().eq("id", deletingProp.id).eq("user_id", user.id);
+    setPropsRaw(prev => prev.filter(p => p.id !== deletingProp.id));
     setDeletingProp(null);
     if (selectedProp?.id === deletingProp.id) { setSelectedProp(null); setPage("noi"); }
   };
 
-  if (!logged) return <Login onLogin={() => setLogged(true)} />;
+  const handleSaveEdit = async (updatedProp) => {
+    const recalced = recalcProp(updatedProp, BENCHMARKS);
+    await supabase.from("imoveis").update(toDB(recalced)).eq("id", recalced.id).eq("user_id", user.id);
+    setPropsRaw(prev => prev.map(p => p.id === recalced.id ? recalced : p));
+    setEditingProp(null);
+    if (selectedProp?.id === recalced.id) setSelectedProp(recalced);
+  };
+
+  const handleSaveObras = async (updatedProp) => {
+    await supabase.from("imoveis").update({ obras: updatedProp.obras||[], prestadores: updatedProp.prestadores||[] }).eq("id", updatedProp.id).eq("user_id", user.id);
+    setPropsRaw(prev => prev.map(p => p.id === updatedProp.id ? updatedProp : p));
+    if (selectedProp?.id === updatedProp.id) setSelectedProp(updatedProp);
+  };
+
+  const handleUpdateProps = async (newProps) => {
+    // Find changed props and save them
+    newProps.forEach(async np => {
+      const old = props.find(p => p.id === np.id);
+      if (old && JSON.stringify(old.pagamentos) !== JSON.stringify(np.pagamentos)) {
+        await supabase.from("imoveis").update({ pagamentos: np.pagamentos }).eq("id", np.id).eq("user_id", user.id);
+      }
+      if (old && JSON.stringify(old.valorMercado) !== JSON.stringify(np.valorMercado)) {
+        await supabase.from("imoveis").update({ valor_mercado: np.valorMercado, valor_compra: np.valorCompra, ano_compra: np.anoCompra }).eq("id", np.id).eq("user_id", user.id);
+      }
+    });
+    setPropsRaw(newProps);
+  };
+
+  // Loading state
+  if (user === undefined) return (
+    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ color:T.gold, fontSize:22, fontWeight:800 }}>GOLDBRIDGE</div>
+    </div>
+  );
+
+  if (!user) return <Login onLogin={(u) => setUser(u)} />;
+
+  if (dbLoading) return (
+    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}>
+      <div style={{ color:T.gold, fontSize:22, fontWeight:800 }}>GOLDBRIDGE</div>
+      <div style={{ color:T.muted, fontSize:14 }}>Carregando seu portfólio...</div>
+    </div>
+  );
 
   const nav = (p) => { setPage(p); if (p !== "detail") setSelectedProp(null); };
   const handleEdit = (prop) => setEditingProp(props.find(p => p.id === prop.id) || prop);
-  const handleSaveEdit = (updatedProp) => { setProps(prev => prev.map(p => p.id === updatedProp.id ? updatedProp : p)); setEditingProp(null); if (selectedProp?.id === updatedProp.id) setSelectedProp(updatedProp); };
-  const handleObras = (prop) => setObrasProps(props.find(p => p.id === prop.id) || prop);
-  const handleSaveObras = (updatedProp) => { setProps(prev => prev.map(p => p.id === updatedProp.id ? updatedProp : p)); if (selectedProp?.id === updatedProp.id) setSelectedProp(updatedProp); };
   const nextId = props.length > 0 ? Math.max(...props.map(p => p.id)) + 1 : 1;
 
   const content = {
     dashboard: <PageDashboard PROPS={props} onNav={nav} onProp={setSelectedProp} />,
-    noi:       <PageNOI PROPS={props} onProp={setSelectedProp} onNav={nav} onEdit={handleEdit} onObras={handleObras} onDelete={handleDeleteImovel} onAdd={() => setAddingImovel(true)} />,
-    obras:     <PageObras PROPS={props} onUpdateProps={setProps} />,
-    mercado:   <PageValorMercado PROPS={props} onUpdateProps={setProps} />,
+    noi:       <PageNOI PROPS={props} onProp={setSelectedProp} onNav={nav} onEdit={handleEdit} onObras={(prop) => setObrasProps(props.find(p => p.id === prop.id) || prop)} onDelete={handleDeleteImovel} onAdd={() => setAddingImovel(true)} />,
+    obras:     <PageObras PROPS={props} onUpdateProps={handleUpdateProps} />,
+    mercado:   <PageValorMercado PROPS={props} onUpdateProps={handleUpdateProps} />,
     leakage:   <PageLeakage PROPS={props} />,
     decision:  <PageDecision PROPS={props} onProp={setSelectedProp} onNav={nav} />,
-    detail:    <PageDetail prop={selectedProp} onBack={() => nav("noi")} onEdit={handleEdit} onObras={handleObras} onDelete={handleDeleteImovel} />,
+    detail:    <PageDetail prop={selectedProp} onBack={() => nav("noi")} onEdit={handleEdit} onObras={(prop) => setObrasProps(props.find(p => p.id === prop.id) || prop)} onDelete={handleDeleteImovel} />,
     report:    <PageReport PROPS={props} />,
     ia:        <PageIA PROPS={props} />,
-    pagamentos: <PagePagamentos PROPS={props} onUpdateProps={setProps} />,
+    pagamentos: <PagePagamentos PROPS={props} onUpdateProps={handleUpdateProps} />,
   }[page] || <PageDashboard PROPS={props} onNav={nav} onProp={setSelectedProp} />;
 
   return (
@@ -2397,8 +2580,8 @@ export default function App() {
           </div>
           <div style={{ margin: "0 12px 16px", padding: "10px 14px", background: T.s1, borderRadius: 10, border: `1px solid ${T.border}` }}>
             <div style={{ color: T.dim, fontSize: 10, letterSpacing: 1, marginBottom: 4 }}>PORTFÓLIO ATIVO</div>
-            <div style={{ color: T.text, fontSize: 13, fontWeight: 700 }}>Family Office SP</div>
-            <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{props.length} imóveis · Mix res/com</div>
+            <div style={{ color: T.text, fontSize: 13, fontWeight: 700 }}>{user?.user_metadata?.full_name || "Meu Portfólio"}</div>
+            <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{props.length} imóveis</div>
           </div>
           <nav style={{ flex: 1 }}>
             {NAV.map(n => {
@@ -2412,11 +2595,9 @@ export default function App() {
             })}
           </nav>
           <div style={{ padding: "14px 22px", borderTop: `1px solid ${T.border}` }}>
-            <div style={{ color: T.dim, fontSize: 11, marginBottom: 4 }}>gestao@familyoffice.com.br</div>
+            <div style={{ color: T.dim, fontSize: 11, marginBottom: 4 }}>{user?.email}</div>
             <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-              <button style={{ color: T.dim, fontSize: 11, background: "none", border: "none", cursor: "pointer", padding: 0 }} onClick={() => setLogged(false)}>Sair →</button>
-              <span style={{ color: T.border }}>|</span>
-              <button style={{ color: T.redDim, fontSize: 11, background: "none", border: "none", cursor: "pointer", padding: 0 }} onClick={() => { if(window.confirm("Resetar portfólio para os dados demo?")) { localStorage.removeItem("goldbridge_props"); window.location.reload(); } }}>Reset demo</button>
+              <button style={{ color: T.dim, fontSize: 11, background: "none", border: "none", cursor: "pointer", padding: 0 }} onClick={() => supabase.auth.signOut()}>Sair →</button>
             </div>
           </div>
         </div>
