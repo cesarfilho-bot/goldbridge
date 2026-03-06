@@ -221,6 +221,7 @@ function computePort(props) {
     total: props.length,
   };
   PORT.noiPct = PORT.noi / PORT.receita;
+  PORT.lucroLiquido = props.reduce((s, p) => s + (p.lucroLiquido||p.noi), 0);
   PORT.leakageScore = Math.round(props.reduce((s, p) => s + p.leakage, 0) / props.length);
   return PORT;
 }
@@ -688,7 +689,7 @@ function ObrasPorImovel({ prop, onBack, onSave, bmForTipo }) {
         </div>
       </div>
       <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
-        <div style={S.card}><div style={{ color:T.muted, fontSize:10, fontWeight:700, letterSpacing:1, marginBottom:6 }}>NOI ANUAL ATUAL</div><div style={{ color:prop.noi>0?T.green:T.red, fontSize:22, fontWeight:800, ...S.mono }}>{fmt.brlK(prop.noi)}</div><div style={{ color:T.dim, fontSize:11, marginTop:4 }}>Margem: {fmt.pct(prop.noiPct)}</div></div>
+        <div style={S.card}><div style={{ color:T.muted, fontSize:10, fontWeight:700, letterSpacing:1, marginBottom:6 }}>LUCRO LÍQUIDO ANUAL</div><div style={{ color:(prop.lucroLiquido||prop.noi)>0?T.green:T.red, fontSize:22, fontWeight:800, ...S.mono }}>{fmt.brlK(prop.lucroLiquido||prop.noi)}</div><div style={{ color:T.dim, fontSize:11, marginTop:4 }}>Margem: {fmt.pct(prop.noiPct)}</div></div>
         <div style={S.card}><div style={{ color:T.muted, fontSize:10, fontWeight:700, letterSpacing:1, marginBottom:6 }}>TOTAL ORÇADO</div><div style={{ color:T.gold, fontSize:22, fontWeight:800, ...S.mono }}>{fmt.brlK(totalOrc)}</div><div style={{ color:T.dim, fontSize:11, marginTop:4 }}>{obras.length} obra(s)</div></div>
         <div style={{ ...S.card, border:`1px solid ${varTotal>0?T.red+"40":T.border}` }}><div style={{ color:T.muted, fontSize:10, fontWeight:700, letterSpacing:1, marginBottom:6 }}>VARIAÇÃO</div><div style={{ color:varTotal>0?T.red:T.green, fontSize:22, fontWeight:800, ...S.mono }}>{varTotal>0?"+":""}{fmt.brlK(varTotal)}</div><div style={{ color:T.dim, fontSize:11, marginTop:4 }}>{totalOrc>0?`${((varTotal/totalOrc)*100).toFixed(1)}% do orçado`:"—"}</div></div>
       </div>
@@ -1314,7 +1315,7 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
 
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
         <KPI label="Receita Bruta" value={fmt.brlK(PORT.receita)} sub="últimos 12 meses" />
-        <KPI label="Lucro Operacional" value={fmt.brlK(PORT.noi)} sub={`Margem: ${fmt.pct(PORT.noiPct)}`} color={T.green} delta={3.2} />
+        <KPI label="Lucro Líquido" value={fmt.brlK(PORT.lucroLiquido||PORT.noi)} sub={`Margem: ${fmt.pct(PORT.noiPct)}`} color={T.green} delta={3.2} />
         <KPI label="Custo Vacância" value={fmt.brlK(PORT.vacancyCost)} color={T.amber} sub={`${PROPS.filter(p => p.status === "Vago").length} imóveis vagos`} warn />
         <div style={{ ...S.card, minWidth: 180, flex: 1, cursor: "pointer" }} onClick={() => onNav("mercado")}>
           <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>VALOR DE MERCADO EST.</div>
@@ -1333,8 +1334,8 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
         <div style={S.card}>
-          <div style={{ color: T.text, fontWeight: 700, marginBottom: 4, fontSize: 15 }}>Lucro Operacional Mensal — 2024</div>
-          <div style={{ color: T.muted, fontSize: 12, marginBottom: 16 }}>Receita vs Lucro Operacional</div>
+          <div style={{ color: T.text, fontWeight: 700, marginBottom: 4, fontSize: 15 }}>Resultado Mensal — 2024</div>
+          <div style={{ color: T.muted, fontSize: 12, marginBottom: 16 }}>Receita vs Lucro Líquido</div>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={PORT_MONTHLY}>
               <defs>
@@ -1426,7 +1427,7 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
           <thead>
             <tr style={{ background: T.s2 }}>
               <Th col="id" label="#" /><th style={S.th}>Imóvel / Endereço</th><th style={S.th}>Tipo</th><th style={S.th}>Status</th>
-              <Th col="rent" label="Aluguel/mês" /><Th col="totalExpenses" label="Despesas" /><Th col="ir" label="IR/ano" /><Th col="noi" label="Lucro Op. 12m" /><Th col="noiPct" label="Margem" />
+              <Th col="rent" label="Aluguel/mês" /><Th col="totalExpenses" label="Despesas" /><Th col="ir" label="IR/ano" /><Th col="lucroLiquido" label="Lucro Líquido 12m" /><Th col="noiPct" label="Margem" />
               <Th col="vacancyDays" label="Vacância" /><Th col="leakage" label="Risco" /><th style={S.th}>Obras</th><th style={S.th}>Ações</th>
             </tr>
           </thead>
@@ -1449,7 +1450,7 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
                       <span style={{ color: T.dim, fontSize: 10, marginLeft: 4 }}>{isExpanded ? "▲" : "▼"}</span>
                     </td>
                     <td style={{ ...S.td, ...S.mono, color: T.red }} onClick={() => { onProp(p); onNav("detail"); }}>{p.ir > 0 ? fmt.brl(p.ir) : <span style={{ color: T.dim }}>—</span>}</td>
-                    <td style={{ ...S.td, ...S.mono, color: p.noi > 0 ? T.green : T.red, fontWeight: 700 }} onClick={() => { onProp(p); onNav("detail"); }}>{fmt.brl(p.noi)}</td>
+                    <td style={{ ...S.td, ...S.mono, color: (p.lucroLiquido||p.noi) > 0 ? T.green : T.red, fontWeight: 700 }} onClick={() => { onProp(p); onNav("detail"); }}>{fmt.brl(p.lucroLiquido||p.noi)}</td>
                     <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={{ color: p.noiPct > 0.55 ? T.green : p.noiPct > 0.4 ? T.amber : T.red, fontSize: 12, fontWeight: 700, ...S.mono }}>{fmt.pct(p.noiPct)}</span></td>
                     <td style={{ ...S.td, color: p.vacancyDays > p.vacancyBenchmark ? T.amber : T.muted }} onClick={() => { onProp(p); onNav("detail"); }}>{p.vacancyDays}d</td>
                     <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={{ color: p.leakage > 60 ? T.red : p.leakage > 30 ? T.amber : T.green, fontSize: 13, fontWeight: 800, ...S.mono }}>{p.leakage}</span></td>
@@ -1626,7 +1627,7 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete }) {
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
         <KPI label="Receita 12m" value={fmt.brlK(prop.totalIncome)} size="md" />
         <KPI label="Despesas 12m" value={fmt.brlK(prop.totalExpenses)} color={T.red} size="md" />
-        <KPI label="Lucro Operacional 12m" value={fmt.brlK(prop.noi)} sub={`Margem: ${fmt.pct(prop.noiPct)}`} color={prop.noi > 0 ? T.green : T.red} size="md" />
+        <KPI label="Lucro Líquido 12m" value={fmt.brlK(prop.lucroLiquido||prop.noi)} sub={`Margem: ${fmt.pct(prop.noiPct)}`} color={(prop.lucroLiquido||prop.noi) > 0 ? T.green : T.red} size="md" />
         <KPI label="Vacância" value={`${prop.vacancyDays}d`} sub={`Benchmark: ${prop.vacancyBenchmark}d`} color={prop.vacancyDays > prop.vacancyBenchmark ? T.amber : T.muted} size="md" warn={prop.vacancyDays > prop.vacancyBenchmark} />
       </div>
       {obrasCount > 0 && (
@@ -1734,13 +1735,13 @@ function PageDecision({ PROPS, onProp, onNav }) {
       </div>
       <div style={{ ...S.card, padding:0, overflow:"auto" }}>
         <table style={{ width:"100%", borderCollapse:"collapse" }}>
-          <thead><tr style={{ background:T.s2 }}>{["Imóvel","Tipo","Lucro Operacional 12m","Manter","Vender","Retrofit","Reposicionar","RECOMENDAÇÃO"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+          <thead><tr style={{ background:T.s2 }}>{["Imóvel","Tipo","Lucro Líquido 12m","Manter","Vender","Retrofit","Reposicionar","RECOMENDAÇÃO"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
           <tbody>
             {filtered.map(p=>{ const d=p.decision, rec=DECISION_META[d.recommendation]; return (
               <tr key={p.id} style={{ cursor:"pointer" }} onMouseEnter={e=>e.currentTarget.style.background=T.s2} onMouseLeave={e=>e.currentTarget.style.background="transparent"} onClick={()=>setSelected(p)}>
                 <td style={S.td}><div style={{ color:T.goldBright, fontWeight:600, fontSize:13 }}>{p.name}</div><div style={{ color:T.dim, fontSize:11 }}>{p.neighborhood}</div></td>
                 <td style={S.td}><span style={S.badge(p.type==="Comercial"?T.blue:T.teal)}>{p.type}</span></td>
-                <td style={{ ...S.td, ...S.mono, color:p.noi>0?T.green:T.red, fontWeight:700 }}>{fmt.brlK(p.noi)}</td>
+                <td style={{ ...S.td, ...S.mono, color:(p.lucroLiquido||p.noi)>0?T.green:T.red, fontWeight:700 }}>{fmt.brlK(p.lucroLiquido||p.noi)}</td>
                 {[{ score:d.keepScore,color:T.green },{ score:d.sellScore,color:T.red },{ score:d.retroScore,color:T.amber },{ score:d.reposScore,color:T.blue }].map(({score,color},i)=>(
                   <td key={i} style={{ ...S.td, textAlign:"center" }}><ScoreRing score={score} color={color} size={44} /></td>
                 ))}
@@ -1803,7 +1804,7 @@ function PageReport({ PROPS }) {
   const download = () => {
     const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${name} — Relatório</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Georgia',serif;color:#1a1a1a;padding:48px;max-width:900px;margin:0 auto}.header{display:flex;justify-content:space-between;padding-bottom:24px;border-bottom:3px solid #C8A84B;margin-bottom:32px}.logo{font-size:22px;font-weight:900;color:#C8A84B}h2{font-size:14px;color:#333;margin:28px 0 12px;padding-bottom:6px;border-bottom:1px solid #e5e5e5;text-transform:uppercase;letter-spacing:1px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}.kpi{background:#f8f6f0;border:1px solid #e8e0cc;border-radius:8px;padding:14px}.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:4px}.kpi-value{font-size:18px;font-weight:700;font-family:'Courier New',monospace}.green{color:#1a8a6a}.red{color:#c0392b}.amber{color:#d4890a}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#f0ede4;text-align:left;padding:8px 10px;border:1px solid #ddd;font-size:10px;text-transform:uppercase}td{padding:8px 10px;border:1px solid #eee;font-family:'Courier New',monospace}tr:nth-child(even) td{background:#fafaf8}.footer{margin-top:40px;padding-top:14px;border-top:1px solid #ddd;font-size:10px;color:#999;display:flex;justify-content:space-between}</style></head><body>
 <div class="header"><div><div class="logo">GOLDBRIDGE</div><div style="font-size:13px;font-weight:700;margin-top:6px">${name}</div></div><div style="text-align:right;font-size:12px;color:#666"><div>Jan–Dez 2024</div><div>Gerado: ${fmt.date()}</div><div>${PROPS.length} imóveis</div></div></div>
-<h2>Resumo Executivo</h2><div class="kpis"><div class="kpi"><div class="kpi-label">Receita Bruta</div><div class="kpi-value">${fmt.brlK(PORT.receita)}</div></div><div class="kpi"><div class="kpi-label">Despesas</div><div class="kpi-value red">${fmt.brlK(PORT.despesas)}</div></div><div class="kpi"><div class="kpi-label">NOI</div><div class="kpi-value green">${fmt.brlK(PORT.noi)}</div></div><div class="kpi"><div class="kpi-label">Valor da Carteira Est.</div><div class="kpi-value amber">${fmt.brlK(totalValorMercado)}</div></div></div>
+<h2>Resumo Executivo</h2><div class="kpis"><div class="kpi"><div class="kpi-label">Receita Bruta</div><div class="kpi-value">${fmt.brlK(PORT.receita)}</div></div><div class="kpi"><div class="kpi-label">Despesas</div><div class="kpi-value red">${fmt.brlK(PORT.despesas)}</div></div><div class="kpi"><div class="kpi-label">Lucro Líquido</div><div class="kpi-value green">${fmt.brlK(PORT.noi)}</div></div><div class="kpi"><div class="kpi-label">Valor da Carteira Est.</div><div class="kpi-value amber">${fmt.brlK(totalValorMercado)}</div></div></div>
 <h2>Lucro Operacional Mensal</h2><table><tr><th>Mês</th><th>Receita</th><th>Despesas</th><th>NOI</th><th>Margem</th></tr>${PORT_MONTHLY.map(m=>`<tr><td>${m.month}/2024</td><td>${fmt.brl(m.receita)}</td><td style="color:#c0392b">${fmt.brl(m.despesas)}</td><td style="color:${m.noi>=0?"#1a8a6a":"#c0392b"};font-weight:700">${fmt.brl(m.noi)}</td><td>${fmt.pct(m.noi/m.receita)}</td></tr>`).join("")}</table>
 ${totalObras>0?`<h2>Obras Cadastradas</h2><table><tr><th>Imóvel</th><th>Obra</th><th>Tipo</th><th>Status</th><th>Orçado</th><th>Executado</th></tr>${PROPS.flatMap(p=>(p.obras||[]).map(o=>`<tr><td>${p.name}</td><td>${o.descricao}</td><td>${o.tipo}</td><td>${o.status}</td><td>${fmt.brl(o.orcado)}</td><td>${fmt.brl(o.executado)}</td></tr>`)).join("")}</table>`:""}
 <h2>Alertas</h2>${INSIGHTS.map(ins=>`<div style="margin-bottom:12px;padding:12px;background:#fff9f0;border-left:4px solid #C8A84B;border-radius:6px"><strong>${ins.icon} ${ins.title}</strong><p style="font-size:12px;color:#555;margin-top:4px">${ins.description}</p><p style="font-size:12px;color:#c0392b;font-weight:700;margin-top:2px">Impacto: ${fmt.brl(ins.impactMin)}–${fmt.brl(ins.impactMax)}/ano</p></div>`).join("")}
@@ -2547,19 +2548,24 @@ export default function App() {
   }, []);
 
   // Load data when user logs in
+  const loadedRef = useRef(false);
   useEffect(() => {
-    if (!user) return;
+    if (!user || loadedRef.current) return;
+    loadedRef.current = true;
     (async () => {
       setDbLoading(true);
       // Get or create portfolio
-      let { data: port } = await supabase.from("portfolios").select("id").eq("user_id", user.id).single();
+      let { data: port } = await supabase.from("portfolios").select("id").eq("user_id", user.id).maybeSingle();
       if (!port) {
-        const { data: newPort } = await supabase.from("portfolios").insert({ user_id: user.id, name: "Meu Portfólio" }).select("id").single();
+        const { data: newPort, error: createErr } = await supabase.from("portfolios").insert({ user_id: user.id, name: "Meu Portfólio" }).select("id").maybeSingle();
+        if (createErr) { console.error("Erro ao criar portfólio:", createErr); setDbLoading(false); return; }
         port = newPort;
       }
+      if (!port) { setDbLoading(false); return; }
       setPortfolioId(port.id);
       // Load imoveis
-      const { data: rows } = await supabase.from("imoveis").select("*").eq("portfolio_id", port.id).order("created_at");
+      const { data: rows, error: loadErr } = await supabase.from("imoveis").select("*").eq("portfolio_id", port.id).order("created_at");
+      if (loadErr) { console.error("Erro ao carregar imóveis:", loadErr); setDbLoading(false); return; }
       if (rows && rows.length > 0) {
         const mapped = rows.map(r => recalcProp({
           id: r.id, name: r.name, address: r.address||"", neighborhood: r.neighborhood||"",
@@ -2607,7 +2613,24 @@ export default function App() {
   }, []);
 
   const handleAddImovel = async (newProp) => {
-    const { data } = await supabase.from("imoveis").insert(toDB(newProp)).select().single();
+    if (!portfolioId || !user) { setAddingImovel(false); return; }
+    const dbData = {
+      portfolio_id: portfolioId, user_id: user.id,
+      name: newProp.name, address: newProp.address, neighborhood: newProp.neighborhood,
+      city: newProp.city, type: newProp.type, status: newProp.status, size: newProp.size,
+      rent: newProp.rent, iptu: newProp.iptu, maint_monthly: newProp.maintMonthly,
+      insurance: newProp.insurance, admin: newProp.admin, vacancy_days: newProp.vacancyDays,
+      has_condominio: newProp.hasCondominio||false, condo_fee: newProp.condoFee||0,
+      fundo_reserva: newProp.fundoReserva||0, chamada_extra: newProp.chamadaExtra||0,
+      desconto_aluguel: newProp.descontoAluguel||0, contrato_anos: newProp.contratoAnos||1,
+      contrato_inicio: newProp.contratoInicio||null, market_value_manual: newProp.marketValueManual||0,
+      valor_mercado: newProp.valorMercado||0, valor_compra: newProp.valorCompra||0, ano_compra: newProp.anoCompra||null,
+      obras: newProp.obras||[], prestadores: newProp.prestadores||[], pagamentos: newProp.pagamentos||{},
+      monthly_data: newProp.monthlyData||[], dia_vencimento: newProp.diaVencimento||10,
+      condo_pago_por: newProp.condoPagoPor||"proprietario", regime_fiscal: newProp.regimeFiscal||"PF",
+    };
+    const { data, error } = await supabase.from("imoveis").insert(dbData).select().single();
+    if (error) { console.error("Erro ao adicionar imóvel:", error); setAddingImovel(false); return; }
     if (data) {
       const withId = recalcProp({ ...newProp, id: data.id }, BENCHMARKS);
       setPropsRaw(prev => [...prev, withId]);
