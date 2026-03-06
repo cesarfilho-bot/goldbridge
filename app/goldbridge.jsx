@@ -372,10 +372,12 @@ function EditModal({ prop, onSave, onClose }) {
     condoFee: prop.condoFee || 0,
     fundoReserva: prop.fundoReserva || 0,
     chamadaExtra: prop.chamadaExtra || 0,
+    condoPagoPor: prop.condoPagoPor || "proprietario",
     descontoAluguel: prop.descontoAluguel || 0,
     contratoAnos: prop.contratoAnos || 1,
     contratoInicio: prop.contratoInicio || "",
     marketValueManual: prop.marketValueManual || 0,
+    regimeFiscal: prop.regimeFiscal || "PF",
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const num = (k, v) => set(k, parseFloat(v) || 0);
@@ -401,7 +403,7 @@ function EditModal({ prop, onSave, onClose }) {
     if (noiPct < 0.5) leakage += 20;
     leakage = Math.min(98, Math.max(2, Math.round(leakage)));
     const proximoReajuste = form.contratoInicio ? (() => { const d = new Date(form.contratoInicio); const now = new Date(); let y = now.getFullYear(); if (new Date(y, d.getMonth(), d.getDate()) <= now) y++; return new Date(y, d.getMonth(), d.getDate()).toLocaleDateString("pt-BR"); })() : "";
-    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: Number(form.admin), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual) });
+    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: Number(form.admin), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal });
   };
 
   return (
@@ -447,12 +449,41 @@ function EditModal({ prop, onSave, onClose }) {
               <label htmlFor="hasCondominio" style={{ color: T.muted, fontSize: 13, cursor: "pointer" }}>Este imóvel tem condomínio</label>
             </div>
             {form.hasCondominio && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div><label style={S.label}>COND. MENSAL (R$)</label><input type="number" style={S.input} value={form.condoFee} onChange={e=>set("condoFee",e.target.value)} /></div>
-                <div><label style={S.label}>FUNDO DE RESERVA MENSAL (R$)</label><input type="number" style={S.input} value={form.fundoReserva} onChange={e=>set("fundoReserva",e.target.value)} /></div>
-                <div><label style={S.label}>CHAMADA EXTRA MENSAL (R$)</label><input type="number" style={S.input} value={form.chamadaExtra} onChange={e=>set("chamadaExtra",e.target.value)} /></div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div><label style={S.label}>COND. MENSAL (R$)</label><input type="number" style={S.input} value={form.condoFee} onChange={e=>set("condoFee",e.target.value)} /></div>
+                  <div><label style={S.label}>FUNDO DE RESERVA MENSAL (R$)</label><input type="number" style={S.input} value={form.fundoReserva} onChange={e=>set("fundoReserva",e.target.value)} /></div>
+                  <div><label style={S.label}>CHAMADA EXTRA MENSAL (R$)</label><input type="number" style={S.input} value={form.chamadaExtra} onChange={e=>set("chamadaExtra",e.target.value)} /></div>
+                </div>
+                <div>
+                  <label style={S.label}>QUEM PAGA O CONDOMÍNIO?</label>
+                  <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+                    {[["proprietario","Proprietário"],["inquilino","Inquilino"]].map(([val, label]) => (
+                      <button key={val} style={{ flex: 1, padding: "9px", borderRadius: 8, border: `1px solid ${form.condoPagoPor === val ? T.gold : T.border}`, background: form.condoPagoPor === val ? T.goldGlow : T.s2, color: form.condoPagoPor === val ? T.gold : T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: form.condoPagoPor === val ? 700 : 400 }} onClick={() => set("condoPagoPor", val)}>{label}</button>
+                    ))}
+                  </div>
+                  {form.condoPagoPor === "inquilino" && <div style={{ color: T.green, fontSize: 11, marginTop: 6 }}>✓ Condomínio não entra nas suas despesas</div>}
+                </div>
               </div>
             )}
+          </div>
+          <div>
+            <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>REGIME FISCAL</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              {[["PF","Pessoa Física (IRPF até 27,5%)"],["PJ","Pessoa Jurídica (Lucro Presumido ~14%)"]].map(([val, label]) => (
+                <button key={val} style={{ flex: 1, padding: "10px", borderRadius: 8, border: `1px solid ${form.regimeFiscal === val ? T.gold : T.border}`, background: form.regimeFiscal === val ? T.goldGlow : T.s2, color: form.regimeFiscal === val ? T.gold : T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: form.regimeFiscal === val ? 700 : 400, textAlign: "center" }} onClick={() => set("regimeFiscal", val)}>{val}<div style={{ fontSize: 10, marginTop: 2, opacity: 0.7 }}>{label.split("(")[1]?.replace(")","")}</div></button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>REGIME FISCAL</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              {[["PF","Pessoa Física","IRPF até 27,5%"],["PJ","Pessoa Jurídica","Lucro Presumido ~14%"]].map(([val, title, sub]) => (
+                <button key={val} style={{ flex: 1, padding: "10px", borderRadius: 8, border: `1px solid ${(form.regimeFiscal||"PF") === val ? T.gold : T.border}`, background: (form.regimeFiscal||"PF") === val ? T.goldGlow : T.s2, color: (form.regimeFiscal||"PF") === val ? T.gold : T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: (form.regimeFiscal||"PF") === val ? 700 : 400, textAlign: "center" }} onClick={() => set("regimeFiscal", val)}>
+                  {title}<div style={{ fontSize: 10, marginTop: 2, opacity: 0.7 }}>{sub}</div>
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>CONTRATO</div>
@@ -1368,6 +1399,7 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
   const [filterType, setFilterType] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [search, setSearch] = useState("");
+  const [expandedId, setExpandedId] = useState(null);
   const sorted = useMemo(() => {
     let list = PROPS;
     if (filterType) list = list.filter(p => p.type === filterType);
@@ -1394,33 +1426,76 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
           <thead>
             <tr style={{ background: T.s2 }}>
               <Th col="id" label="#" /><th style={S.th}>Imóvel / Endereço</th><th style={S.th}>Tipo</th><th style={S.th}>Status</th>
-              <Th col="rent" label="Aluguel/mês" /><Th col="noi" label="Lucro Op. 12m" /><Th col="noiPct" label="Margem" />
+              <Th col="rent" label="Aluguel/mês" /><Th col="totalExpenses" label="Despesas" /><Th col="ir" label="IR/ano" /><Th col="noi" label="Lucro Op. 12m" /><Th col="noiPct" label="Margem" />
               <Th col="vacancyDays" label="Vacância" /><Th col="leakage" label="Risco" /><th style={S.th}>Obras</th><th style={S.th}>Ações</th>
             </tr>
           </thead>
           <tbody>
             {sorted.map((p) => {
               const obrasCount = (p.obras || []).length, obrasAtivas = (p.obras || []).filter(o => o.status === "Em andamento").length;
+              const isExpanded = expandedId === p.id;
+              const condoPagoProprietario = p.hasCondominio && (p.condoPagoPor || "proprietario") === "proprietario";
+              const condoAnnual = condoPagoProprietario ? ((p.condoFee||0)+(p.fundoReserva||0)+(p.chamadaExtra||0))*12 : 0;
               return (
-                <tr key={p.id} style={{ cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.background = T.s2} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                  <td style={{ ...S.td, color: T.dim, ...S.mono, fontSize: 11 }} onClick={() => { onProp(p); onNav("detail"); }}>{String(p.id).padStart(2, "0")}</td>
-                  <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><div style={{ color: T.goldBright, fontWeight: 600, fontSize: 13 }}>{p.name}</div><div style={{ color: T.dim, fontSize: 11 }}>{p.address} · {p.neighborhood}</div></td>
-                  <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={S.badge(p.type === "Comercial" ? T.blue : T.teal)}>{p.type}</span></td>
-                  <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={S.badge(p.status === "Ocupado" ? T.green : T.red)}>{p.status}</span></td>
-                  <td style={{ ...S.td, ...S.mono }} onClick={() => { onProp(p); onNav("detail"); }}>{fmt.brl(p.rent)}</td>
-                  <td style={{ ...S.td, ...S.mono, color: p.noi > 0 ? T.green : T.red, fontWeight: 700 }} onClick={() => { onProp(p); onNav("detail"); }}>{fmt.brl(p.noi)}</td>
-                  <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={{ color: p.noiPct > 0.55 ? T.green : p.noiPct > 0.4 ? T.amber : T.red, fontSize: 12, fontWeight: 700, ...S.mono }}>{fmt.pct(p.noiPct)}</span></td>
-                  <td style={{ ...S.td, color: p.vacancyDays > p.vacancyBenchmark ? T.amber : T.muted }} onClick={() => { onProp(p); onNav("detail"); }}>{p.vacancyDays}d</td>
-                  <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={{ color: p.leakage > 60 ? T.red : p.leakage > 30 ? T.amber : T.green, fontSize: 13, fontWeight: 800, ...S.mono }}>{p.leakage}</span></td>
-                  <td style={S.td}>{obrasCount > 0 ? <span style={S.badge(obrasAtivas > 0 ? T.amber : T.muted)}>🔨 {obrasCount}{obrasAtivas > 0 ? ` (${obrasAtivas} ativ.)` : ""}</span> : <span style={{ color: T.dim, fontSize: 11 }}>—</span>}</td>
-                  <td style={S.td}>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button title="Editar" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onEdit(p); }}>✏️</button>
-                      <button title="Obras" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onObras(p); }}>🔨</button>
-                      <button title="Remover" style={{ background: T.s3, border: `1px solid ${T.redDim}`, color: T.red, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onDelete(p); }}>🗑</button>
-                    </div>
-                  </td>
-                </tr>
+                <>
+                  <tr key={p.id} style={{ cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.background = T.s2} onMouseLeave={e => e.currentTarget.style.background = isExpanded ? T.s2 : "transparent"}>
+                    <td style={{ ...S.td, color: T.dim, ...S.mono, fontSize: 11 }} onClick={() => { onProp(p); onNav("detail"); }}>{String(p.id).padStart(2, "0")}</td>
+                    <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><div style={{ color: T.goldBright, fontWeight: 600, fontSize: 13 }}>{p.name}</div><div style={{ color: T.dim, fontSize: 11 }}>{p.address} · {p.neighborhood}</div></td>
+                    <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={S.badge(p.type === "Comercial" ? T.blue : T.teal)}>{p.type}</span></td>
+                    <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={S.badge(p.status === "Ocupado" ? T.green : T.red)}>{p.status}</span></td>
+                    <td style={{ ...S.td, ...S.mono }} onClick={() => { onProp(p); onNav("detail"); }}>{fmt.brl(p.rent)}</td>
+                    <td style={{ ...S.td, ...S.mono, cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : p.id)}>
+                      <span style={{ color: T.amber, fontWeight: 600 }}>{fmt.brl(p.totalExpenses)}</span>
+                      <span style={{ color: T.dim, fontSize: 10, marginLeft: 4 }}>{isExpanded ? "▲" : "▼"}</span>
+                    </td>
+                    <td style={{ ...S.td, ...S.mono, color: T.red }} onClick={() => { onProp(p); onNav("detail"); }}>{p.ir > 0 ? fmt.brl(p.ir) : <span style={{ color: T.dim }}>—</span>}</td>
+                    <td style={{ ...S.td, ...S.mono, color: p.noi > 0 ? T.green : T.red, fontWeight: 700 }} onClick={() => { onProp(p); onNav("detail"); }}>{fmt.brl(p.noi)}</td>
+                    <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={{ color: p.noiPct > 0.55 ? T.green : p.noiPct > 0.4 ? T.amber : T.red, fontSize: 12, fontWeight: 700, ...S.mono }}>{fmt.pct(p.noiPct)}</span></td>
+                    <td style={{ ...S.td, color: p.vacancyDays > p.vacancyBenchmark ? T.amber : T.muted }} onClick={() => { onProp(p); onNav("detail"); }}>{p.vacancyDays}d</td>
+                    <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={{ color: p.leakage > 60 ? T.red : p.leakage > 30 ? T.amber : T.green, fontSize: 13, fontWeight: 800, ...S.mono }}>{p.leakage}</span></td>
+                    <td style={S.td}>{obrasCount > 0 ? <span style={S.badge(obrasAtivas > 0 ? T.amber : T.muted)}>🔨 {obrasCount}{obrasAtivas > 0 ? ` (${obrasAtivas} ativ.)` : ""}</span> : <span style={{ color: T.dim, fontSize: 11 }}>—</span>}</td>
+                    <td style={S.td}>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button title="Editar" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onEdit(p); }}>✏️</button>
+                        <button title="Obras" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onObras(p); }}>🔨</button>
+                        <button title="Remover" style={{ background: T.s3, border: `1px solid ${T.redDim}`, color: T.red, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onDelete(p); }}>🗑</button>
+                      </div>
+                    </td>
+                  </tr>
+                  {isExpanded && (
+                    <tr key={`exp-${p.id}`} style={{ background: T.s0 }}>
+                      <td colSpan={13} style={{ padding: "14px 20px", borderBottom: `1px solid ${T.border}` }}>
+                        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+                          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, alignSelf: "center", minWidth: 80 }}>DESPESAS</div>
+                          {[
+                            ["IPTU", fmt.brl(p.iptu), "anual"],
+                            ["Manutenção", fmt.brl((p.maintMonthly||0)*12), "anual"],
+                            ["Seguro", fmt.brl(p.insurance||0), "anual"],
+                            ["Adm.", fmt.brl((p.admin||0)*12), "anual"],
+                            ...(condoPagoProprietario ? [["Condomínio", fmt.brl(condoAnnual), "anual"]] : []),
+                            ...(p.hasCondominio && !condoPagoProprietario ? [["Cond. (inquilino)", "—", ""]] : []),
+                          ].map(([label, value, sub]) => (
+                            <div key={label} style={{ background: T.s2, padding: "8px 14px", borderRadius: 8 }}>
+                              <div style={{ color: T.dim, fontSize: 10, marginBottom: 2 }}>{label}</div>
+                              <div style={{ color: T.amber, fontWeight: 700, fontSize: 13 }}>{value}</div>
+                              {sub && <div style={{ color: T.dim, fontSize: 10 }}>{sub}</div>}
+                            </div>
+                          ))}
+                          <div style={{ background: T.s2, padding: "8px 14px", borderRadius: 8, borderLeft: `2px solid ${T.red}` }}>
+                            <div style={{ color: T.dim, fontSize: 10, marginBottom: 2 }}>IR ({p.regimeFiscal || "PF"})</div>
+                            <div style={{ color: T.red, fontWeight: 700, fontSize: 13 }}>{fmt.brl(p.ir||0)}</div>
+                            <div style={{ color: T.dim, fontSize: 10 }}>anual</div>
+                          </div>
+                          <div style={{ background: T.s2, padding: "8px 14px", borderRadius: 8, borderLeft: `2px solid ${T.green}` }}>
+                            <div style={{ color: T.dim, fontSize: 10, marginBottom: 2 }}>Lucro Líquido (após IR)</div>
+                            <div style={{ color: T.green, fontWeight: 700, fontSize: 13 }}>{fmt.brl(p.lucroLiquido||p.noi)}</div>
+                            <div style={{ color: T.dim, fontSize: 10 }}>anual</div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
               );
             })}
           </tbody>
@@ -2402,16 +2477,39 @@ function DeleteConfirmModal({ prop, onConfirm, onClose }) {
 }
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
+function calcIR(totalIncome, totalExpenses, regimeFiscal, deducoes) {
+  if (regimeFiscal === "PJ") {
+    // Lucro Presumido: 14% sobre receita bruta
+    return Math.round(totalIncome * 0.14);
+  }
+  // PF: tabela progressiva IRPF com deduções
+  const baseCalculo = Math.max(0, totalIncome - deducoes);
+  const mensal = baseCalculo / 12;
+  let aliquota = 0;
+  if (mensal <= 2259.20) aliquota = 0;
+  else if (mensal <= 2826.65) aliquota = 0.075;
+  else if (mensal <= 3751.05) aliquota = 0.15;
+  else if (mensal <= 4664.68) aliquota = 0.225;
+  else aliquota = 0.275;
+  return Math.round(baseCalculo * aliquota);
+}
+
 function recalcProp(prop, BENCHMARKS) {
   const bm = BENCHMARKS[prop.city]?.[prop.type] || BENCHMARKS["São Paulo"][prop.type] || BENCHMARKS["São Paulo"]["Residencial"];
   const annualRent = (prop.rent || 0) * 12;
   const descontoAnual = (prop.descontoAluguel || 0) * 12;
   const vacancyCost = Math.round(((prop.rent || 0) / 30) * (prop.vacancyDays || 0));
   const totalIncome = annualRent - vacancyCost - descontoAnual;
-  const condoAnnual = prop.hasCondominio ? ((prop.condoFee||0)+(prop.fundoReserva||0)+(prop.chamadaExtra||0))*12 : 0;
+  // Condomínio só entra nas despesas se pago pelo proprietário
+  const condoPagoProprietario = prop.hasCondominio && (prop.condoPagoPor || "proprietario") === "proprietario";
+  const condoAnnual = condoPagoProprietario ? ((prop.condoFee||0)+(prop.fundoReserva||0)+(prop.chamadaExtra||0))*12 : 0;
   const totalExpenses = (prop.iptu||0) + (prop.maintMonthly||0)*12 + (prop.insurance||0) + (prop.admin||0)*12 + condoAnnual;
   const noi = totalIncome - totalExpenses;
   const noiPct = noi / (totalIncome || 1);
+  // IR: deduções PF = admin + IPTU + condomínio pago pelo proprietário
+  const deducoesPF = (prop.admin||0)*12 + (prop.iptu||0) + condoAnnual;
+  const ir = calcIR(totalIncome, totalExpenses, prop.regimeFiscal || "PF", deducoesPF);
+  const lucroLiquido = noi - ir;
   const iptuBenchmark = Math.round(bm.iptu_m2 * (prop.size||0));
   const iptuDelta = iptuBenchmark > 0 ? Math.round(((prop.iptu||0) - iptuBenchmark) / iptuBenchmark * 100) : 0;
   const maintBenchmark = Math.round(bm.maintenance_annual_m2 * (prop.size||0) / 12);
@@ -2422,7 +2520,7 @@ function recalcProp(prop, BENCHMARKS) {
   if (maintDelta > 30) leakage += Math.min(20, maintDelta * 0.4);
   if (noiPct < 0.5) leakage += 20;
   leakage = Math.min(98, Math.max(2, Math.round(leakage)));
-  return { ...prop, vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage };
+  return { ...prop, vacancyCost, totalIncome, totalExpenses, noi, noiPct, ir, lucroLiquido, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage };
 }
 
 export default function App() {
@@ -2476,6 +2574,8 @@ export default function App() {
           obras: r.obras||[], prestadores: r.prestadores||[], pagamentos: r.pagamentos||{},
           monthlyData: r.monthly_data||[], diaVencimento: r.dia_vencimento||10,
           proximoReajuste: r.proximo_reajuste||"",
+          condoPagoPor: r.condo_pago_por||"proprietario",
+          regimeFiscal: r.regime_fiscal||"PF",
         }, BENCHMARKS));
         setPropsRaw(mapped);
       }
@@ -2496,6 +2596,7 @@ export default function App() {
     valor_mercado: prop.valorMercado||0, valor_compra: prop.valorCompra||0, ano_compra: prop.anoCompra||null,
     obras: prop.obras||[], prestadores: prop.prestadores||[], pagamentos: prop.pagamentos||{},
     monthly_data: prop.monthlyData||[], dia_vencimento: prop.diaVencimento||10,
+    condo_pago_por: prop.condoPagoPor||"proprietario", regime_fiscal: prop.regimeFiscal||"PF",
   });
 
   const setProps = useCallback((updater) => {
