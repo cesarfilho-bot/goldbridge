@@ -1950,6 +1950,221 @@ function Login({ onLogin }) {
   );
 }
 
+// ─── PAGE PAGAMENTOS ──────────────────────────────────────────────────────────
+function PagePagamentos({ PROPS, onUpdateProps }) {
+  const hoje = new Date();
+  const mesAtual = hoje.getMonth();
+  const anoAtual = hoje.getFullYear();
+  const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const MESES_FULL = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+  const [mesSel, setMesSel] = useState(mesAtual);
+  const [anoSel, setAnoSel] = useState(anoAtual);
+  const [detalheProp, setDetalheProp] = useState(null);
+
+  // Helpers para ler/salvar pagamentos no prop
+  const getKey = (propId, ano, mes) => `pag_${propId}_${ano}_${mes}`;
+  const getPag = (prop, ano, mes) => (prop.pagamentos || {})[`${ano}_${mes}`] || null;
+  const setPag = (prop, ano, mes, dados) => {
+    const pagamentos = { ...(prop.pagamentos || {}), [`${ano}_${mes}`]: dados };
+    return { ...prop, pagamentos };
+  };
+
+  const handleMarcar = (prop, status) => {
+    const updated = setPag(prop, anoSel, mesSel, {
+      status, // "pago" | "atrasado" | "nao_pago"
+      valor: prop.rent - (prop.descontoAluguel || 0),
+      data: status === "pago" ? new Date().toLocaleDateString("pt-BR") : null,
+      vencimento: prop.diaVencimento || 10,
+    });
+    onUpdateProps(PROPS.map(p => p.id === prop.id ? updated : p));
+  };
+
+  const imovelOcupado = PROPS.filter(p => p.status === "Ocupado");
+
+  // Alertas de vencimento de contrato (próximos 90 dias)
+  const alertasContrato = PROPS.filter(p => {
+    if (!p.contratoInicio || !p.contratoAnos) return false;
+    const inicio = new Date(p.contratoInicio);
+    const fim = new Date(inicio);
+    fim.setFullYear(fim.getFullYear() + Number(p.contratoAnos));
+    const diasRestantes = Math.round((fim - hoje) / (1000 * 60 * 60 * 24));
+    return diasRestantes >= 0 && diasRestantes <= 90;
+  }).map(p => {
+    const inicio = new Date(p.contratoInicio);
+    const fim = new Date(inicio);
+    fim.setFullYear(fim.getFullYear() + Number(p.contratoAnos));
+    const diasRestantes = Math.round((fim - hoje) / (1000 * 60 * 60 * 24));
+    return { ...p, fimContrato: fim.toLocaleDateString("pt-BR"), diasRestantes };
+  }).sort((a, b) => a.diasRestantes - b.diasRestantes);
+
+  // Alertas de reajuste (próximos 60 dias)
+  const alertasReajuste = PROPS.filter(p => {
+    if (!p.contratoInicio) return false;
+    const d = new Date(p.contratoInicio);
+    let y = anoAtual;
+    let aniv = new Date(y, d.getMonth(), d.getDate());
+    if (aniv < hoje) { aniv = new Date(y + 1, d.getMonth(), d.getDate()); }
+    const dias = Math.round((aniv - hoje) / (1000 * 60 * 60 * 24));
+    return dias >= 0 && dias <= 60;
+  }).map(p => {
+    const d = new Date(p.contratoInicio);
+    let y = anoAtual;
+    let aniv = new Date(y, d.getMonth(), d.getDate());
+    if (aniv < hoje) aniv = new Date(y + 1, d.getMonth(), d.getDate());
+    const dias = Math.round((aniv - hoje) / (1000 * 60 * 60 * 24));
+    // IGPM estimado (hardcoded por ora, 6.2% acumulado 12m)
+    const igpm = 0.062;
+    const aluguelAtual = p.rent - (p.descontoAluguel || 0);
+    const aluguelReajustado = Math.round(aluguelAtual * (1 + igpm));
+    return { ...p, diasReajuste: dias, dataReajuste: aniv.toLocaleDateString("pt-BR"), igpm, aluguelAtual, aluguelReajustado };
+  }).sort((a, b) => a.diasReajuste - b.diasReajuste);
+
+  // Resumo do mês selecionado
+  const pagMes = imovelOcupado.map(p => ({ ...p, pag: getPag(p, anoSel, mesSel) }));
+  const pagos = pagMes.filter(p => p.pag?.status === "pago").length;
+  const atrasados = pagMes.filter(p => p.pag?.status === "atrasado").length;
+  const naoPagos = pagMes.filter(p => p.pag?.status === "nao_pago").length;
+  const pendentes = pagMes.filter(p => !p.pag).length;
+  const totalRecebido = pagMes.filter(p => p.pag?.status === "pago").reduce((s, p) => s + (p.rent - (p.descontoAluguel || 0)), 0);
+  const totalEsperado = imovelOcupado.reduce((s, p) => s + (p.rent - (p.descontoAluguel || 0)), 0);
+
+  // Histórico de um imóvel
+  const getHistorico = (prop) => {
+    const hist = [];
+    for (let a = anoAtual; a >= anoAtual - 1; a--) {
+      for (let m = 11; m >= 0; m--) {
+        if (a === anoAtual && m > mesAtual) continue;
+        const pag = getPag(prop, a, m);
+        hist.push({ ano: a, mes: m, label: `${MESES[m]}/${a}`, pag });
+      }
+    }
+    return hist.slice(0, 12);
+  };
+
+  const STATUS_COR = { pago: T.green, atrasado: T.amber, nao_pago: T.red };
+  const STATUS_LABEL = { pago: "Pago", atrasado: "Atrasado", nao_pago: "Não pago" };
+
+  if (detalheProp) {
+    const hist = getHistorico(detalheProp);
+    const pagosCnt = hist.filter(h => h.pag?.status === "pago").length;
+    const atrasadosCnt = hist.filter(h => h.pag?.status === "atrasado").length;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <button style={{ ...S.btnGhost, padding: "8px 16px" }} onClick={() => setDetalheProp(null)}>← Pagamentos</button>
+          <div>
+            <div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700 }}>HISTÓRICO DE PAGAMENTOS</div>
+            <h1 style={{ color: T.text, fontSize: 22, fontWeight: 800, margin: "4px 0 0" }}>{detalheProp.name}</h1>
+            <div style={{ color: T.muted, fontSize: 13 }}>{detalheProp.neighborhood} · Aluguel: {fmt.brl(detalheProp.rent - (detalheProp.descontoAluguel || 0))}/mês</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+          <div style={S.card}><div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>PAGOS EM DIA</div><div style={{ color: T.green, fontSize: 26, fontWeight: 900 }}>{pagosCnt}<span style={{ fontSize: 14, color: T.dim }}>/12</span></div></div>
+          <div style={S.card}><div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>ATRASOS</div><div style={{ color: atrasadosCnt > 0 ? T.amber : T.green, fontSize: 26, fontWeight: 900 }}>{atrasadosCnt}</div></div>
+          <div style={S.card}><div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>RECEBIDO 12M</div><div style={{ color: T.gold, fontSize: 22, fontWeight: 900, ...S.mono }}>{fmt.brlK(pagosCnt * (detalheProp.rent - (detalheProp.descontoAluguel || 0)))}</div></div>
+          <div style={S.card}><div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>CONFIABILIDADE</div><div style={{ color: pagosCnt >= 10 ? T.green : pagosCnt >= 7 ? T.amber : T.red, fontSize: 26, fontWeight: 900 }}>{hist.filter(h=>h.pag).length > 0 ? Math.round((pagosCnt / hist.filter(h=>h.pag).length) * 100) : "—"}{hist.filter(h=>h.pag).length > 0 ? "%" : ""}</div></div>
+        </div>
+        <div style={{ ...S.card, border: `1px solid ${T.borderMid}` }}>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 16 }}>ÚLTIMOS 12 MESES</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {hist.map((h, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: T.s2, borderRadius: 8 }}>
+                <div style={{ width: 70, color: T.muted, fontSize: 13, fontWeight: 600 }}>{h.label}</div>
+                {h.pag ? (
+                  <>
+                    <span style={{ ...S.badge(STATUS_COR[h.pag.status]), fontSize: 11 }}>{STATUS_LABEL[h.pag.status]}</span>
+                    {h.pag.valor && <div style={{ color: T.text, fontSize: 13, ...S.mono }}>{fmt.brl(h.pag.valor)}</div>}
+                    {h.pag.data && <div style={{ color: T.dim, fontSize: 11 }}>em {h.pag.data}</div>}
+                  </>
+                ) : (
+                  <span style={{ color: T.dim, fontSize: 12 }}>{h.ano < anoAtual || (h.ano === anoAtual && h.mes < mesAtual) ? "Não registrado" : "Pendente"}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div><div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>GESTÃO FINANCEIRA</div><h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Pagamentos</h1></div>
+
+      {/* Alertas de contrato e reajuste */}
+      {(alertasContrato.length > 0 || alertasReajuste.length > 0) && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {alertasContrato.map(p => (
+            <div key={p.id} style={{ padding: "14px 18px", background: T.redDim + "44", border: `1px solid ${T.red}44`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ fontSize: 22 }}>📋</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{p.name} — Contrato vence em <span style={{ color: T.red }}>{p.diasRestantes} dias</span></div>
+                <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>Vencimento: {p.fimContrato} · {p.neighborhood}</div>
+              </div>
+            </div>
+          ))}
+          {alertasReajuste.map(p => (
+            <div key={p.id} style={{ padding: "14px 18px", background: T.amberDim + "44", border: `1px solid ${T.amber}44`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ fontSize: 22 }}>📈</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{p.name} — Reajuste em <span style={{ color: T.amber }}>{p.diasReajuste} dias</span></div>
+                <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
+                  IGPM 12m estimado: {(p.igpm * 100).toFixed(1)}% · {fmt.brl(p.aluguelAtual)} → <span style={{ color: T.green, fontWeight: 700 }}>{fmt.brl(p.aluguelReajustado)}/mês</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Seletor de mês */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <button style={{ ...S.btnGhost, padding: "8px 14px" }} onClick={() => { if (mesSel === 0) { setMesSel(11); setAnoSel(a => a - 1); } else setMesSel(m => m - 1); }}>←</button>
+        <div style={{ color: T.text, fontWeight: 800, fontSize: 18, minWidth: 160, textAlign: "center" }}>{MESES_FULL[mesSel]} {anoSel}</div>
+        <button style={{ ...S.btnGhost, padding: "8px 14px" }} onClick={() => { if (mesSel === 11) { setMesSel(0); setAnoSel(a => a + 1); } else setMesSel(m => m + 1); }} disabled={anoSel === anoAtual && mesSel === mesAtual}>→</button>
+        <button style={{ ...S.btnGhost, padding: "8px 14px", marginLeft: 8, fontSize: 12 }} onClick={() => { setMesSel(mesAtual); setAnoSel(anoAtual); }}>Hoje</button>
+      </div>
+
+      {/* KPIs do mês */}
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+        <div style={S.card}><div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>RECEBIDO</div><div style={{ color: T.green, fontSize: 22, fontWeight: 900, ...S.mono }}>{fmt.brlK(totalRecebido)}</div><div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>{pagos} imóvel(is)</div></div>
+        <div style={S.card}><div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>ESPERADO</div><div style={{ color: T.gold, fontSize: 22, fontWeight: 900, ...S.mono }}>{fmt.brlK(totalEsperado)}</div><div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>{imovelOcupado.length} imóvel(is)</div></div>
+        <div style={{ ...S.card, border: `1px solid ${atrasados > 0 ? T.amber + "60" : T.border}` }}><div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>ATRASADOS</div><div style={{ color: atrasados > 0 ? T.amber : T.green, fontSize: 22, fontWeight: 900 }}>{atrasados}</div></div>
+        <div style={{ ...S.card, border: `1px solid ${naoPagos > 0 ? T.red + "60" : T.border}` }}><div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>NÃO PAGOS</div><div style={{ color: naoPagos > 0 ? T.red : T.green, fontSize: 22, fontWeight: 900 }}>{naoPagos}</div></div>
+        <div style={S.card}><div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>PENDENTES</div><div style={{ color: pendentes > 0 ? T.muted : T.green, fontSize: 22, fontWeight: 900 }}>{pendentes}</div></div>
+      </div>
+
+      {/* Lista de imóveis com controle de pagamento */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>IMÓVEIS OCUPADOS — {MESES_FULL[mesSel].toUpperCase()} {anoSel}</div>
+        {imovelOcupado.length === 0 && <div style={{ ...S.card, textAlign: "center", color: T.muted, padding: 40 }}>Nenhum imóvel ocupado cadastrado.</div>}
+        {pagMes.map(p => {
+          const status = p.pag?.status;
+          const aluguel = p.rent - (p.descontoAluguel || 0);
+          const borderC = status === "pago" ? T.green + "40" : status === "atrasado" ? T.amber + "40" : status === "nao_pago" ? T.red + "40" : T.border;
+          return (
+            <div key={p.id} style={{ background: T.s1, border: `1px solid ${borderC}`, borderRadius: 14, padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <div style={{ color: T.goldBright, fontWeight: 700, fontSize: 14 }}>{p.name}</div>
+                <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>{p.neighborhood} · <span style={{ color: T.text, fontWeight: 700, ...S.mono }}>{fmt.brl(aluguel)}/mês</span></div>
+                {p.proximoReajuste && <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>Próximo reajuste: {p.proximoReajuste}</div>}
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                {status && <span style={{ ...S.badge(STATUS_COR[status]) }}>{STATUS_LABEL[status]}{p.pag?.data ? ` · ${p.pag.data}` : ""}</span>}
+                <button style={{ ...S.btn, padding: "7px 14px", fontSize: 12, background: status === "pago" ? T.greenDim : T.goldGlow, border: `1px solid ${status === "pago" ? T.green : T.gold}`, color: status === "pago" ? T.green : T.gold }} onClick={() => handleMarcar(p, "pago")}>✓ Pago</button>
+                <button style={{ background: "transparent", border: `1px solid ${T.amberDim}`, color: T.amber, borderRadius: 8, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }} onClick={() => handleMarcar(p, "atrasado")}>⏰ Atrasado</button>
+                <button style={{ background: "transparent", border: `1px solid ${T.redDim}`, color: T.red, borderRadius: 8, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }} onClick={() => handleMarcar(p, "nao_pago")}>✕ Não pago</button>
+                <button style={{ background: "transparent", border: `1px solid ${T.border}`, color: T.muted, borderRadius: 8, padding: "7px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }} onClick={() => setDetalheProp(p)}>Histórico →</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── NAV ──────────────────────────────────────────────────────────────────────
 const NAV = [
   { id: "dashboard", label: "Visão Executiva",     icon: "◈" },
@@ -1959,6 +2174,7 @@ const NAV = [
   { id: "leakage",   label: "Leakage Finder",      icon: "◎" },
   { id: "decision",  label: "Decisão por Imóvel",  icon: "⟁" },
   { id: "report",    label: "Relatório Bank-Ready", icon: "⬡" },
+  { id: "pagamentos", label: "Pagamentos",           icon: "💳" },
   { id: "ia",        label: "IA do Portfólio",      icon: "✦" },
 ];
 
@@ -2152,6 +2368,7 @@ export default function App() {
     detail:    <PageDetail prop={selectedProp} onBack={() => nav("noi")} onEdit={handleEdit} onObras={handleObras} onDelete={handleDeleteImovel} />,
     report:    <PageReport PROPS={props} />,
     ia:        <PageIA PROPS={props} />,
+    pagamentos: <PagePagamentos PROPS={props} onUpdateProps={setProps} />,
   }[page] || <PageDashboard PROPS={props} onNav={nav} onProp={setSelectedProp} />;
 
   return (
