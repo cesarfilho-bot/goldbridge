@@ -28,6 +28,11 @@ const LIGHT_T = {
   blueDim: "#D0E0FF", teal: "#1A9990",
 };
 let T = { ...DARK_T };
+// Initialize theme from localStorage immediately (before first render)
+if (typeof window !== "undefined") {
+  const saved = localStorage.getItem("gb_theme");
+  if (saved === "light") Object.assign(T, LIGHT_T);
+}
 
 function applyTheme(theme) {
   Object.assign(T, theme);
@@ -3469,7 +3474,7 @@ export default function App() {
             <div style={{ color: T.dim, fontSize: 11, marginBottom: 6 }}>{user?.email}</div>
             <button
               style={{ width: "100%", marginBottom: 8, padding: "8px 12px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.s2, color: T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "space-between" }}
-              onClick={() => { const next = !darkMode; applyTheme(next ? DARK_T : LIGHT_T); setDarkMode(next); setThemeKey(k => k + 1); localStorage.setItem("gb_theme", next ? "dark" : "light"); }}
+              onClick={() => { const next = !darkMode; const theme = next ? DARK_T : LIGHT_T; Object.assign(T, theme); applyTheme(theme); localStorage.setItem("gb_theme", next ? "dark" : "light"); setDarkMode(next); setThemeKey(k => k + 1); }}
             >
               <span>{darkMode ? "🌙 Modo Escuro" : "☀️ Modo Claro"}</span>
               <span style={{ fontSize: 10, opacity: 0.6 }}>trocar</span>
