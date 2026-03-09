@@ -378,6 +378,13 @@ function EditModal({ prop, onSave, onClose }) {
     descontoAluguel: prop.descontoAluguel || 0,
     contratoAnos: prop.contratoAnos || 1,
     contratoInicio: prop.contratoInicio || "",
+    indiceReajuste: prop.indiceReajuste || "IGPM",
+    iptuVencimento: prop.iptuVencimento || "",
+    locatarioNome: prop.locatarioNome || "",
+    locatarioCPF: prop.locatarioCPF || "",
+    locatarioTelefone: prop.locatarioTelefone || "",
+    locatarioEmail: prop.locatarioEmail || "",
+    locatarioGarantia: prop.locatarioGarantia || "Fiador",
     marketValueManual: prop.marketValueManual || 0,
     regimeFiscal: prop.regimeFiscal || "PF",
   });
@@ -405,7 +412,7 @@ function EditModal({ prop, onSave, onClose }) {
     if (noiPct < 0.5) leakage += 20;
     leakage = Math.min(98, Math.max(2, Math.round(leakage)));
     const proximoReajuste = form.contratoInicio ? (() => { const d = new Date(form.contratoInicio); const now = new Date(); let y = now.getFullYear(); if (new Date(y, d.getMonth(), d.getDate()) <= now) y++; return new Date(y, d.getMonth(), d.getDate()).toLocaleDateString("pt-BR"); })() : "";
-    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: Number(form.admin), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal });
+    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: Number(form.admin), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, locatarioNome: form.locatarioNome, locatarioCPF: form.locatarioCPF, locatarioTelefone: form.locatarioTelefone, locatarioEmail: form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
   };
 
   return (
@@ -472,14 +479,6 @@ function EditModal({ prop, onSave, onClose }) {
           <div>
             <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>REGIME FISCAL</div>
             <div style={{ display: "flex", gap: 10 }}>
-              {[["PF","Pessoa Física (IRPF até 27,5%)"],["PJ","Pessoa Jurídica (Lucro Presumido ~14%)"]].map(([val, label]) => (
-                <button key={val} style={{ flex: 1, padding: "10px", borderRadius: 8, border: `1px solid ${form.regimeFiscal === val ? T.gold : T.border}`, background: form.regimeFiscal === val ? T.goldGlow : T.s2, color: form.regimeFiscal === val ? T.gold : T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: form.regimeFiscal === val ? 700 : 400, textAlign: "center" }} onClick={() => set("regimeFiscal", val)}>{val}<div style={{ fontSize: 10, marginTop: 2, opacity: 0.7 }}>{label.split("(")[1]?.replace(")","")}</div></button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>REGIME FISCAL</div>
-            <div style={{ display: "flex", gap: 10 }}>
               {[["PF","Pessoa Física","IRPF até 27,5%"],["PJ","Pessoa Jurídica","Lucro Presumido ~14%"]].map(([val, title, sub]) => (
                 <button key={val} style={{ flex: 1, padding: "10px", borderRadius: 8, border: `1px solid ${(form.regimeFiscal||"PF") === val ? T.gold : T.border}`, background: (form.regimeFiscal||"PF") === val ? T.goldGlow : T.s2, color: (form.regimeFiscal||"PF") === val ? T.gold : T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: (form.regimeFiscal||"PF") === val ? 700 : 400, textAlign: "center" }} onClick={() => set("regimeFiscal", val)}>
                   {title}<div style={{ fontSize: 10, marginTop: 2, opacity: 0.7 }}>{sub}</div>
@@ -492,6 +491,15 @@ function EditModal({ prop, onSave, onClose }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div><label style={S.label}>DURAÇÃO DO CONTRATO (anos)</label><input type="number" style={S.input} value={form.contratoAnos} onChange={e=>set("contratoAnos",e.target.value)} /></div>
               <div><label style={S.label}>DATA DE INÍCIO DO CONTRATO</label><input type="date" style={S.input} value={form.contratoInicio} onChange={e=>set("contratoInicio",e.target.value)} /></div>
+              <div>
+                <label style={S.label}>ÍNDICE DE REAJUSTE</label>
+                <div style={{ display:"flex", gap:6, marginTop:6 }}>
+                  {["IGPM","IPCA","INPC","Fixo"].map(idx => (
+                    <button key={idx} style={{ flex:1, padding:"8px 4px", borderRadius:8, border:`1px solid ${(form.indiceReajuste||"IGPM")===idx?T.gold:T.border}`, background:(form.indiceReajuste||"IGPM")===idx?T.goldGlow:T.s2, color:(form.indiceReajuste||"IGPM")===idx?T.gold:T.muted, cursor:"pointer", fontFamily:"inherit", fontSize:12, fontWeight:(form.indiceReajuste||"IGPM")===idx?700:400 }} onClick={()=>set("indiceReajuste",idx)}>{idx}</button>
+                  ))}
+                </div>
+              </div>
+              <div><label style={S.label}>VENCIMENTO IPTU (mês/ano — 1ª parcela ou cota única)</label><input type="month" style={S.input} value={form.iptuVencimento||""} onChange={e=>set("iptuVencimento",e.target.value)} /><div style={{ color:T.dim, fontSize:10, marginTop:4 }}>O sistema gera alertas 30 dias antes do vencimento</div></div>
             </div>
             {form.contratoInicio && (
               <div style={{ marginTop: 10, padding: "10px 14px", background: T.s3, borderRadius: 8, color: T.muted, fontSize: 12 }}>
@@ -500,6 +508,16 @@ function EditModal({ prop, onSave, onClose }) {
                 </span> · Normalmente pelo IGPM acumulado
               </div>
             )}
+          </div>
+          <div>
+            <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>LOCATÁRIO</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ gridColumn: "1/-1" }}><label style={S.label}>NOME DO LOCATÁRIO</label><input style={S.input} value={form.locatarioNome} placeholder="Nome completo" onChange={e=>set("locatarioNome",e.target.value)} /></div>
+              <div><label style={S.label}>CPF / CNPJ</label><input style={S.input} value={form.locatarioCPF} placeholder="000.000.000-00" onChange={e=>set("locatarioCPF",e.target.value)} /></div>
+              <div><label style={S.label}>TELEFONE</label><input style={S.input} value={form.locatarioTelefone} placeholder="(11) 99999-9999" onChange={e=>set("locatarioTelefone",e.target.value)} /></div>
+              <div style={{ gridColumn: "1/-1" }}><label style={S.label}>EMAIL</label><input style={S.input} value={form.locatarioEmail} placeholder="email@exemplo.com" onChange={e=>set("locatarioEmail",e.target.value)} /></div>
+              <div><label style={S.label}>GARANTIA</label><select style={S.sel} value={form.locatarioGarantia} onChange={e=>set("locatarioGarantia",e.target.value)}>{["Fiador","Seguro Fiança","Caução","Título de Capitalização","Sem garantia"].map(o=><option key={o}>{o}</option>)}</select></div>
+            </div>
           </div>
         </div>
         <div style={{ padding: "16px 28px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 12, justifyContent: "flex-end" }}>
@@ -2161,6 +2179,18 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
     return { ...p, fimContrato: fim.toLocaleDateString("pt-BR"), diasRestantes };
   }).sort((a, b) => a.diasRestantes - b.diasRestantes);
 
+  // Alertas de IPTU vencendo (próximos 30 dias)
+  const alertasIPTU = PROPS.filter(p => {
+    if (!p.iptuVencimento) return false;
+    const venc = new Date(p.iptuVencimento + "-01");
+    const diasAte = Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
+    return diasAte >= -5 && diasAte <= 30;
+  }).map(p => {
+    const venc = new Date(p.iptuVencimento + "-01");
+    const diasAte = Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
+    return { ...p, diasIPTU: diasAte, vencIPTU: venc.toLocaleDateString("pt-BR", { month:"long", year:"numeric" }) };
+  });
+
   // Alertas de reajuste (próximos 60 dias)
   const alertasReajuste = PROPS.filter(p => {
     if (!p.contratoInicio) return false;
@@ -2178,9 +2208,12 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
     const dias = Math.round((aniv - hoje) / (1000 * 60 * 60 * 24));
     // IGPM estimado (hardcoded por ora, 6.2% acumulado 12m)
     const igpm = 0.062;
+    const ipca = 0.048; // IPCA estimado 4.8%
+    const indice = p.indiceReajuste || "IGPM";
+    const taxa = indice === "IPCA" ? ipca : indice === "Fixo" ? 0.05 : igpm;
     const aluguelAtual = p.rent - (p.descontoAluguel || 0);
-    const aluguelReajustado = Math.round(aluguelAtual * (1 + igpm));
-    return { ...p, diasReajuste: dias, dataReajuste: aniv.toLocaleDateString("pt-BR"), igpm, aluguelAtual, aluguelReajustado };
+    const aluguelReajustado = Math.round(aluguelAtual * (1 + taxa));
+    return { ...p, diasReajuste: dias, dataReajuste: aniv.toLocaleDateString("pt-BR"), igpm: taxa, indice, aluguelAtual, aluguelReajustado };
   }).sort((a, b) => a.diasReajuste - b.diasReajuste);
 
   // Resumo do mês selecionado
@@ -2255,9 +2288,18 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <div><div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>GESTÃO FINANCEIRA</div><h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Pagamentos</h1></div>
 
-      {/* Alertas de contrato e reajuste */}
-      {(alertasContrato.length > 0 || alertasReajuste.length > 0) && (
+      {/* Alertas de contrato, reajuste e IPTU */}
+      {(alertasContrato.length > 0 || alertasReajuste.length > 0 || alertasIPTU.length > 0) && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {alertasIPTU.map(p => (
+            <div key={`iptu-${p.id}`} style={{ padding: "14px 18px", background: T.blue + "22", border: `1px solid ${T.blue}44`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ fontSize: 22 }}>🏛️</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{p.name} — IPTU vence {p.diasIPTU <= 0 ? "este mês" : `em ${p.diasIPTU} dias`}</div>
+                <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>{p.vencIPTU} · {fmt.brl(p.iptu)} · {p.neighborhood}</div>
+              </div>
+            </div>
+          ))}
           {alertasContrato.map(p => (
             <div key={p.id} style={{ padding: "14px 18px", background: T.redDim + "44", border: `1px solid ${T.red}44`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ fontSize: 22 }}>📋</div>
@@ -2273,7 +2315,7 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
               <div style={{ flex: 1 }}>
                 <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{p.name} — Reajuste em <span style={{ color: T.amber }}>{p.diasReajuste} dias</span></div>
                 <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
-                  IGPM 12m estimado: {(p.igpm * 100).toFixed(1)}% · {fmt.brl(p.aluguelAtual)} → <span style={{ color: T.green, fontWeight: 700 }}>{fmt.brl(p.aluguelReajustado)}/mês</span>
+                  {p.indice||"IGPM"} estimado: {(p.igpm * 100).toFixed(1)}% · {fmt.brl(p.aluguelAtual)} → <span style={{ color: T.green, fontWeight: 700 }}>{fmt.brl(p.aluguelReajustado)}/mês</span>
                 </div>
               </div>
             </div>
@@ -2328,18 +2370,462 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
   );
 }
 
+// ─── PAGE LOCATÁRIOS ──────────────────────────────────────────────────────────
+function PageLocatarios({ PROPS, onUpdateProps }) {
+  const [selectedId, setSelectedId] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingIdx, setEditingIdx] = useState(null);
+  const [form, setForm] = useState({});
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const prop = selectedId ? PROPS.find(p => p.id === selectedId) : null;
+  const locatarios = prop?.locatarios || [];
+
+  const GARANTIAS = ["Fiador","Seguro Fiança","Título de Capitalização","Depósito Caução","Sem Garantia"];
+
+  const openForm = (idx = null) => {
+    if (idx !== null) setForm({ ...locatarios[idx] });
+    else setForm({ nome:"", cpf:"", telefone:"", email:"", garantia:"Fiador", garantiaObs:"", dataEntrada:"", dataSaida:"", ativo:true, obs:"" });
+    setEditingIdx(idx);
+    setShowForm(true);
+  };
+
+  const saveLocatario = () => {
+    const updated = [...locatarios];
+    if (editingIdx !== null) updated[editingIdx] = form;
+    else updated.push({ ...form, id: Date.now() });
+    const updatedProp = { ...prop, locatarios: updated };
+    onUpdateProps(PROPS.map(p => p.id === prop.id ? updatedProp : p));
+    setShowForm(false);
+  };
+
+  const removeLocatario = (idx) => {
+    if (!window.confirm("Remover locatário?")) return;
+    const updated = locatarios.filter((_, i) => i !== idx);
+    onUpdateProps(PROPS.map(p => p.id === prop.id ? { ...prop, locatarios: updated } : p));
+  };
+
+  // Lista de todos os locatários ativos por imóvel
+  const todosAtivos = PROPS.flatMap(p => (p.locatarios||[]).filter(l => l.ativo).map(l => ({ ...l, imovel: p.name, neighborhood: p.neighborhood })));
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
+      <div>
+        <div style={{ color:T.muted, fontSize:11, letterSpacing:2, fontWeight:700, marginBottom:6 }}>CADASTRO</div>
+        <h1 style={{ color:T.text, fontSize:26, fontWeight:800, margin:0 }}>Locatários</h1>
+      </div>
+
+      {/* Selecionar imóvel */}
+      <div style={{ display:"flex", gap:12, alignItems:"center", flexWrap:"wrap" }}>
+        <select style={{ ...S.sel, minWidth:280 }} value={selectedId||""} onChange={e => setSelectedId(Number(e.target.value)||null)}>
+          <option value="">— Selecione um imóvel —</option>
+          {PROPS.map(p => <option key={p.id} value={p.id}>{p.name} · {p.neighborhood}</option>)}
+        </select>
+        {prop && <button style={S.btn} onClick={() => openForm()}>+ Adicionar Locatário</button>}
+      </div>
+
+      {/* Locatários do imóvel selecionado */}
+      {prop && (
+        <div style={{ ...S.card }}>
+          <div style={{ color:T.gold, fontSize:12, fontWeight:700, letterSpacing:1, marginBottom:16 }}>{prop.name} — HISTÓRICO DE LOCATÁRIOS</div>
+          {locatarios.length === 0 ? (
+            <div style={{ color:T.dim, fontSize:13, padding:"20px 0", textAlign:"center" }}>Nenhum locatário cadastrado ainda.</div>
+          ) : locatarios.map((l, i) => (
+            <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 0", borderBottom:`1px solid ${T.border}` }}>
+              <div style={{ display:"flex", gap:16, alignItems:"center" }}>
+                <div style={{ width:40, height:40, borderRadius:"50%", background:T.s3, display:"flex", alignItems:"center", justifyContent:"center", color:T.gold, fontWeight:800, fontSize:16 }}>{l.nome?.[0]?.toUpperCase()||"?"}</div>
+                <div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ color:T.text, fontWeight:700 }}>{l.nome||"—"}</span>
+                    <span style={S.badge(l.ativo?T.green:T.dim)}>{l.ativo?"Ativo":"Encerrado"}</span>
+                  </div>
+                  <div style={{ color:T.muted, fontSize:12, marginTop:2 }}>
+                    {l.cpf && <span>{l.cpf} · </span>}{l.telefone && <span>{l.telefone} · </span>}{l.email && <span>{l.email}</span>}
+                  </div>
+                  <div style={{ color:T.dim, fontSize:11, marginTop:2 }}>
+                    {l.garantia && <span>Garantia: {l.garantia} · </span>}
+                    {l.dataEntrada && <span>Entrada: {l.dataEntrada}</span>}
+                    {l.dataSaida && <span> · Saída: {l.dataSaida}</span>}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:8 }}>
+                <button style={{ background:T.s3, border:`1px solid ${T.border}`, color:T.muted, borderRadius:7, padding:"5px 10px", cursor:"pointer" }} onClick={() => openForm(i)}>✏️</button>
+                <button style={{ background:T.s3, border:`1px solid ${T.redDim}`, color:T.red, borderRadius:7, padding:"5px 10px", cursor:"pointer" }} onClick={() => removeLocatario(i)}>🗑</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Visão geral de todos ativos */}
+      {!prop && todosAtivos.length > 0 && (
+        <div style={{ ...S.card }}>
+          <div style={{ color:T.gold, fontSize:12, fontWeight:700, letterSpacing:1, marginBottom:16 }}>TODOS OS LOCATÁRIOS ATIVOS</div>
+          {todosAtivos.map((l, i) => (
+            <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${T.border}` }}>
+              <div>
+                <span style={{ color:T.text, fontWeight:600 }}>{l.nome||"—"}</span>
+                <span style={{ color:T.dim, fontSize:12, marginLeft:10 }}>{l.imovel} · {l.neighborhood}</span>
+              </div>
+              <div style={{ color:T.muted, fontSize:12 }}>{l.garantia} · {l.telefone||l.email||"—"}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal de form */}
+      {showForm && (
+        <div style={{ position:"fixed", inset:0, background:"#00000099", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+          <div style={{ background:T.s1, border:`1px solid ${T.borderMid}`, borderRadius:18, width:"100%", maxWidth:540, maxHeight:"90vh", overflow:"auto" }}>
+            <div style={{ padding:"20px 24px", borderBottom:`1px solid ${T.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div style={{ color:T.text, fontWeight:800, fontSize:16 }}>{editingIdx !== null ? "Editar" : "Novo"} Locatário</div>
+              <button style={{ background:T.s3, border:"none", color:T.muted, borderRadius:8, width:32, height:32, cursor:"pointer", fontSize:18 }} onClick={() => setShowForm(false)}>×</button>
+            </div>
+            <div style={{ padding:24, display:"flex", flexDirection:"column", gap:14 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                <div style={{ gridColumn:"1/-1" }}><label style={S.label}>NOME COMPLETO</label><input style={S.input} value={form.nome||""} onChange={e=>set("nome",e.target.value)} placeholder="Nome do locatário" autoFocus /></div>
+                <div><label style={S.label}>CPF</label><input style={S.input} value={form.cpf||""} onChange={e=>set("cpf",e.target.value)} placeholder="000.000.000-00" /></div>
+                <div><label style={S.label}>TELEFONE</label><input style={S.input} value={form.telefone||""} onChange={e=>set("telefone",e.target.value)} placeholder="(11) 99999-9999" /></div>
+                <div style={{ gridColumn:"1/-1" }}><label style={S.label}>EMAIL</label><input style={S.input} value={form.email||""} onChange={e=>set("email",e.target.value)} placeholder="email@exemplo.com" /></div>
+                <div><label style={S.label}>GARANTIA</label><select style={S.sel} value={form.garantia||"Fiador"} onChange={e=>set("garantia",e.target.value)}>{GARANTIAS.map(g=><option key={g}>{g}</option>)}</select></div>
+                <div><label style={S.label}>DETALHES DA GARANTIA</label><input style={S.input} value={form.garantiaObs||""} onChange={e=>set("garantiaObs",e.target.value)} placeholder="Ex: João Silva, CPF..." /></div>
+                <div><label style={S.label}>DATA DE ENTRADA</label><input type="date" style={S.input} value={form.dataEntrada||""} onChange={e=>set("dataEntrada",e.target.value)} /></div>
+                <div><label style={S.label}>DATA DE SAÍDA</label><input type="date" style={S.input} value={form.dataSaida||""} onChange={e=>set("dataSaida",e.target.value)} /></div>
+                <div style={{ gridColumn:"1/-1" }}><label style={S.label}>OBSERVAÇÕES</label><input style={S.input} value={form.obs||""} onChange={e=>set("obs",e.target.value)} placeholder="Observações adicionais" /></div>
+                <div style={{ gridColumn:"1/-1", display:"flex", alignItems:"center", gap:10 }}>
+                  <input type="checkbox" checked={form.ativo!==false} onChange={e=>set("ativo",e.target.checked)} style={{ width:16, height:16, accentColor:T.gold }} />
+                  <span style={{ color:T.muted, fontSize:13 }}>Locatário ativo no imóvel</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ padding:"14px 24px", borderTop:`1px solid ${T.border}`, display:"flex", gap:10, justifyContent:"flex-end" }}>
+              <button style={S.btnGhost} onClick={() => setShowForm(false)}>Cancelar</button>
+              <button style={S.btn} onClick={saveLocatario}>Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PAGE FLUXO DE CAIXA ─────────────────────────────────────────────────────
+function PageFluxoCaixa({ PROPS }) {
+  const hoje = new Date();
+  const [ano, setAno] = useState(hoje.getFullYear());
+  const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const MESES_FULL = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+  const fluxo = MESES.map((mes, i) => {
+    const dataRef = new Date(ano, i, 1);
+    const chave = `${ano}_${i}`;
+    let entradas = 0, saidas = 0, inadimplentes = 0;
+    PROPS.forEach(p => {
+      if (p.status === "Ocupado") {
+        const pag = p.pagamentos?.[chave];
+        if (pag?.status === "pago") entradas += pag.valor || p.rent;
+        else if (pag?.status === "atrasado") { inadimplentes += p.rent; }
+        else if (dataRef < hoje) inadimplentes += p.rent;
+      }
+      // Despesas fixas mensais
+      const despMensal = Math.round((p.iptu||0)/12 + (p.maintMonthly||0) + (p.insurance||0)/12 + (p.admin||0));
+      const condoMensal = (p.hasCondominio && (p.condoPagoPor||"proprietario")==="proprietario") ? ((p.condoFee||0)+(p.fundoReserva||0)+(p.chamadaExtra||0)) : 0;
+      saidas += despMensal + condoMensal;
+    });
+    const saldo = entradas - saidas;
+    return { mes, mesNum: i, entradas, saidas, saldo, inadimplentes };
+  });
+
+  const totalEntradas = fluxo.reduce((s, m) => s + m.entradas, 0);
+  const totalSaidas = fluxo.reduce((s, m) => s + m.saidas, 0);
+  const totalSaldo = totalEntradas - totalSaidas;
+  const saldoAcumulado = fluxo.reduce((acc, m, i) => {
+    const prev = i === 0 ? 0 : acc[i-1];
+    acc.push(prev + m.saldo);
+    return acc;
+  }, []);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div>
+          <div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>FINANCEIRO</div>
+          <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Fluxo de Caixa</h1>
+        </div>
+        <select style={{ ...S.sel, width: "auto" }} value={ano} onChange={e => setAno(Number(e.target.value))}>
+          {[hoje.getFullYear()-1, hoje.getFullYear(), hoje.getFullYear()+1].map(y => <option key={y}>{y}</option>)}
+        </select>
+      </div>
+
+      {/* KPIs */}
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+        {[
+          { label: "ENTRADAS NO ANO", value: fmt.brlK(totalEntradas), color: T.green },
+          { label: "SAÍDAS NO ANO", value: fmt.brlK(totalSaidas), color: T.red },
+          { label: "SALDO LÍQUIDO", value: fmt.brlK(totalSaldo), color: totalSaldo >= 0 ? T.green : T.red },
+          { label: "IMÓVEIS ATIVOS", value: PROPS.filter(p => p.status === "Ocupado").length, color: T.gold },
+        ].map(k => (
+          <div key={k.label} style={{ ...S.card, flex: 1, minWidth: 160 }}>
+            <div style={{ color: T.dim, fontSize: 10, letterSpacing: 1, marginBottom: 6 }}>{k.label}</div>
+            <div style={{ color: k.color, fontSize: 22, fontWeight: 800, ...S.mono }}>{k.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Gráfico de barras */}
+      <div style={{ ...S.card }}>
+        <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 16 }}>Entradas × Saídas por Mês</div>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={fluxo.map((m, i) => ({ ...m, saldoAcum: saldoAcumulado[i] }))} barGap={2} barCategoryGap="25%">
+            <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
+            <XAxis dataKey="mes" tick={{ fill: T.muted, fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: T.muted, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+            <Tooltip content={<Tip />} />
+            <Bar dataKey="entradas" name="Entradas" fill={T.green} radius={[4,4,0,0]} opacity={0.85} />
+            <Bar dataKey="saidas" name="Saídas" fill={T.red} radius={[4,4,0,0]} opacity={0.75} />
+          </BarChart>
+        </ResponsiveContainer>
+        <div style={{ display:"flex", gap:20, marginTop:8, justifyContent:"center" }}>
+          {[["Entradas", T.green], ["Saídas", T.red]].map(([l,c]) => (
+            <div key={l} style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <div style={{ width:10, height:10, borderRadius:2, background:c }} />
+              <span style={{ color:T.muted, fontSize:11 }}>{l}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Tabela mensal */}
+      <div style={{ ...S.card, padding: 0, overflow: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ background: T.s2 }}>
+              {["MÊS","ENTRADAS","SAÍDAS","SALDO","SALDO ACUM.","INADIMPLÊNCIA"].map(h => <th key={h} style={S.th}>{h}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {fluxo.map((m, i) => {
+              const isFuture = new Date(ano, m.mesNum, 1) > hoje;
+              return (
+                <tr key={m.mes} style={{ opacity: isFuture ? 0.5 : 1 }} onMouseEnter={e => e.currentTarget.style.background = T.s2} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                  <td style={{ ...S.td, fontWeight: 600 }}>{MESES_FULL[i]}{isFuture && <span style={{ color: T.dim, fontSize: 10, marginLeft: 6 }}>previsto</span>}</td>
+                  <td style={{ ...S.td, ...S.mono, color: T.green, fontWeight: 600 }}>{fmt.brl(m.entradas)}</td>
+                  <td style={{ ...S.td, ...S.mono, color: T.red }}>{fmt.brl(m.saidas)}</td>
+                  <td style={{ ...S.td, ...S.mono, color: m.saldo >= 0 ? T.green : T.red, fontWeight: 700 }}>{fmt.brl(m.saldo)}</td>
+                  <td style={{ ...S.td, ...S.mono, color: saldoAcumulado[i] >= 0 ? T.gold : T.red }}>{fmt.brl(saldoAcumulado[i])}</td>
+                  <td style={{ ...S.td, ...S.mono, color: m.inadimplentes > 0 ? T.amber : T.dim }}>{m.inadimplentes > 0 ? fmt.brl(m.inadimplentes) : "—"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr style={{ background: T.s2, fontWeight: 800 }}>
+              <td style={{ ...S.td, color: T.text, fontWeight: 800 }}>TOTAL</td>
+              <td style={{ ...S.td, ...S.mono, color: T.green, fontWeight: 800 }}>{fmt.brl(totalEntradas)}</td>
+              <td style={{ ...S.td, ...S.mono, color: T.red, fontWeight: 800 }}>{fmt.brl(totalSaidas)}</td>
+              <td style={{ ...S.td, ...S.mono, color: totalSaldo >= 0 ? T.green : T.red, fontWeight: 800 }}>{fmt.brl(totalSaldo)}</td>
+              <td style={S.td}>—</td>
+              <td style={S.td}>—</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {/* Despesas por categoria */}
+      <div style={{ ...S.card }}>
+        <div style={{ color: T.text, fontWeight: 700, fontSize: 15, marginBottom: 16 }}>Composição das Saídas Mensais (média)</div>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          {[
+            ["IPTU", PROPS.reduce((s,p) => s+(p.iptu||0),0)/12, T.amber],
+            ["Manutenção", PROPS.reduce((s,p) => s+(p.maintMonthly||0),0), T.blue],
+            ["Seguros", PROPS.reduce((s,p) => s+(p.insurance||0),0)/12, T.teal],
+            ["Administração", PROPS.reduce((s,p) => s+(p.admin||0),0), T.gold],
+            ["Condomínio", PROPS.filter(p=>p.hasCondominio&&(p.condoPagoPor||"proprietario")==="proprietario").reduce((s,p)=>s+(p.condoFee||0)+(p.fundoReserva||0)+(p.chamadaExtra||0),0), T.muted],
+          ].map(([label, val, color]) => (
+            <div key={label} style={{ flex: 1, minWidth: 120, background: T.s2, padding: "12px 16px", borderRadius: 10 }}>
+              <div style={{ color: T.dim, fontSize: 11, marginBottom: 4 }}>{label}</div>
+              <div style={{ color, fontWeight: 700, fontSize: 15, ...S.mono }}>{fmt.brl(Math.round(val))}<span style={{ color: T.dim, fontSize: 10 }}>/mês</span></div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Top inadimplentes no mês atual */}
+      {(() => {
+        const mesKey = `${hoje.getFullYear()}_${hoje.getMonth()}`;
+        const inadimplentes = PROPS.filter(p => p.status === "Ocupado" && (p.pagamentos?.[mesKey]?.status === "atrasado" || p.pagamentos?.[mesKey]?.status === "nao_pago" || (!p.pagamentos?.[mesKey] && new Date(ano, hoje.getMonth(), p.diaVencimento||10) < hoje)));
+        if (inadimplentes.length === 0) return null;
+        return (
+          <div style={{ ...S.card, border:`1px solid ${T.red}40` }}>
+            <div style={{ color: T.red, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>⚠️ Inadimplência — Mês Atual</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {inadimplentes.map(p => (
+                <div key={p.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:T.s2, borderRadius:8 }}>
+                  <div>
+                    <div style={{ color:T.text, fontWeight:600 }}>{p.name}</div>
+                    <div style={{ color:T.muted, fontSize:12 }}>{p.neighborhood}</div>
+                  </div>
+                  <div style={{ color:T.red, fontWeight:700, ...S.mono }}>{fmt.brl(p.rent - (p.descontoAluguel||0))}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+
 // ─── NAV ──────────────────────────────────────────────────────────────────────
 const NAV = [
-  { id: "dashboard",  label: "Visão Geral",          icon: "◈" },
-  { id: "noi",        label: "Imóveis",               icon: "⊞" },
-  { id: "pagamentos", label: "Pagamentos",             icon: "💳" },
-  { id: "obras",      label: "Obras & Reformas",      icon: "🔨" },
-  { id: "mercado",    label: "Valor da Carteira",     icon: "🏦" },
-  { id: "leakage",    label: "Alertas",               icon: "◎" },
-  { id: "decision",   label: "Decisão por Imóvel",   icon: "⟁" },
-  { id: "ia",         label: "IA do Portfólio",       icon: "✦" },
-  { id: "report",     label: "Relatórios",            icon: "⬡" },
+  { id: "dashboard",  label: "Visão Geral",        icon: "◈" },
+  { id: "noi",        label: "Imóveis",             icon: "⊞" },
+  { id: "pagamentos", label: "Pagamentos",           icon: "💳" },
+  { id: "fluxo",      label: "Fluxo de Caixa",      icon: "📊" },
+  { id: "locatarios", label: "Locatários",           icon: "👤" },
+  { id: "obras",      label: "Obras & Reformas",    icon: "🔨" },
+  { id: "mercado",    label: "Valor da Carteira",   icon: "🏦" },
+  { id: "historico",  label: "Histórico",           icon: "📅" },
+  { id: "leakage",    label: "Alertas",             icon: "◎" },
+  { id: "decision",   label: "Decisão por Imóvel", icon: "⟁" },
+  { id: "ia",         label: "IA do Portfólio",     icon: "✦" },
+  { id: "report",     label: "Relatórios",          icon: "⬡" },
 ];
+
+// ─── PAGE HISTÓRICO DO IMÓVEL ─────────────────────────────────────────────────
+function PageHistorico({ PROPS, onUpdateProps }) {
+  const [selectedId, setSelectedId] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({});
+  const [editingIdx, setEditingIdx] = useState(null);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const prop = selectedId ? PROPS.find(p => p.id === selectedId) : null;
+  const historico = prop?.historico || [];
+
+  const TIPOS_EVENTO = ["Compra","Reforma/CAPEX","Início de Locação","Rescisão de Contrato","Valorização/Avaliação","Venda","Sinistro","Outro"];
+  const CORES = { "Compra":T.gold, "Reforma/CAPEX":T.amber, "Início de Locação":T.green, "Rescisão de Contrato":T.red, "Valorização/Avaliação":T.blue, "Venda":T.teal, "Sinistro":T.red, "Outro":T.muted };
+
+  const openForm = (idx = null) => {
+    if (idx !== null) setForm({ ...historico[idx] });
+    else setForm({ tipo:"Compra", data:"", titulo:"", descricao:"", valor:0 });
+    setEditingIdx(idx);
+    setShowForm(true);
+  };
+
+  const saveEvento = () => {
+    const updated = [...historico];
+    if (editingIdx !== null) updated[editingIdx] = form;
+    else updated.push({ ...form, id: Date.now() });
+    updated.sort((a, b) => new Date(a.data) - new Date(b.data));
+    onUpdateProps(PROPS.map(p => p.id === prop.id ? { ...prop, historico: updated } : p));
+    setShowForm(false);
+  };
+
+  const removeEvento = (idx) => {
+    if (!window.confirm("Remover evento?")) return;
+    const updated = historico.filter((_, i) => i !== idx);
+    onUpdateProps(PROPS.map(p => p.id === prop.id ? { ...prop, historico: updated } : p));
+  };
+
+  const todosEventos = PROPS.flatMap(p => (p.historico||[]).map(ev => ({ ...ev, imovel: p.name }))).sort((a,b) => new Date(b.data) - new Date(a.data));
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
+      <div>
+        <div style={{ color:T.muted, fontSize:11, letterSpacing:2, fontWeight:700, marginBottom:6 }}>PATRIMÔNIO</div>
+        <h1 style={{ color:T.text, fontSize:26, fontWeight:800, margin:0 }}>Histórico do Imóvel</h1>
+      </div>
+      <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+        <select style={{ ...S.sel, minWidth:280 }} value={selectedId||""} onChange={e => setSelectedId(Number(e.target.value)||null)}>
+          <option value="">— Selecione um imóvel —</option>
+          {PROPS.map(p => <option key={p.id} value={p.id}>{p.name} · {p.neighborhood}</option>)}
+        </select>
+        {prop && <button style={S.btn} onClick={() => openForm()}>+ Adicionar Evento</button>}
+      </div>
+      {prop && (
+        <div style={{ ...S.card }}>
+          <div style={{ color:T.gold, fontSize:12, fontWeight:700, letterSpacing:1, marginBottom:20 }}>{prop.name} — LINHA DO TEMPO</div>
+          {historico.length === 0 ? (
+            <div style={{ color:T.dim, fontSize:13, padding:"20px 0", textAlign:"center" }}>Nenhum evento cadastrado. Comece pela compra do imóvel.</div>
+          ) : (
+            <div style={{ position:"relative", paddingLeft:32 }}>
+              <div style={{ position:"absolute", left:10, top:0, bottom:0, width:2, background:T.border }} />
+              {historico.map((ev, i) => {
+                const cor = CORES[ev.tipo] || T.muted;
+                return (
+                  <div key={i} style={{ position:"relative", marginBottom:24 }}>
+                    <div style={{ position:"absolute", left:-28, width:16, height:16, borderRadius:"50%", background:cor, border:"2px solid "+T.bg, top:2 }} />
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                      <div>
+                        <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:4 }}>
+                          <span style={S.badge(cor)}>{ev.tipo}</span>
+                          <span style={{ color:T.dim, fontSize:12 }}>{ev.data ? new Date(ev.data+"T12:00").toLocaleDateString("pt-BR") : "—"}</span>
+                        </div>
+                        <div style={{ color:T.text, fontWeight:600 }}>{ev.titulo||ev.tipo}</div>
+                        {ev.descricao && <div style={{ color:T.muted, fontSize:13, marginTop:4 }}>{ev.descricao}</div>}
+                        {ev.valor > 0 && <div style={{ color:T.gold, fontSize:13, marginTop:4, fontWeight:700, ...S.mono }}>{fmt.brl(ev.valor)}</div>}
+                      </div>
+                      <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                        <button style={{ background:T.s3, border:"1px solid "+T.border, color:T.muted, borderRadius:7, padding:"4px 8px", cursor:"pointer" }} onClick={() => openForm(i)}>✏️</button>
+                        <button style={{ background:T.s3, border:"1px solid "+T.redDim, color:T.red, borderRadius:7, padding:"4px 8px", cursor:"pointer" }} onClick={() => removeEvento(i)}>🗑</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+      {!prop && todosEventos.length > 0 && (
+        <div style={{ ...S.card }}>
+          <div style={{ color:T.gold, fontSize:12, fontWeight:700, letterSpacing:1, marginBottom:16 }}>EVENTOS RECENTES — TODOS OS IMÓVEIS</div>
+          {todosEventos.slice(0,15).map((ev, i) => {
+            const cor = CORES[ev.tipo] || T.muted;
+            return (
+              <div key={i} style={{ display:"flex", gap:14, alignItems:"center", padding:"10px 0", borderBottom:"1px solid "+T.border }}>
+                <span style={S.badge(cor)}>{ev.tipo}</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ color:T.text, fontSize:13, fontWeight:600 }}>{ev.titulo||ev.tipo}</div>
+                  <div style={{ color:T.dim, fontSize:12 }}>{ev.imovel}</div>
+                </div>
+                {ev.valor > 0 && <div style={{ color:T.gold, fontSize:13, fontWeight:700, ...S.mono }}>{fmt.brl(ev.valor)}</div>}
+                <div style={{ color:T.dim, fontSize:12 }}>{ev.data ? new Date(ev.data+"T12:00").toLocaleDateString("pt-BR") : ""}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {showForm && (
+        <div style={{ position:"fixed", inset:0, background:"#00000099", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+          <div style={{ background:T.s1, border:"1px solid "+T.borderMid, borderRadius:18, width:"100%", maxWidth:500 }}>
+            <div style={{ padding:"20px 24px", borderBottom:"1px solid "+T.border, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div style={{ color:T.text, fontWeight:800, fontSize:16 }}>{editingIdx !== null ? "Editar" : "Novo"} Evento</div>
+              <button style={{ background:T.s3, border:"none", color:T.muted, borderRadius:8, width:32, height:32, cursor:"pointer", fontSize:18 }} onClick={() => setShowForm(false)}>×</button>
+            </div>
+            <div style={{ padding:24, display:"flex", flexDirection:"column", gap:14 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                <div><label style={S.label}>TIPO DE EVENTO</label><select style={S.sel} value={form.tipo||"Compra"} onChange={e=>set("tipo",e.target.value)}>{TIPOS_EVENTO.map(t=><option key={t}>{t}</option>)}</select></div>
+                <div><label style={S.label}>DATA</label><input type="date" style={S.input} value={form.data||""} onChange={e=>set("data",e.target.value)} /></div>
+                <div style={{ gridColumn:"1/-1" }}><label style={S.label}>TÍTULO</label><input style={S.input} value={form.titulo||""} onChange={e=>set("titulo",e.target.value)} placeholder="Ex: Compra do imóvel, Reforma da cozinha..." autoFocus /></div>
+                <div style={{ gridColumn:"1/-1" }}><label style={S.label}>DESCRIÇÃO</label><input style={S.input} value={form.descricao||""} onChange={e=>set("descricao",e.target.value)} placeholder="Detalhes do evento" /></div>
+                <div><label style={S.label}>VALOR (R$)</label><input type="number" style={S.input} value={form.valor||""} onChange={e=>set("valor",parseFloat(e.target.value)||0)} placeholder="0" /></div>
+              </div>
+            </div>
+            <div style={{ padding:"14px 24px", borderTop:"1px solid "+T.border, display:"flex", gap:10, justifyContent:"flex-end" }}>
+              <button style={S.btnGhost} onClick={() => setShowForm(false)}>Cancelar</button>
+              <button style={S.btn} onClick={saveEvento}>Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 // ─── ADD IMOVEL MODAL ─────────────────────────────────────────────────────────
 function AddImovelModal({ onSave, onClose, nextId }) {
@@ -2392,6 +2878,8 @@ function AddImovelModal({ onSave, onClose, nextId }) {
       iptuBenchmark, iptuDelta, maintBenchmark, maintDelta,
       vacancyBenchmark: bm.vacancy_days, vacancyDelta, monthlyData, isProblematic: false,
       obras: [], prestadores: [], pagamentos: {}, valorMercado: 0, valorCompra: 0, anoCompra: null,
+      indiceReajuste: 'IGPM', iptuVencimento: '', locatarioNome: '', locatarioCPF: '',
+      locatarioTelefone: '', locatarioEmail: '', locatarioGarantia: 'Fiador',
     });
   };
 
@@ -2584,6 +3072,8 @@ export default function App() {
           proximoReajuste: r.proximo_reajuste||"",
           condoPagoPor: r.condo_pago_por||"proprietario",
           regimeFiscal: r.regime_fiscal||"PF",
+          locatarios: r.locatarios||[], historico: r.historico||[],
+          iptuVencimento: r.iptu_vencimento||"", indiceReajuste: r.indice_reajuste||"IGPM",
         }, BENCHMARKS));
         setPropsRaw(mapped);
       }
@@ -2605,6 +3095,8 @@ export default function App() {
     obras: prop.obras||[], prestadores: prop.prestadores||[], pagamentos: prop.pagamentos||{},
     monthly_data: prop.monthlyData||[], dia_vencimento: prop.diaVencimento||10,
     condo_pago_por: prop.condoPagoPor||"proprietario", regime_fiscal: prop.regimeFiscal||"PF",
+    indice_reajuste: prop.indiceReajuste||"IGPM", iptu_vencimento: prop.iptuVencimento||null,
+    locatarios: prop.locatarios||[], historico: prop.historico||[],
   });
 
   const setProps = useCallback((updater) => {
@@ -2630,6 +3122,8 @@ export default function App() {
       obras: newProp.obras||[], prestadores: newProp.prestadores||[], pagamentos: newProp.pagamentos||{},
       monthly_data: newProp.monthlyData||[], dia_vencimento: newProp.diaVencimento||10,
       condo_pago_por: newProp.condoPagoPor||"proprietario", regime_fiscal: newProp.regimeFiscal||"PF",
+      locatarios: newProp.locatarios||[], historico: newProp.historico||[],
+      iptu_vencimento: newProp.iptuVencimento||null, indice_reajuste: newProp.indiceReajuste||"IGPM",
     };
     const { data, error } = await supabase.from("imoveis").insert(dbData).select().single();
     if (error) { console.error("Erro ao adicionar imóvel:", error); setAddingImovel(false); return; }
@@ -2675,6 +3169,12 @@ export default function App() {
       if (old.valorMercado !== np.valorMercado || old.valorCompra !== np.valorCompra || old.anoCompra !== np.anoCompra) {
         await supabase.from("imoveis").update({ valor_mercado: np.valorMercado||0, valor_compra: np.valorCompra||0, ano_compra: np.anoCompra||null }).eq("id", np.id).eq("user_id", user.id);
       }
+      if (JSON.stringify(old.locatarios) !== JSON.stringify(np.locatarios)) {
+        await supabase.from("imoveis").update({ locatarios: np.locatarios||[] }).eq("id", np.id).eq("user_id", user.id);
+      }
+      if (JSON.stringify(old.historico) !== JSON.stringify(np.historico)) {
+        await supabase.from("imoveis").update({ historico: np.historico||[] }).eq("id", np.id).eq("user_id", user.id);
+      }
     });
     setPropsRaw(newProps);
   };
@@ -2710,7 +3210,10 @@ export default function App() {
     report:    <PageReport PROPS={props} />,
     ia:        <PageIA PROPS={props} />,
     pagamentos: <PagePagamentos PROPS={props} onUpdateProps={handleUpdateProps} />,
-  }[page] || <PageDashboard PROPS={props} onNav={nav} onProp={setSelectedProp} />;
+    fluxo:     <PageFluxoCaixa PROPS={props} />,
+    locatarios: <PageLocatarios PROPS={props} onUpdateProps={handleUpdateProps} />,
+    historico:  <PageHistorico PROPS={props} onUpdateProps={handleUpdateProps} />,
+  }[page] || <PageDashboard PROPS={props} onNav={nav} onProp={setSelectedProp} onAdd={() => setAddingImovel(true)} />;
 
   return (
     <>
