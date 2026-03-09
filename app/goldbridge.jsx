@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -3426,7 +3426,7 @@ export default function App() {
   }[page] || <PageDashboard PROPS={props} onNav={nav} onProp={setSelectedProp} onAdd={() => setAddingImovel(true)} />;
 
   return (
-    <>
+    <React.Fragment key={themeKey}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
         *{box-sizing:border-box}
@@ -3442,7 +3442,7 @@ export default function App() {
       {addingImovel && <AddImovelModal nextId={nextId} onSave={handleAddImovel} onClose={() => setAddingImovel(false)} />}
       {deletingProp && <DeleteConfirmModal prop={deletingProp} onConfirm={confirmDelete} onClose={() => setDeletingProp(null)} />}
 
-      <div key={`app-${themeKey}`} style={{ display: "flex", minHeight: "100vh", background: T.bg }}>
+      <div style={{ display: "flex", minHeight: "100vh", background: T.bg }}>
         {/* Sidebar */}
         <div style={{ width: 230, background: T.s0, borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 100 }}>
           <div style={{ padding: "28px 22px 20px" }}>
@@ -3481,10 +3481,10 @@ export default function App() {
         </div>
 
         {/* Main */}
-        <div key={themeKey} style={{ marginLeft: 230, flex: 1, padding: "32px 36px", minHeight: "100vh", maxWidth: "calc(100vw - 230px)" }}>
+        <div style={{ marginLeft: 230, flex: 1, padding: "32px 36px", minHeight: "100vh", maxWidth: "calc(100vw - 230px)" }}>
           {content}
         </div>
       </div>
-    </>
+    </React.Fragment>
   );
 }
