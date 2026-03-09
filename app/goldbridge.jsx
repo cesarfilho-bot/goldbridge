@@ -11,7 +11,7 @@ import {
   Tooltip, ResponsiveContainer, AreaChart, Area, Cell, PieChart, Pie,
 } from "recharts";
 
-const T = {
+const DARK_T = {
   bg: "#08090D", s0: "#0E1018", s1: "#141720", s2: "#1C2030", s3: "#232840",
   border: "#1E2235", borderMid: "#2A3050", gold: "#C8A84B", goldBright: "#E5C96A",
   goldDim: "#6B5A28", goldGlow: "#C8A84B33", text: "#EDF0F8", muted: "#7A82A0",
@@ -19,6 +19,15 @@ const T = {
   redDim: "#7A2230", amber: "#F5A623", amberDim: "#7A5212", blue: "#4A8CF5",
   blueDim: "#1E3D7A", teal: "#2EC4B6",
 };
+const LIGHT_T = {
+  bg: "#F4F5F7", s0: "#FFFFFF", s1: "#FFFFFF", s2: "#F0F1F5", s3: "#E4E6ED",
+  border: "#D8DAE5", borderMid: "#C4C8D8", gold: "#9A7A28", goldBright: "#B8930A",
+  goldDim: "#D4B96A", goldGlow: "#C8A84B22", text: "#0E1018", muted: "#5A6282",
+  dim: "#9AA0BA", green: "#1A9E72", greenDim: "#C8F0E4", red: "#C03045",
+  redDim: "#FAD0D5", amber: "#C07010", amberDim: "#FDE8C0", blue: "#2060D0",
+  blueDim: "#D0E0FF", teal: "#1A9990",
+};
+let T = { ...DARK_T };
 
 const BENCHMARKS = {
   "São Paulo": {
@@ -412,7 +421,8 @@ function EditModal({ prop, onSave, onClose }) {
     if (noiPct < 0.5) leakage += 20;
     leakage = Math.min(98, Math.max(2, Math.round(leakage)));
     const proximoReajuste = form.contratoInicio ? (() => { const d = new Date(form.contratoInicio); const now = new Date(); let y = now.getFullYear(); if (new Date(y, d.getMonth(), d.getDate()) <= now) y++; return new Date(y, d.getMonth(), d.getDate()).toLocaleDateString("pt-BR"); })() : "";
-    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: Number(form.admin), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, locatarioNome: form.locatarioNome, locatarioCPF: form.locatarioCPF, locatarioTelefone: form.locatarioTelefone, locatarioEmail: form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
+    const adminFromPct = Math.round(Number(form.rent) * (Number(form.adminPct)||8) / 100);
+    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: adminFromPct, adminPct: Number(form.adminPct)||8, vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, locatarioNome: form.locatarioNome, locatarioCPF: form.locatarioCPF, locatarioTelefone: form.locatarioTelefone, locatarioEmail: form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
   };
 
   return (
@@ -446,7 +456,14 @@ function EditModal({ prop, onSave, onClose }) {
               <div><label style={S.label}>IPTU ANUAL (R$)</label><input type="number" style={S.input} value={form.iptu} onChange={e=>set("iptu",e.target.value)} /></div>
               <div><label style={S.label}>MANUTENÇÃO MENSAL (R$)</label><input type="number" style={S.input} value={form.maintMonthly} onChange={e=>set("maintMonthly",e.target.value)} /></div>
               <div><label style={S.label}>SEGURO ANUAL (R$)</label><input type="number" style={S.input} value={form.insurance} onChange={e=>set("insurance",e.target.value)} /></div>
-              <div><label style={S.label}>TAXA ADM. MENSAL (R$)</label><input type="number" style={S.input} value={form.admin} onChange={e=>set("admin",e.target.value)} /></div>
+              <div>
+                <label style={S.label}>TAXA ADM. (%)</label>
+                <div style={{ position: "relative" }}>
+                  <input type="number" style={{ ...S.input, paddingRight: 32 }} value={form.adminPct} placeholder="8" min="0" max="20" step="0.5" onChange={e=>{ set("adminPct",e.target.value); set("admin", Math.round((parseFloat(form.rent)||0)*(parseFloat(e.target.value)||8)/100)); }} />
+                  <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: T.muted, fontSize: 14, fontWeight: 700 }}>%</span>
+                </div>
+                {form.rent && <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>= {new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Math.round((parseFloat(form.rent)||0)*(parseFloat(form.adminPct)||8)/100))}/mês</div>}
+              </div>
               <div><label style={S.label}>DIAS DE VACÂNCIA/ANO</label><input type="number" style={S.input} value={form.vacancyDays} onChange={e=>set("vacancyDays",e.target.value)} /></div>
               <div><label style={S.label}>VALOR DE MERCADO MANUAL (R$)</label><input type="number" style={S.input} value={form.marketValueManual} onChange={e=>set("marketValueManual",e.target.value)} /></div>
             </div>
@@ -2829,36 +2846,48 @@ function PageHistorico({ PROPS, onUpdateProps }) {
 
 // ─── ADD IMOVEL MODAL ─────────────────────────────────────────────────────────
 function AddImovelModal({ onSave, onClose, nextId }) {
+  const NEIGHBORHOODS = Object.keys(FIPEZAP_M2).filter(k => !k.startsWith("_default"));
   const [form, setForm] = useState({
     name: "", address: "", neighborhood: "Itaim Bibi", city: "São Paulo",
-    type: "Residencial", status: "Ocupado", size: "", rent: "",
-    iptu: "", maintMonthly: "", insurance: "", admin: "", vacancyDays: "0",
+    type: "Residencial", status: "Vago", size: "",
+    iptu: "", maintMonthly: "", insurance: "", valorCompra: "", valorMercado: "",
+    iptuVencimento: "",
+    // Aluguel (só se ocupado)
+    rent: "", adminPct: "8", descontoAluguel: "0", contratoAnos: "1",
+    contratoInicio: "", indiceReajuste: "IGPM",
+    hasCondominio: false, condoFee: "0", fundoReserva: "0", chamadaExtra: "0", condoPagoPor: "proprietario",
+    regimeFiscal: "PF",
+    // Locatário
+    locatarioNome: "", locatarioCPF: "", locatarioTelefone: "", locatarioEmail: "", locatarioGarantia: "Fiador",
   });
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const NEIGHBORHOODS = Object.keys(FIPEZAP_M2).filter(k => !k.startsWith("_default"));
-  const canSave = form.name && form.rent;
+  const alugado = form.status === "Ocupado";
+  const canSave = form.name.trim() !== "";
 
   const handleSave = () => {
     if (!canSave) return;
     const bm = BENCHMARKS[form.city]?.[form.type] || BENCHMARKS["São Paulo"][form.type];
     const size = parseFloat(form.size) || 0;
-    const rent = parseFloat(form.rent) || 0;
+    const rent = alugado ? (parseFloat(form.rent) || 0) : 0;
+    const adminPct = parseFloat(form.adminPct) || 8;
+    const admin = Math.round(rent * adminPct / 100);
     const iptu = parseFloat(form.iptu) || Math.round(bm.iptu_m2 * size);
     const maintMonthly = parseFloat(form.maintMonthly) || Math.round(bm.maintenance_annual_m2 * size / 12);
     const insurance = parseFloat(form.insurance) || Math.round(rent * 0.025 * 12);
-    const admin = parseFloat(form.admin) || Math.round(rent * 0.08);
-    const vacancyDays = parseFloat(form.vacancyDays) || 0;
-    const annualRent = rent * 12;
+    const descontoAluguel = parseFloat(form.descontoAluguel) || 0;
+    const vacancyDays = alugado ? 0 : 30;
     const vacancyCost = Math.round((rent / 30) * vacancyDays);
-    const totalIncome = annualRent - vacancyCost;
-    const totalExpenses = iptu + maintMonthly * 12 + insurance + admin * 12;
+    const annualRent = rent * 12;
+    const descontoAnual = descontoAluguel * 12;
+    const condoAnnual = form.hasCondominio ? (parseFloat(form.condoFee)+parseFloat(form.fundoReserva)+parseFloat(form.chamadaExtra)) * 12 : 0;
+    const totalIncome = annualRent - vacancyCost - descontoAnual;
+    const totalExpenses = iptu + maintMonthly * 12 + insurance + admin * 12 + condoAnnual;
     const noi = totalIncome - totalExpenses;
     const noiPct = noi / (totalIncome || 1);
     const iptuBenchmark = Math.round(bm.iptu_m2 * size);
-    const iptuDelta = Math.round(((iptu - iptuBenchmark) / iptuBenchmark) * 100);
+    const iptuDelta = iptuBenchmark ? Math.round(((iptu - iptuBenchmark) / iptuBenchmark) * 100) : 0;
     const maintBenchmark = Math.round(bm.maintenance_annual_m2 * size / 12);
-    const maintDelta = Math.round(((maintMonthly - maintBenchmark) / maintBenchmark) * 100);
+    const maintDelta = maintBenchmark ? Math.round(((maintMonthly - maintBenchmark) / maintBenchmark) * 100) : 0;
     const vacancyDelta = vacancyDays - bm.vacancy_days;
     let leakage = 0;
     if (vacancyDays > bm.vacancy_days) leakage += Math.min(35, vacancyDelta * 0.5);
@@ -2871,72 +2900,224 @@ function AddImovelModal({ onSave, onClose, nextId }) {
       return { month: m, receita: rent, despesas: exp, noi: rent - exp };
     });
     onSave({
-      id: nextId, name: form.name,
-      address: form.address, neighborhood: form.neighborhood, city: form.city, state: "SP",
-      type: form.type, status: form.status, size, rent, iptu, maintMonthly, insurance, admin,
-      vacancyDays, vacancyCost, totalIncome, totalExpenses, noi, noiPct, leakage,
-      iptuBenchmark, iptuDelta, maintBenchmark, maintDelta,
+      id: nextId, name: form.name, address: form.address,
+      neighborhood: form.neighborhood, city: form.city, state: "SP",
+      type: form.type, status: form.status, size, rent, iptu, maintMonthly,
+      insurance, admin, adminPct, vacancyDays, vacancyCost, totalIncome, totalExpenses,
+      noi, noiPct, leakage, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta,
       vacancyBenchmark: bm.vacancy_days, vacancyDelta, monthlyData, isProblematic: false,
-      obras: [], prestadores: [], pagamentos: {}, valorMercado: 0, valorCompra: 0, anoCompra: null,
-      indiceReajuste: 'IGPM', iptuVencimento: '', locatarioNome: '', locatarioCPF: '',
-      locatarioTelefone: '', locatarioEmail: '', locatarioGarantia: 'Fiador',
+      obras: [], prestadores: [], pagamentos: {}, valorMercado: parseFloat(form.valorMercado)||0,
+      valorCompra: parseFloat(form.valorCompra)||0, anoCompra: null,
+      indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento,
+      descontoAluguel, contratoAnos: parseFloat(form.contratoAnos)||1,
+      contratoInicio: form.contratoInicio, hasCondominio: form.hasCondominio,
+      condoFee: parseFloat(form.condoFee)||0, fundoReserva: parseFloat(form.fundoReserva)||0,
+      chamadaExtra: parseFloat(form.chamadaExtra)||0, condoPagoPor: form.condoPagoPor,
+      regimeFiscal: form.regimeFiscal,
+      locatarioNome: form.locatarioNome, locatarioCPF: form.locatarioCPF,
+      locatarioTelefone: form.locatarioTelefone, locatarioEmail: form.locatarioEmail,
+      locatarioGarantia: form.locatarioGarantia, locatarios: [], historico: [],
     });
   };
 
+  const Section = ({ title }) => (
+    <div style={{ color: T.gold, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, marginBottom: 12, marginTop: 4, paddingBottom: 6, borderBottom: `1px solid ${T.border}` }}>{title}</div>
+  );
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000099", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ background: T.s1, border: `1px solid ${T.borderMid}`, borderRadius: 18, width: "100%", maxWidth: 560, maxHeight: "92vh", overflow: "auto" }}>
-        <div style={{ padding: "24px 28px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: T.s1, zIndex: 1 }}>
+      <div style={{ background: T.s1, border: `1px solid ${T.borderMid}`, borderRadius: 18, width: "100%", maxWidth: 600, maxHeight: "92vh", overflow: "auto" }}>
+        <div style={{ padding: "22px 28px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: T.s1, zIndex: 1 }}>
           <div>
             <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>NOVO IMÓVEL</div>
             <div style={{ color: T.text, fontWeight: 800, fontSize: 17, marginTop: 2 }}>Adicionar ao Portfólio</div>
           </div>
           <button style={{ background: T.s3, border: "none", color: T.muted, borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 18 }} onClick={onClose}>×</button>
         </div>
-        <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 18 }}>
 
-          {/* Campos obrigatórios */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div><label style={S.label}>NOME DO IMÓVEL *</label><input style={S.input} value={form.name} placeholder="Ex: Apartamento Jardins, Sala Faria Lima..." onChange={e=>set("name",e.target.value)} autoFocus /></div>
+        <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 20 }}>
+
+          {/* DADOS DO IMÓVEL */}
+          <div>
+            <Section title="DADOS DO IMÓVEL" />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div><label style={S.label}>ALUGUEL MENSAL (R$) *</label><input type="number" style={S.input} value={form.rent} placeholder="Ex: 4.500" onChange={e=>set("rent",e.target.value)} /></div>
-              <div><label style={S.label}>TIPO</label><select style={S.sel} value={form.type} onChange={e=>set("type",e.target.value)}>{["Residencial","Comercial"].map(o=><option key={o}>{o}</option>)}</select></div>
-              <div><label style={S.label}>STATUS</label><select style={S.sel} value={form.status} onChange={e=>set("status",e.target.value)}>{["Ocupado","Vago"].map(o=><option key={o}>{o}</option>)}</select></div>
+              <div style={{ gridColumn: "1/-1" }}>
+                <label style={S.label}>NOME DO IMÓVEL *</label>
+                <input style={S.input} value={form.name} placeholder="Ex: Apartamento Jardins, Sala Faria Lima..." onChange={e=>set("name",e.target.value)} autoFocus />
+              </div>
+              <div style={{ gridColumn: "1/-1" }}>
+                <label style={S.label}>ENDEREÇO</label>
+                <input style={S.input} value={form.address} placeholder="Ex: Rua Oscar Freire, 1200" onChange={e=>set("address",e.target.value)} />
+              </div>
               <div>
                 <label style={S.label}>BAIRRO</label>
                 <select style={S.sel} value={form.neighborhood} onChange={e=>set("neighborhood",e.target.value)}>
                   {NEIGHBORHOODS.map(n=><option key={n}>{n}</option>)}
                 </select>
               </div>
+              <div>
+                <label style={S.label}>CIDADE</label>
+                <select style={S.sel} value={form.city} onChange={e=>set("city",e.target.value)}>
+                  {["São Paulo","Campinas","Santo André","Americana"].map(o=><option key={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={S.label}>TIPO</label>
+                <select style={S.sel} value={form.type} onChange={e=>set("type",e.target.value)}>
+                  {["Residencial","Comercial"].map(o=><option key={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={S.label}>ÁREA (m²)</label>
+                <input type="number" style={S.input} value={form.size} placeholder="Ex: 85" onChange={e=>set("size",e.target.value)} />
+              </div>
+              <div>
+                <label style={S.label}>VALOR DE COMPRA (R$)</label>
+                <input type="number" style={S.input} value={form.valorCompra} placeholder="Ex: 500.000" onChange={e=>set("valorCompra",e.target.value)} />
+              </div>
+              <div>
+                <label style={S.label}>VALOR DE MERCADO ATUAL (R$)</label>
+                <input type="number" style={S.input} value={form.valorMercado} placeholder="Ex: 650.000" onChange={e=>set("valorMercado",e.target.value)} />
+              </div>
+              <div>
+                <label style={S.label}>IPTU ANUAL (R$)</label>
+                <input type="number" style={S.input} value={form.iptu} placeholder="Automático" onChange={e=>set("iptu",e.target.value)} />
+              </div>
+              <div>
+                <label style={S.label}>VENCIMENTO IPTU</label>
+                <input type="month" style={S.input} value={form.iptuVencimento} onChange={e=>set("iptuVencimento",e.target.value)} />
+              </div>
+              <div>
+                <label style={S.label}>MANUTENÇÃO MENSAL (R$)</label>
+                <input type="number" style={S.input} value={form.maintMonthly} placeholder="Automático" onChange={e=>set("maintMonthly",e.target.value)} />
+              </div>
+              <div>
+                <label style={S.label}>SEGURO ANUAL (R$)</label>
+                <input type="number" style={S.input} value={form.insurance} placeholder="Automático" onChange={e=>set("insurance",e.target.value)} />
+              </div>
             </div>
           </div>
 
-          {/* Campos opcionais */}
-          <button style={{ background: "none", border: `1px solid ${T.border}`, color: T.muted, borderRadius: 10, padding: "10px 16px", cursor: "pointer", fontFamily: "inherit", fontSize: 13, textAlign: "left", display: "flex", justifyContent: "space-between" }}
-            onClick={() => setShowAdvanced(v => !v)}>
-            <span>Dados adicionais (endereço, área, despesas)</span>
-            <span>{showAdvanced ? "▲ ocultar" : "▼ ver mais"}</span>
-          </button>
+          {/* STATUS */}
+          <div>
+            <Section title="STATUS DO IMÓVEL" />
+            <div style={{ display: "flex", gap: 10 }}>
+              {[["Vago","🔑 Vago"],["Ocupado","✅ Alugado"]].map(([val, label]) => (
+                <button key={val} style={{ flex: 1, padding: "12px", borderRadius: 10, border: `1px solid ${form.status === val ? T.gold : T.border}`, background: form.status === val ? T.goldGlow : T.s2, color: form.status === val ? T.gold : T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: form.status === val ? 700 : 400 }} onClick={() => set("status", val)}>{label}</button>
+              ))}
+            </div>
+          </div>
 
-          {showAdvanced && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* DADOS DO ALUGUEL — só se ocupado */}
+          {alugado && (
+            <div style={{ background: T.s2, borderRadius: 12, padding: 20, border: `1px solid ${T.border}` }}>
+              <Section title="DADOS DO ALUGUEL" />
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div style={{ gridColumn: "1/-1" }}><label style={S.label}>ENDEREÇO</label><input style={S.input} value={form.address} placeholder="Ex: Rua Oscar Freire, 1200" onChange={e=>set("address",e.target.value)} /></div>
-                <div><label style={S.label}>CIDADE</label><select style={S.sel} value={form.city} onChange={e=>set("city",e.target.value)}>{["São Paulo","Campinas","Santo André","Americana"].map(o=><option key={o}>{o}</option>)}</select></div>
-                <div><label style={S.label}>ÁREA (m²)</label><input type="number" style={S.input} value={form.size} placeholder="Ex: 85" onChange={e=>set("size",e.target.value)} /></div>
-                <div><label style={S.label}>IPTU ANUAL (R$)</label><input type="number" style={S.input} value={form.iptu} placeholder="Auto" onChange={e=>set("iptu",e.target.value)} /></div>
-                <div><label style={S.label}>MANUTENÇÃO MENSAL (R$)</label><input type="number" style={S.input} value={form.maintMonthly} placeholder="Auto" onChange={e=>set("maintMonthly",e.target.value)} /></div>
-                <div><label style={S.label}>SEGURO ANUAL (R$)</label><input type="number" style={S.input} value={form.insurance} placeholder="Auto" onChange={e=>set("insurance",e.target.value)} /></div>
-                <div><label style={S.label}>TAXA ADM. MENSAL (R$)</label><input type="number" style={S.input} value={form.admin} placeholder="Auto" onChange={e=>set("admin",e.target.value)} /></div>
-                <div><label style={S.label}>DIAS VAGOS/ANO</label><input type="number" style={S.input} value={form.vacancyDays} placeholder="0" onChange={e=>set("vacancyDays",e.target.value)} /></div>
+                <div>
+                  <label style={S.label}>ALUGUEL MENSAL (R$) *</label>
+                  <input type="number" style={S.input} value={form.rent} placeholder="Ex: 4.500" onChange={e=>set("rent",e.target.value)} />
+                </div>
+                <div>
+                  <label style={S.label}>TAXA DE ADM. (%)</label>
+                  <div style={{ position: "relative" }}>
+                    <input type="number" style={{ ...S.input, paddingRight: 32 }} value={form.adminPct} placeholder="8" min="0" max="20" step="0.5" onChange={e=>set("adminPct",e.target.value)} />
+                    <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: T.muted, fontSize: 14, fontWeight: 700 }}>%</span>
+                  </div>
+                  {form.rent && <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>= {new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Math.round((parseFloat(form.rent)||0)*(parseFloat(form.adminPct)||8)/100))}/mês</div>}
+                </div>
+                <div>
+                  <label style={S.label}>DESCONTO NO ALUGUEL (R$/mês)</label>
+                  <input type="number" style={S.input} value={form.descontoAluguel} placeholder="0" onChange={e=>set("descontoAluguel",e.target.value)} />
+                </div>
+                <div>
+                  <label style={S.label}>DURAÇÃO DO CONTRATO (anos)</label>
+                  <input type="number" style={S.input} value={form.contratoAnos} placeholder="1" onChange={e=>set("contratoAnos",e.target.value)} />
+                </div>
+                <div>
+                  <label style={S.label}>INÍCIO DO CONTRATO</label>
+                  <input type="date" style={S.input} value={form.contratoInicio} onChange={e=>set("contratoInicio",e.target.value)} />
+                </div>
+                <div>
+                  <label style={S.label}>ÍNDICE DE REAJUSTE</label>
+                  <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                    {["IGPM","IPCA","INPC","Fixo"].map(idx => (
+                      <button key={idx} style={{ flex:1, padding:"8px 4px", borderRadius:8, border:`1px solid ${form.indiceReajuste===idx?T.gold:T.border}`, background:form.indiceReajuste===idx?T.goldGlow:T.s1, color:form.indiceReajuste===idx?T.gold:T.muted, cursor:"pointer", fontFamily:"inherit", fontSize:12, fontWeight:form.indiceReajuste===idx?700:400 }} onClick={()=>set("indiceReajuste",idx)}>{idx}</button>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div style={{ padding: 12, background: T.s2, borderRadius: 8 }}>
-                <div style={{ color: T.dim, fontSize: 12 }}>💡 Despesas não preenchidas são calculadas automaticamente com base nos benchmarks do bairro.</div>
+
+              {/* Locatário */}
+              <div style={{ marginTop: 16 }}>
+                <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>LOCATÁRIO</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={{ gridColumn: "1/-1" }}>
+                    <label style={S.label}>NOME COMPLETO</label>
+                    <input style={S.input} value={form.locatarioNome} placeholder="Nome do locatário" onChange={e=>set("locatarioNome",e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={S.label}>CPF / CNPJ</label>
+                    <input style={S.input} value={form.locatarioCPF} placeholder="000.000.000-00" onChange={e=>set("locatarioCPF",e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={S.label}>TELEFONE</label>
+                    <input style={S.input} value={form.locatarioTelefone} placeholder="(11) 99999-9999" onChange={e=>set("locatarioTelefone",e.target.value)} />
+                  </div>
+                  <div style={{ gridColumn: "1/-1" }}>
+                    <label style={S.label}>EMAIL</label>
+                    <input style={S.input} value={form.locatarioEmail} placeholder="email@exemplo.com" onChange={e=>set("locatarioEmail",e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={S.label}>GARANTIA</label>
+                    <select style={S.sel} value={form.locatarioGarantia} onChange={e=>set("locatarioGarantia",e.target.value)}>
+                      {["Fiador","Seguro Fiança","Caução","Título de Capitalização","Sem garantia"].map(o=><option key={o}>{o}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Condomínio */}
+              <div style={{ marginTop: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: form.hasCondominio ? 12 : 0 }}>
+                  <input type="checkbox" checked={form.hasCondominio} onChange={e=>set("hasCondominio",e.target.checked)} style={{ width:16, height:16, accentColor:T.gold, cursor:"pointer" }} />
+                  <span style={{ color: T.muted, fontSize: 13, cursor: "pointer" }}>Este imóvel tem condomínio</span>
+                </div>
+                {form.hasCondominio && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <div><label style={S.label}>COND. MENSAL (R$)</label><input type="number" style={S.input} value={form.condoFee} onChange={e=>set("condoFee",e.target.value)} /></div>
+                    <div><label style={S.label}>FUNDO DE RESERVA (R$/mês)</label><input type="number" style={S.input} value={form.fundoReserva} onChange={e=>set("fundoReserva",e.target.value)} /></div>
+                    <div>
+                      <label style={S.label}>QUEM PAGA?</label>
+                      <div style={{ display:"flex", gap:8, marginTop:6 }}>
+                        {[["proprietario","Proprietário"],["inquilino","Inquilino"]].map(([val,label]) => (
+                          <button key={val} style={{ flex:1, padding:"8px", borderRadius:8, border:`1px solid ${form.condoPagoPor===val?T.gold:T.border}`, background:form.condoPagoPor===val?T.goldGlow:T.s1, color:form.condoPagoPor===val?T.gold:T.muted, cursor:"pointer", fontFamily:"inherit", fontSize:12, fontWeight:form.condoPagoPor===val?700:400 }} onClick={()=>set("condoPagoPor",val)}>{label}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Regime fiscal */}
+              <div style={{ marginTop: 16 }}>
+                <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>REGIME FISCAL</div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  {[["PF","Pessoa Física","IRPF até 27,5%"],["PJ","Pessoa Jurídica","Lucro Presumido ~14%"]].map(([val,title,sub]) => (
+                    <button key={val} style={{ flex:1, padding:"10px", borderRadius:8, border:`1px solid ${form.regimeFiscal===val?T.gold:T.border}`, background:form.regimeFiscal===val?T.goldGlow:T.s1, color:form.regimeFiscal===val?T.gold:T.muted, cursor:"pointer", fontFamily:"inherit", fontSize:13, fontWeight:form.regimeFiscal===val?700:400, textAlign:"center" }} onClick={()=>set("regimeFiscal",val)}>
+                      {title}<div style={{ fontSize:10, marginTop:2, opacity:0.7 }}>{sub}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
+
+          <div style={{ padding: 12, background: T.s2, borderRadius: 8 }}>
+            <div style={{ color: T.dim, fontSize: 12 }}>💡 Despesas não preenchidas são calculadas automaticamente com base nos benchmarks do bairro.</div>
+          </div>
         </div>
-        <div style={{ padding: "16px 28px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 12, justifyContent: "flex-end" }}>
+
+        <div style={{ padding: "16px 28px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 12, justifyContent: "flex-end", position: "sticky", bottom: 0, background: T.s1 }}>
           <button style={S.btnGhost} onClick={onClose}>Cancelar</button>
           <button style={{ ...S.btn, opacity: !canSave ? 0.5 : 1 }} onClick={handleSave} disabled={!canSave}>+ Adicionar Imóvel</button>
         </div>
@@ -2945,7 +3126,7 @@ function AddImovelModal({ onSave, onClose, nextId }) {
   );
 }
 
-// ─── DELETE CONFIRM MODAL ─────────────────────────────────────────────────────
+
 function DeleteConfirmModal({ prop, onConfirm, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000099", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
@@ -3025,6 +3206,12 @@ export default function App() {
   const [obrasProps, setObrasProps] = useState(null);
   const [addingImovel, setAddingImovel] = useState(false);
   const [deletingProp, setDeletingProp] = useState(null);
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("gb_theme") !== "light";
+    return true;
+  });
+  // Apply theme globally
+  Object.assign(T, darkMode ? DARK_T : LIGHT_T);
 
   // Check session on mount
   useEffect(() => {
@@ -3054,7 +3241,7 @@ export default function App() {
       if (!port) { setDbLoading(false); return; }
       setPortfolioId(port.id);
       // Load imoveis
-      const { data: rows, error: loadErr } = await supabase.from("imoveis").select("*").eq("portfolio_id", port.id).order("created_at");
+      const { data: rows, error: loadErr } = await supabase.from("imoveis").select("*").eq("portfolio_id", port.id).eq("user_id", user.id).order("created_at");
       if (loadErr) { console.error("Erro ao carregar imóveis:", loadErr); setDbLoading(false); return; }
       if (rows && rows.length > 0) {
         const mapped = rows.map(r => recalcProp({
@@ -3073,7 +3260,7 @@ export default function App() {
           condoPagoPor: r.condo_pago_por||"proprietario",
           regimeFiscal: r.regime_fiscal||"PF",
           locatarios: r.locatarios||[], historico: r.historico||[],
-          iptuVencimento: r.iptu_vencimento||"", indiceReajuste: r.indice_reajuste||"IGPM",
+          iptuVencimento: r.iptu_vencimento||"", indiceReajuste: r.indice_reajuste||"IGPM", adminPct: r.admin_pct||8,
         }, BENCHMARKS));
         setPropsRaw(mapped);
       }
@@ -3094,7 +3281,7 @@ export default function App() {
     valor_mercado: prop.valorMercado||0, valor_compra: prop.valorCompra||0, ano_compra: prop.anoCompra||null,
     obras: prop.obras||[], prestadores: prop.prestadores||[], pagamentos: prop.pagamentos||{},
     monthly_data: prop.monthlyData||[], dia_vencimento: prop.diaVencimento||10,
-    condo_pago_por: prop.condoPagoPor||"proprietario", regime_fiscal: prop.regimeFiscal||"PF",
+    condo_pago_por: prop.condoPagoPor||"proprietario", regime_fiscal: prop.regimeFiscal||"PF", admin_pct: prop.adminPct||8,
     indice_reajuste: prop.indiceReajuste||"IGPM", iptu_vencimento: prop.iptuVencimento||null,
     locatarios: prop.locatarios||[], historico: prop.historico||[],
   });
@@ -3256,7 +3443,14 @@ export default function App() {
             })}
           </nav>
           <div style={{ padding: "14px 22px", borderTop: `1px solid ${T.border}` }}>
-            <div style={{ color: T.dim, fontSize: 11, marginBottom: 4 }}>{user?.email}</div>
+            <div style={{ color: T.dim, fontSize: 11, marginBottom: 6 }}>{user?.email}</div>
+            <button
+              style={{ width: "100%", marginBottom: 8, padding: "8px 12px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.s2, color: T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "space-between" }}
+              onClick={() => { const next = !darkMode; setDarkMode(next); localStorage.setItem("gb_theme", next ? "dark" : "light"); Object.assign(T, next ? DARK_T : LIGHT_T); }}
+            >
+              <span>{darkMode ? "🌙 Modo Escuro" : "☀️ Modo Claro"}</span>
+              <span style={{ fontSize: 10, opacity: 0.6 }}>trocar</span>
+            </button>
             <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
               <button style={{ color: T.dim, fontSize: 11, background: "none", border: "none", cursor: "pointer", padding: 0 }} onClick={() => supabase.auth.signOut()}>Sair →</button>
             </div>
