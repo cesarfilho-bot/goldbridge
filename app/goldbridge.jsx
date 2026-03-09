@@ -29,6 +29,27 @@ const LIGHT_T = {
 };
 let T = { ...DARK_T };
 
+function applyTheme(theme) {
+  Object.assign(T, theme);
+  const root = document.documentElement;
+  Object.entries(theme).forEach(([k, v]) => {
+    root.style.setProperty(`--t-${k}`, v);
+  });
+  root.setAttribute("data-theme", theme === LIGHT_T ? "light" : "dark");
+  // Inject global CSS if not already present
+  if (!document.getElementById("gb-theme-style")) {
+    const style = document.createElement("style");
+    style.id = "gb-theme-style";
+    style.textContent = `
+      [data-theme="light"] { color-scheme: light; }
+      [data-theme="dark"] { color-scheme: dark; }
+      body { background: var(--t-bg) !important; transition: background 0.2s; }
+      * { transition: background-color 0.15s, border-color 0.15s, color 0.15s; }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
 const BENCHMARKS = {
   "São Paulo": {
     Residencial: { iptu_m2: 18, vacancy_days: 32, maintenance_annual_m2: 45, cap_rate: 0.055 },
@@ -3211,8 +3232,9 @@ export default function App() {
     return true;
   });
   const [themeKey, setThemeKey] = useState(0);
-  // Apply theme globally — runs on every render so all components see the current theme
+  // Apply theme globally on every render
   Object.assign(T, darkMode ? DARK_T : LIGHT_T);
+  useEffect(() => { applyTheme(darkMode ? DARK_T : LIGHT_T); }, [darkMode]);
 
   // Check session on mount
   useEffect(() => {
@@ -3447,7 +3469,7 @@ export default function App() {
             <div style={{ color: T.dim, fontSize: 11, marginBottom: 6 }}>{user?.email}</div>
             <button
               style={{ width: "100%", marginBottom: 8, padding: "8px 12px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.s2, color: T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "space-between" }}
-              onClick={() => { const next = !darkMode; Object.assign(T, next ? DARK_T : LIGHT_T); setDarkMode(next); setThemeKey(k => k + 1); localStorage.setItem("gb_theme", next ? "dark" : "light"); }}
+              onClick={() => { const next = !darkMode; applyTheme(next ? DARK_T : LIGHT_T); setDarkMode(next); setThemeKey(k => k + 1); localStorage.setItem("gb_theme", next ? "dark" : "light"); }}
             >
               <span>{darkMode ? "🌙 Modo Escuro" : "☀️ Modo Claro"}</span>
               <span style={{ fontSize: 10, opacity: 0.6 }}>trocar</span>
