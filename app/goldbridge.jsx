@@ -3210,7 +3210,8 @@ export default function App() {
     if (typeof window !== "undefined") return localStorage.getItem("gb_theme") !== "light";
     return true;
   });
-  // Apply theme globally
+  const [themeKey, setThemeKey] = useState(0);
+  // Apply theme globally — runs on every render so all components see the current theme
   Object.assign(T, darkMode ? DARK_T : LIGHT_T);
 
   // Check session on mount
@@ -3419,7 +3420,7 @@ export default function App() {
       {addingImovel && <AddImovelModal nextId={nextId} onSave={handleAddImovel} onClose={() => setAddingImovel(false)} />}
       {deletingProp && <DeleteConfirmModal prop={deletingProp} onConfirm={confirmDelete} onClose={() => setDeletingProp(null)} />}
 
-      <div style={{ display: "flex", minHeight: "100vh" }}>
+      <div key={`app-${themeKey}`} style={{ display: "flex", minHeight: "100vh", background: T.bg }}>
         {/* Sidebar */}
         <div style={{ width: 230, background: T.s0, borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 100 }}>
           <div style={{ padding: "28px 22px 20px" }}>
@@ -3446,7 +3447,7 @@ export default function App() {
             <div style={{ color: T.dim, fontSize: 11, marginBottom: 6 }}>{user?.email}</div>
             <button
               style={{ width: "100%", marginBottom: 8, padding: "8px 12px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.s2, color: T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "space-between" }}
-              onClick={() => { const next = !darkMode; setDarkMode(next); localStorage.setItem("gb_theme", next ? "dark" : "light"); Object.assign(T, next ? DARK_T : LIGHT_T); }}
+              onClick={() => { const next = !darkMode; Object.assign(T, next ? DARK_T : LIGHT_T); setDarkMode(next); setThemeKey(k => k + 1); localStorage.setItem("gb_theme", next ? "dark" : "light"); }}
             >
               <span>{darkMode ? "🌙 Modo Escuro" : "☀️ Modo Claro"}</span>
               <span style={{ fontSize: 10, opacity: 0.6 }}>trocar</span>
@@ -3458,7 +3459,7 @@ export default function App() {
         </div>
 
         {/* Main */}
-        <div style={{ marginLeft: 230, flex: 1, padding: "32px 36px", minHeight: "100vh", maxWidth: "calc(100vw - 230px)" }}>
+        <div key={themeKey} style={{ marginLeft: 230, flex: 1, padding: "32px 36px", minHeight: "100vh", maxWidth: "calc(100vw - 230px)" }}>
           {content}
         </div>
       </div>
