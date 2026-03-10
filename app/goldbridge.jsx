@@ -2966,7 +2966,7 @@ function PageLocatarios({ PROPS, onUpdateProps }) {
 
       {/* IPTU — imóveis sem imobiliária */}
       {(() => {
-        const semImob = PROPS.filter(p => !p.viaImobiliaria && (p.iptu||0) > 0);
+        const semImob = PROPS.filter(p => !p.viaImobiliaria);
         if (semImob.length === 0) return null;
         const hoje3 = new Date();
         const getStatus = (p) => {
