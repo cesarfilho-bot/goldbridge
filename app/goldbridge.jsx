@@ -3173,6 +3173,108 @@ function AddImovelModal({ onSave, onClose, nextId }) {
 }
 
 
+function CancelarContratoModal({ prop, onConfirm, onClose }) {
+  const hoje = new Date();
+  const isDesocupando = prop.status === "Em desocupação";
+
+  let multaMeses = 0, multaValor = 0;
+  if (prop.contratoInicio && prop.contratoAnos && !isDesocupando) {
+    const inicio = new Date(prop.contratoInicio);
+    const mesesTotais = (prop.contratoAnos || 1) * 12;
+    const mesesDecorridos = Math.max(0, Math.floor((hoje - inicio) / (1000 * 60 * 60 * 24 * 30.44)));
+    multaMeses = Math.max(0, mesesTotais - mesesDecorridos);
+    multaValor = Math.round((prop.rent || 0) * multaMeses);
+  }
+
+  const [dataEntrega, setDataEntrega] = React.useState("");
+  const [vistoria, setVistoria] = React.useState({
+    paredes: false, pisos: false, hidraulica: false, eletrica: false,
+    janelas: false, portas: false, chaves: false,
+  });
+  const vistoriaLabels = {
+    paredes: "Paredes e pintura", pisos: "Pisos e revestimentos",
+    hidraulica: "Hidráulica", eletrica: "Elétrica",
+    janelas: "Janelas e esquadrias", portas: "Portas e fechaduras",
+    chaves: "Chaves entregues",
+  };
+  const vistoriaCompleta = Object.values(vistoria).every(Boolean);
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"#00000099", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+      <div style={{ background:T.s1, border:`1px solid ${T.borderMid}`, borderRadius:18, width:"100%", maxWidth:500, maxHeight:"90vh", overflow:"auto" }}>
+        <div style={{ padding:"22px 28px", borderBottom:`1px solid ${T.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div>
+            <div style={{ color:T.amber, fontSize:11, fontWeight:700, letterSpacing:1 }}>{isDesocupando ? "REGISTRAR ENTREGA" : "CANCELAR CONTRATO"}</div>
+            <div style={{ color:T.text, fontWeight:800, fontSize:17, marginTop:2 }}>{prop.name}</div>
+          </div>
+          <button style={{ background:T.s3, border:"none", color:T.muted, borderRadius:8, width:32, height:32, cursor:"pointer", fontSize:18 }} onClick={onClose}>×</button>
+        </div>
+        <div style={{ padding:24, display:"flex", flexDirection:"column", gap:20 }}>
+          {!isDesocupando && (
+            <>
+              {multaMeses > 0 ? (
+                <div style={{ padding:16, background:T.amber+"18", border:`1px solid ${T.amber}44`, borderRadius:12 }}>
+                  <div style={{ color:T.amber, fontWeight:700, fontSize:13, marginBottom:8 }}>⚠️ Multa por rescisão antecipada</div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                    <div><div style={{ color:T.dim, fontSize:11 }}>MESES RESTANTES</div><div style={{ color:T.text, fontWeight:700, fontSize:18 }}>{multaMeses}x</div></div>
+                    <div><div style={{ color:T.dim, fontSize:11 }}>VALOR DA MULTA</div><div style={{ color:T.amber, fontWeight:800, fontSize:18, fontFamily:"'DM Mono',monospace" }}>{fmt.brl(multaValor)}</div></div>
+                  </div>
+                  <div style={{ color:T.dim, fontSize:11, marginTop:8 }}>Aluguel: {fmt.brl(prop.rent)} × {multaMeses} meses restantes</div>
+                </div>
+              ) : (
+                <div style={{ padding:14, background:T.s2, borderRadius:10 }}>
+                  <div style={{ color:T.muted, fontSize:13 }}>ℹ️ Contrato no prazo — sem multa de rescisão calculada.</div>
+                </div>
+              )}
+              <div>
+                <label style={S.label}>DATA PREVISTA DE ENTREGA DAS CHAVES</label>
+                <input type="date" style={S.input} value={dataEntrega} onChange={e=>setDataEntrega(e.target.value)} min={new Date().toISOString().split("T")[0]} />
+              </div>
+              <div style={{ padding:12, background:T.s2, borderRadius:8 }}>
+                <div style={{ color:T.muted, fontSize:12 }}>O imóvel passará para <strong>Em desocupação</strong>. Quando as chaves forem entregues, registre a entrega para marcar como <strong>Vago</strong>.</div>
+              </div>
+            </>
+          )}
+          <div>
+            <div style={{ color:T.gold, fontSize:11, fontWeight:700, letterSpacing:1, marginBottom:12 }}>
+              {isDesocupando ? "CHECKLIST DE VISTORIA *" : "CHECKLIST DE VISTORIA (opcional)"}
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {Object.entries(vistoriaLabels).map(([k, label]) => (
+                <div key={k} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:T.s2, borderRadius:8, cursor:"pointer" }} onClick={() => setVistoria(v=>({...v,[k]:!v[k]}))}>
+                  <div style={{ width:18, height:18, borderRadius:4, border:`2px solid ${vistoria[k]?T.green:T.border}`, background:vistoria[k]?T.green:"transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                    {vistoria[k] && <span style={{ color:"#fff", fontSize:11, fontWeight:700 }}>✓</span>}
+                  </div>
+                  <span style={{ color:vistoria[k]?T.text:T.muted, fontSize:13 }}>{label}</span>
+                </div>
+              ))}
+            </div>
+            {isDesocupando && !vistoriaCompleta && (
+              <div style={{ color:T.amber, fontSize:11, marginTop:8 }}>Complete toda a vistoria antes de registrar a entrega.</div>
+            )}
+          </div>
+          {isDesocupando && (
+            <div>
+              <label style={S.label}>DATA DE ENTREGA DAS CHAVES</label>
+              <input type="date" style={S.input} value={dataEntrega} onChange={e=>setDataEntrega(e.target.value)} />
+            </div>
+          )}
+        </div>
+        <div style={{ padding:"14px 24px", borderTop:`1px solid ${T.border}`, display:"flex", gap:10, justifyContent:"flex-end" }}>
+          <button style={S.btnGhost} onClick={onClose}>Cancelar</button>
+          <button
+            style={{ ...S.btn, background: isDesocupando ? (vistoriaCompleta ? `linear-gradient(135deg,${T.green},#1A9E72)` : T.s3) : `linear-gradient(135deg,${T.amber},#E07010)`, color: isDesocupando ? "#fff" : "#1A0A00", opacity: isDesocupando && !vistoriaCompleta ? 0.5 : 1 }}
+            onClick={() => onConfirm({ dataEntrega, vistoria, multaValor, multaMeses })}
+            disabled={isDesocupando && !vistoriaCompleta}
+          >
+            {isDesocupando ? "✅ Confirmar Entrega" : "⚠️ Iniciar Desocupação"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DeleteConfirmModal({ prop, onConfirm, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000099", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
