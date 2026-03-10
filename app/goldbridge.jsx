@@ -309,6 +309,70 @@ const FIPEZAP_M2 = {
   "_default_Americana":         { res: 4400, com: 3200, var12m: 0.028, fonte: "AgentImóvel Americana dez/2025" },
 };
 
+
+// ─── BAIRROS POR CIDADE ───────────────────────────────────────────────────────
+const SP_BAIRROS = ["Itaim Bibi","Pinheiros","Jardins","Cerqueira César","Jardim Paulista","Jardim América","Jardim Europa","Moema","Vila Mariana","Paraíso","Perdizes","Bela Vista","Consolação","Vila Olímpia","Vila Nova Conceição","Vila Madalena","Alto de Pinheiros","Higienópolis","Morumbi","Campo Belo","Brooklin","Santana","Vila Andrade","Centro"];
+const CAMPINAS_BAIRROS = ["Cambuí","Nova Campinas","Centro"];
+const SANTO_ANDRE_BAIRROS = ["Vila Guiomar","Centro"];
+const AMERICANA_BAIRROS = Object.keys(FIPEZAP_M2).filter(k => !k.startsWith("_default") && !SP_BAIRROS.includes(k) && !CAMPINAS_BAIRROS.includes(k) && !SANTO_ANDRE_BAIRROS.includes(k)).sort((a,b) => a.localeCompare(b,"pt-BR"));
+
+const BAIRROS_POR_CIDADE = {
+  "São Paulo": SP_BAIRROS.sort((a,b) => a.localeCompare(b,"pt-BR")),
+  "Campinas": CAMPINAS_BAIRROS.sort((a,b) => a.localeCompare(b,"pt-BR")),
+  "Santo André": SANTO_ANDRE_BAIRROS.sort((a,b) => a.localeCompare(b,"pt-BR")),
+  "Americana": AMERICANA_BAIRROS,
+};
+
+function NeighborhoodSearch({ city, value, onChange }) {
+  const [query, setQuery] = useState(value || "");
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef(null);
+
+  const options = (BAIRROS_POR_CIDADE[city] || []);
+  const filtered = query.length > 0
+    ? options.filter(n => n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").includes(query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")))
+    : options;
+
+  useEffect(() => { setQuery(value || ""); }, [value]);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const select = (n) => { onChange(n); setQuery(n); setOpen(false); };
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <input
+        style={{ ...S.input, paddingRight: 32 }}
+        value={query}
+        placeholder="Digite para buscar..."
+        onChange={e => { setQuery(e.target.value); setOpen(true); if (e.target.value === "") onChange(""); }}
+        onFocus={() => setOpen(true)}
+      />
+      <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: T.dim, fontSize: 12, pointerEvents: "none" }}>▾</span>
+      {open && filtered.length > 0 && (
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: T.s1, border: `1px solid ${T.borderMid}`, borderRadius: 10, zIndex: 200, maxHeight: 220, overflow: "auto", boxShadow: "0 8px 24px #00000044" }}>
+          {filtered.map(n => (
+            <div key={n} onMouseDown={() => select(n)} style={{ padding: "9px 14px", cursor: "pointer", color: n === value ? T.gold : T.text, background: n === value ? T.goldGlow : "transparent", fontSize: 13, borderBottom: `1px solid ${T.border}40` }}
+              onMouseEnter={e => e.currentTarget.style.background = T.s2}
+              onMouseLeave={e => e.currentTarget.style.background = n === value ? T.goldGlow : "transparent"}
+            >{n}</div>
+          ))}
+        </div>
+      )}
+      {open && filtered.length === 0 && query.length > 0 && (
+        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: T.s1, border: `1px solid ${T.borderMid}`, borderRadius: 10, zIndex: 200, padding: "12px 14px" }}>
+          <div style={{ color: T.dim, fontSize: 13 }}>Nenhum bairro encontrado. Confirmar "{query}"?</div>
+          <button style={{ ...S.btnGhost, padding: "6px 12px", fontSize: 12, marginTop: 8 }} onMouseDown={() => select(query)}>Usar "{query}"</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function getFipeZAP(neighborhood, city, type) {
   return FIPEZAP_M2[neighborhood]
     || FIPEZAP_M2[`_default_${city}`]
@@ -636,7 +700,7 @@ function EditModal({ prop, onSave, onClose }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div style={{ gridColumn: "1/-1" }}><div><label style={S.label}>NOME</label><input style={S.input} value={form.name} onChange={e=>set("name",e.target.value)} /></div></div>
               <div style={{ gridColumn: "1/-1" }}><div><label style={S.label}>ENDEREÇO</label><input style={S.input} value={form.address} onChange={e=>set("address",e.target.value)} /></div></div>
-              <div><label style={S.label}>BAIRRO</label><input style={S.input} value={form.neighborhood} onChange={e=>set("neighborhood",e.target.value)} /></div>
+              <div><label style={S.label}>BAIRRO</label><NeighborhoodSearch city={form.city} value={form.neighborhood} onChange={v=>set("neighborhood",v)} /></div>
               <div><label style={S.label}>CIDADE</label><select style={S.sel} value={form.city} onChange={e=>set("city",e.target.value)}>{["São Paulo","Campinas","Santo André","Americana"].map(o=><option key={o}>{o}</option>)}</select></div>
               <div><label style={S.label}>TIPO</label><select style={S.sel} value={form.type} onChange={e=>set("type",e.target.value)}>{["Residencial","Comercial"].map(o=><option key={o}>{o}</option>)}</select></div>
               <div><label style={S.label}>STATUS</label><select style={S.sel} value={form.status} onChange={e=>set("status",e.target.value)}>{["Ocupado","Em desocupação","Vago"].map(o=><option key={o}>{o}</option>)}</select></div>
@@ -3166,9 +3230,7 @@ function AddImovelModal({ onSave, onClose, nextId }) {
               </div>
               <div>
                 <label style={S.label}>BAIRRO</label>
-                <select style={S.sel} value={form.neighborhood} onChange={e=>set("neighborhood",e.target.value)}>
-                  {NEIGHBORHOODS.map(n=><option key={n}>{n}</option>)}
-                </select>
+                <NeighborhoodSearch city={form.city} value={form.neighborhood} onChange={v=>set("neighborhood",v)} />
               </div>
               <div>
                 <label style={S.label}>CIDADE</label>
