@@ -652,7 +652,42 @@ function BenchmarkBar({ label, value, benchmark, unit = "", delta }) {
 }
 
 // ─── EDIT MODAL ──────────────────────────────────────────────────────────────
-function EditModal({ prop, onSave, onClose }) {
+function EditModal({ prop, onSave, onClose, userId }) {
+  const [editTab, setEditTab] = useState("dados"); // "dados" | "documentos"
+  const [docs, setDocs] = useState(prop.documentos || []);
+  const [docUploading, setDocUploading] = useState(false);
+  const [docMsg, setDocMsg] = useState("");
+
+  const handleDocUpload = async (file) => {
+    if (!file) return;
+    setDocUploading(true);
+    setDocMsg("Enviando documento...");
+    try {
+      const uid = userId || "anon";
+      const path = `${uid}/${prop.id}/${Date.now()}_${file.name}`;
+      const { error } = await supabase.storage.from("documentos").upload(path, file);
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("documentos").getPublicUrl(path);
+      const newDoc = { nome: file.name, path, url: urlData.publicUrl, tipo: file.type, data: new Date().toLocaleDateString("pt-BR"), size: file.size };
+      const newDocs = [...docs, newDoc];
+      setDocs(newDocs);
+      await supabase.from("imoveis").update({ documentos: newDocs }).eq("id", prop.id);
+      setDocMsg("✅ Documento salvo com sucesso!");
+    } catch(e) {
+      setDocMsg("Erro ao enviar: " + e.message);
+    }
+    setDocUploading(false);
+  };
+
+  const handleDocDelete = async (idx) => {
+    const doc = docs[idx];
+    try {
+      await supabase.storage.from("documentos").remove([doc.path]);
+    } catch {}
+    const newDocs = docs.filter((_,i) => i !== idx);
+    setDocs(newDocs);
+    await supabase.from("imoveis").update({ documentos: newDocs }).eq("id", prop.id);
+  };
   const [form, setForm] = useState({
     name: prop.name || "", address: prop.address || "", neighborhood: prop.neighborhood || "",
     city: prop.city || "Americana", type: prop.type || "Residencial", status: prop.status || "Ocupado", size: prop.size ?? 0,
@@ -717,6 +752,45 @@ function EditModal({ prop, onSave, onClose }) {
           </div>
           <button style={{ background: T.s3, border: "none", color: T.muted, borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>×</button>
         </div>
+
+        {/* ABAS EditModal */}
+        <div style={{ display: "flex", borderBottom: `1px solid ${T.border}`, padding: "0 28px" }}>
+          {[["dados","⚙️ Dados do imóvel"],["documentos",`📁 Documentos${docs.length > 0 ? " ("+docs.length+")" : ""}`]].map(([id, label]) => (
+            <button key={id} onClick={() => setEditTab(id)} style={{ background: "none", border: "none", borderBottom: editTab===id ? `2px solid ${T.gold}` : "2px solid transparent", color: editTab===id ? T.gold : T.muted, fontWeight: editTab===id ? 700 : 400, fontSize: 13, padding: "12px 18px", cursor: "pointer", fontFamily: "inherit", marginBottom: -1 }}>{label}</button>
+          ))}
+        </div>
+
+        {/* ABA DOCUMENTOS */}
+        {editTab === "documentos" && (
+          <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 16 }}>
+            <label style={{ border: `2px dashed ${T.border}`, borderRadius: 12, padding: "24px", textAlign: "center", cursor: "pointer", display: "block", background: T.s2 }}>
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style={{ display: "none" }} onChange={e => e.target.files[0] && handleDocUpload(e.target.files[0])} />
+              <div style={{ fontSize: 28, marginBottom: 8 }}>📎</div>
+              <div style={{ color: T.text, fontWeight: 600 }}>{docUploading ? "Enviando..." : "Clique para anexar documento"}</div>
+              <div style={{ color: T.dim, fontSize: 12, marginTop: 4 }}>PDF, imagem, Word — contratos, boletos, vistoria, escritura</div>
+            </label>
+            {docMsg && <div style={{ padding: "12px 16px", background: docMsg.includes("✅") ? T.green+"22" : T.redDim+"33", borderRadius: 10, color: docMsg.includes("✅") ? T.green : T.red, fontSize: 13 }}>{docMsg}</div>}
+            {docs.length === 0 ? (
+              <div style={{ color: T.dim, fontSize: 13, textAlign: "center", padding: "20px 0" }}>Nenhum documento anexado ainda.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {docs.map((d, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: T.s2, borderRadius: 10, border: `1px solid ${T.border}` }}>
+                    <div style={{ fontSize: 20 }}>{d.nome?.endsWith(".pdf") ? "📄" : d.nome?.match(/\.(jpg|jpeg|png)$/i) ? "🖼️" : "📎"}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: T.text, fontWeight: 600, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.nome}</div>
+                      <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>{d.data} · {d.size ? Math.round(d.size/1024) + " KB" : ""}</div>
+                    </div>
+                    <a href={d.url} target="_blank" rel="noreferrer" style={{ color: T.gold, fontSize: 12, fontWeight: 600, textDecoration: "none", padding: "6px 12px", border: `1px solid ${T.gold}40`, borderRadius: 8 }}>Abrir</a>
+                    <button onClick={() => handleDocDelete(i)} style={{ background: "none", border: `1px solid ${T.redDim}`, color: T.red, borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12 }}>🗑</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {editTab === "dados" && (
         <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 20 }}>
           <div>
             <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>IDENTIFICAÇÃO</div>
@@ -836,9 +910,13 @@ function EditModal({ prop, onSave, onClose }) {
             )}
           </div>
         </div>
+        </div>
+        )} {/* end editTab === dados */}
+
         <div style={{ padding: "16px 28px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 12, justifyContent: "flex-end" }}>
           <button style={S.btnGhost} onClick={onClose}>Cancelar</button>
-          <button style={S.btn} onClick={handleSave}>Salvar Alterações</button>
+          {editTab === "dados" && <button style={S.btn} onClick={handleSave}>Salvar Alterações</button>}
+          {editTab === "documentos" && <button style={S.btnGhost} onClick={onClose}>Fechar</button>}
         </div>
       </div>
     </div>
@@ -3358,8 +3436,87 @@ function PageHistorico({ PROPS, onUpdateProps }) {
 
 
 // ─── ADD IMOVEL MODAL ─────────────────────────────────────────────────────────
-function AddImovelModal({ onSave, onClose, nextId }) {
+function AddImovelModal({ onSave, onClose, nextId, userId }) {
   const NEIGHBORHOODS = Object.keys(FIPEZAP_M2).filter(k => !k.startsWith("_default")).sort((a,b) => a.localeCompare(b, "pt-BR"));
+  const [tab, setTab] = useState("manual"); // "manual" | "pdf"
+  const [pdfFile, setPdfFile] = useState(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfMsg, setPdfMsg] = useState("");
+  const [pdfExtracted, setPdfExtracted] = useState(false);
+
+  const handlePdfUpload = async (file) => {
+    if (!file || !file.type.includes("pdf")) { setPdfMsg("Selecione um arquivo PDF."); return; }
+    setPdfFile(file);
+    setPdfLoading(true);
+    setPdfMsg("Lendo documento com IA...");
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target.result.split(",")[1];
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY || "",
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+          },
+          body: JSON.stringify({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1500,
+            messages: [{
+              role: "user",
+              content: [
+                { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } },
+                { type: "text", text: `Extraia os dados deste documento imobiliário e retorne SOMENTE um JSON válido, sem nenhum texto antes ou depois, com estes campos (use null para campos não encontrados):
+{
+  "name": "nome descritivo do imóvel (ex: Apto 72 - Rua das Flores)",
+  "address": "endereço completo",
+  "neighborhood": "bairro",
+  "city": "cidade",
+  "type": "Apartamento|Casa|Comercial|Sala Comercial|Galpão/Industrial|Studio/Kitnet|Terreno",
+  "size": número em m2,
+  "rent": valor mensal do aluguel em reais,
+  "iptu": valor anual do IPTU em reais,
+  "contratoInicio": "YYYY-MM-DD",
+  "contratoAnos": número de anos do contrato,
+  "locatarioNome": "nome do locatário",
+  "locatarioCPF": "CPF do locatário",
+  "locatarioTelefone": "telefone",
+  "locatarioEmail": "email",
+  "locatarioGarantia": "Fiador|Seguro fiança|Caução|Depósito",
+  "adminPct": percentual de administração (número),
+  "indiceReajuste": "IGPM|IPCA|Fixo",
+  "valorCompra": valor de compra em reais
+}` }
+              ]
+            }]
+          })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        const text = data.content?.[0]?.text || "";
+        const clean = text.replace(/```json|```/g, "").trim();
+        const parsed = JSON.parse(clean);
+        // Fill form with extracted data
+        Object.entries(parsed).forEach(([k, v]) => {
+          if (v !== null && v !== undefined && v !== "") {
+            set(k, String(v));
+          }
+        });
+        if (parsed.rent > 0 || parsed.locatarioNome) set("status", "Ocupado");
+        setPdfExtracted(true);
+        setPdfMsg("✅ Dados extraídos! Revise os campos abaixo e salve.");
+        setTab("manual");
+        setPdfLoading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch(e) {
+      setPdfMsg("Erro ao processar PDF: " + e.message);
+      setPdfLoading(false);
+    }
+  };
+
   const [form, setForm] = useState({
     name: "", address: "", neighborhood: "Itaim Bibi", city: "São Paulo",
     type: "Residencial", status: "Vago", size: "",
@@ -3430,7 +3587,7 @@ function AddImovelModal({ onSave, onClose, nextId }) {
       regimeFiscal: form.regimeFiscal,
       viaImobiliaria: form.viaImobiliaria, locatarioNome: form.viaImobiliaria ? "" : form.locatarioNome, locatarioCPF: form.viaImobiliaria ? "" : form.locatarioCPF,
       locatarioTelefone: form.viaImobiliaria ? "" : form.locatarioTelefone, locatarioEmail: form.viaImobiliaria ? "" : form.locatarioEmail,
-      locatarioGarantia: form.locatarioGarantia, locatarios: [], historico: [],
+      locatarioGarantia: form.locatarioGarantia, locatarios: [], historico: [], documentos: [],
     });
   };
 
@@ -3449,6 +3606,39 @@ function AddImovelModal({ onSave, onClose, nextId }) {
           <button style={{ background: T.s3, border: "none", color: T.muted, borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 18 }} onClick={onClose}>×</button>
         </div>
 
+        {/* ABAS */}
+        <div style={{ display: "flex", borderBottom: `1px solid ${T.border}`, padding: "0 28px" }}>
+          {[["manual","✏️ Preencher manualmente"],["pdf","📄 Importar documento"]].map(([id, label]) => (
+            <button key={id} onClick={() => setTab(id)} style={{ background: "none", border: "none", borderBottom: tab===id ? `2px solid ${T.gold}` : "2px solid transparent", color: tab===id ? T.gold : T.muted, fontWeight: tab===id ? 700 : 400, fontSize: 13, padding: "12px 18px", cursor: "pointer", fontFamily: "inherit", marginBottom: -1 }}>{label}</button>
+          ))}
+          {pdfExtracted && <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: T.green, padding: "0 8px" }}>✅ PDF importado</div>}
+        </div>
+
+        {/* ABA PDF */}
+        {tab === "pdf" && (
+          <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 20 }}>
+            <div style={{ color: T.muted, fontSize: 13, lineHeight: 1.6 }}>
+              Faça upload do contrato de locação ou boleto de IPTU. A IA vai extrair os dados automaticamente e preencher o formulário para você revisar.
+            </div>
+            <label style={{ border: `2px dashed ${T.border}`, borderRadius: 14, padding: "36px 24px", textAlign: "center", cursor: "pointer", display: "block", background: T.s2 }}>
+              <input type="file" accept=".pdf" style={{ display: "none" }} onChange={e => e.target.files[0] && handlePdfUpload(e.target.files[0])} />
+              <div style={{ fontSize: 36, marginBottom: 12 }}>📄</div>
+              <div style={{ color: T.text, fontWeight: 600, marginBottom: 4 }}>{pdfFile ? pdfFile.name : "Clique para selecionar ou arraste o PDF"}</div>
+              <div style={{ color: T.dim, fontSize: 12 }}>Contratos, boletos, escrituras — qualquer documento PDF do imóvel</div>
+            </label>
+            {pdfLoading && (
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 20px", background: T.s2, borderRadius: 12 }}>
+                <div style={{ width: 20, height: 20, border: `2px solid ${T.gold}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                <span style={{ color: T.gold, fontSize: 14 }}>{pdfMsg}</span>
+              </div>
+            )}
+            {!pdfLoading && pdfMsg && (
+              <div style={{ padding: "14px 18px", background: pdfExtracted ? T.green+"22" : T.redDim+"33", border: `1px solid ${pdfExtracted ? T.green : T.red}44`, borderRadius: 10, color: pdfExtracted ? T.green : T.red, fontSize: 13 }}>{pdfMsg}</div>
+            )}
+          </div>
+        )}
+
+        <div style={{ display: tab === "pdf" ? "none" : "block" }}>
         <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 20 }}>
 
           {/* DADOS DO IMÓVEL */}
@@ -3646,10 +3836,16 @@ function AddImovelModal({ onSave, onClose, nextId }) {
             <div style={{ color: T.dim, fontSize: 12 }}>💡 Despesas não preenchidas são calculadas automaticamente com base nos benchmarks do bairro.</div>
           </div>
         </div>
+        </div> {/* end manual tab wrapper */}
 
         <div style={{ padding: "16px 28px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 12, justifyContent: "flex-end", position: "sticky", bottom: 0, background: T.s1 }}>
           <button style={S.btnGhost} onClick={onClose}>Cancelar</button>
-          <button style={{ ...S.btn, opacity: !canSave ? 0.5 : 1 }} onClick={handleSave} disabled={!canSave}>+ Adicionar Imóvel</button>
+          {tab === "pdf" && !pdfExtracted && (
+            <button style={{ ...S.btn, background: T.s3, color: T.muted, cursor: "not-allowed", opacity: 0.6 }} disabled>Faça upload do PDF primeiro</button>
+          )}
+          {(tab === "manual" || pdfExtracted) && (
+            <button style={{ ...S.btn, opacity: !canSave ? 0.5 : 1 }} onClick={handleSave} disabled={!canSave}>+ Adicionar Imóvel</button>
+          )}
         </div>
       </div>
     </div>
@@ -3985,7 +4181,7 @@ export default function App() {
           regimeFiscal: r.regime_fiscal||"PF",
           locatarios: r.locatarios||[], historico: r.historico||[],
           iptuVencimento: r.iptu_vencimento||"", iptuParcelas: r.iptu_parcelas||10, indiceReajuste: r.indice_reajuste||"IGPM", adminPct: r.admin_pct != null ? r.admin_pct : 8,
-          avaliacoes: r.avaliacoes||[], viaImobiliaria: r.via_imobiliaria||false, locatarioNome: r.locatario_nome||"", locatarioCPF: r.locatario_cpf||"", locatarioTelefone: r.locatario_telefone||"", locatarioEmail: r.locatario_email||"", locatarioGarantia: r.locatario_garantia||"Fiador",
+          avaliacoes: r.avaliacoes||[], documentos: r.documentos||[], viaImobiliaria: r.via_imobiliaria||false, locatarioNome: r.locatario_nome||"", locatarioCPF: r.locatario_cpf||"", locatarioTelefone: r.locatario_telefone||"", locatarioEmail: r.locatario_email||"", locatarioGarantia: r.locatario_garantia||"Fiador",
         }, BENCHMARKS));
         setPropsRaw(mapped);
       }
@@ -4008,7 +4204,7 @@ export default function App() {
     monthly_data: prop.monthlyData||[], dia_vencimento: prop.diaVencimento||10,
     condo_pago_por: prop.condoPagoPor||"proprietario", regime_fiscal: prop.regimeFiscal||"PF", admin_pct: prop.adminPct != null ? Number(prop.adminPct) : 8,
     indice_reajuste: prop.indiceReajuste||"IGPM", iptu_vencimento: prop.iptuVencimento||null, iptu_parcelas: prop.iptuParcelas||10,
-    avaliacoes: prop.avaliacoes||[], via_imobiliaria: prop.viaImobiliaria||false, locatario_nome: prop.locatarioNome||"", locatario_cpf: prop.locatarioCPF||"", locatario_telefone: prop.locatarioTelefone||"", locatario_email: prop.locatarioEmail||"", locatario_garantia: prop.locatarioGarantia||"Fiador",
+    avaliacoes: prop.avaliacoes||[], documentos: prop.documentos||[], via_imobiliaria: prop.viaImobiliaria||false, locatario_nome: prop.locatarioNome||"", locatario_cpf: prop.locatarioCPF||"", locatario_telefone: prop.locatarioTelefone||"", locatario_email: prop.locatarioEmail||"", locatario_garantia: prop.locatarioGarantia||"Fiador",
     locatarios: prop.locatarios||[], historico: prop.historico||[],
   });
 
@@ -4152,9 +4348,9 @@ export default function App() {
         input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5)}
       `}</style>
 
-      {editingProp && <EditModal prop={editingProp} onSave={handleSaveEdit} onClose={() => setEditingProp(null)} />}
+      {editingProp && <EditModal prop={editingProp} onSave={handleSaveEdit} onClose={() => setEditingProp(null)} userId={user?.id} />}
       {obrasProps && <ObrasModal prop={obrasProps} onSave={handleSaveObras} onClose={() => setObrasProps(null)} />}
-      {addingImovel && <AddImovelModal nextId={nextId} onSave={handleAddImovel} onClose={() => setAddingImovel(false)} />}
+      {addingImovel && <AddImovelModal nextId={nextId} onSave={handleAddImovel} onClose={() => setAddingImovel(false)} userId={user?.id} />}
       {deletingProp && <DeleteConfirmModal prop={deletingProp} onConfirm={confirmDelete} onClose={() => setDeletingProp(null)} />}
       {cancelandoProp && <CancelarContratoModal prop={cancelandoProp} onConfirm={confirmCancelarContrato} onClose={() => setCancelandoProp(null)} />}
 
