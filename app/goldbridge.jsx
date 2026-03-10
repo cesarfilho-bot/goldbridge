@@ -3182,8 +3182,11 @@ function CancelarContratoModal({ prop, onConfirm, onClose }) {
     const inicio = new Date(prop.contratoInicio);
     const mesesTotais = (prop.contratoAnos || 1) * 12;
     const mesesDecorridos = Math.max(0, Math.floor((hoje - inicio) / (1000 * 60 * 60 * 24 * 30.44)));
-    multaMeses = Math.max(0, mesesTotais - mesesDecorridos);
-    multaValor = Math.round((prop.rent || 0) * multaMeses);
+    // Sem multa se o inquilino ficou mais de 12 meses
+    if (mesesDecorridos < 12) {
+      multaMeses = Math.max(0, mesesTotais - mesesDecorridos);
+      multaValor = Math.round((prop.rent || 0) * multaMeses);
+    }
   }
 
   const [dataEntrega, setDataEntrega] = React.useState("");
