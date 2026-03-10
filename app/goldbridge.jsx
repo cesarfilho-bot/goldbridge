@@ -680,7 +680,7 @@ function EditModal({ prop, onSave, onClose }) {
     if (noiPct < 0.5) leakage += 20;
     leakage = Math.min(98, Math.max(2, Math.round(leakage)));
     const proximoReajuste = form.contratoInicio ? (() => { const d = new Date(form.contratoInicio); const now = new Date(); let y = now.getFullYear(); if (new Date(y, d.getMonth(), d.getDate()) <= now) y++; return new Date(y, d.getMonth(), d.getDate()).toLocaleDateString("pt-BR"); })() : "";
-    const adminFromPct = Math.round(Number(form.rent) * (Number(form.adminPct)||8) / 100);
+    const adminFromPct = Math.round(Number(form.rent) * (Number(form.adminPct)||0) / 100);
     onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: adminFromPct, adminPct: Number(form.adminPct), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, locatarioNome: form.locatarioNome, locatarioCPF: form.locatarioCPF, locatarioTelefone: form.locatarioTelefone, locatarioEmail: form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
   };
 
@@ -718,10 +718,10 @@ function EditModal({ prop, onSave, onClose }) {
               <div>
                 <label style={S.label}>TAXA ADM. (%)</label>
                 <div style={{ position: "relative" }}>
-                  <input type="number" style={{ ...S.input, paddingRight: 32 }} value={form.adminPct} placeholder="8" min="0" max="20" step="0.5" onChange={e=>{ set("adminPct",e.target.value); set("admin", Math.round((parseFloat(form.rent)||0)*(parseFloat(e.target.value)||8)/100)); }} />
+                  <input type="number" style={{ ...S.input, paddingRight: 32 }} value={form.adminPct} placeholder="8" min="0" max="20" step="0.5" onChange={e=>{ set("adminPct",e.target.value); set("admin", Math.round((parseFloat(form.rent)||0)*(parseFloat(e.target.value)||0)/100)); }} />
                   <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: T.muted, fontSize: 14, fontWeight: 700 }}>%</span>
                 </div>
-                {form.rent && <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>= {new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Math.round((parseFloat(form.rent)||0)*(parseFloat(form.adminPct)||8)/100))}/mês</div>}
+                {form.rent && <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>= {new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Math.round((parseFloat(form.rent)||0)*(parseFloat(form.adminPct)||0)/100))}/mês</div>}
               </div>
               <div><label style={S.label}>DIAS DE VACÂNCIA/ANO</label><input type="number" style={S.input} value={form.vacancyDays} onChange={e=>set("vacancyDays",e.target.value)} /></div>
               <div><label style={S.label}>VALOR DE MERCADO MANUAL (R$)</label><input type="number" style={S.input} value={form.marketValueManual} onChange={e=>set("marketValueManual",e.target.value)} /></div>
@@ -3137,7 +3137,7 @@ function AddImovelModal({ onSave, onClose, nextId }) {
     hasCondominio: false, condoFee: "0", fundoReserva: "0", chamadaExtra: "0", condoPagoPor: "proprietario",
     regimeFiscal: "PF",
     // Locatário
-    locatarioNome: "", locatarioCPF: "", locatarioTelefone: "", locatarioEmail: "", locatarioGarantia: "Fiador",
+    locatarioNome: "", locatarioCPF: "", locatarioTelefone: "", locatarioEmail: "", locatarioGarantia: "Fiador", viaImobiliaria: false,
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const alugado = form.status === "Ocupado";
@@ -3193,8 +3193,8 @@ function AddImovelModal({ onSave, onClose, nextId }) {
       condoFee: parseFloat(form.condoFee)||0, fundoReserva: parseFloat(form.fundoReserva)||0,
       chamadaExtra: parseFloat(form.chamadaExtra)||0, condoPagoPor: form.condoPagoPor,
       regimeFiscal: form.regimeFiscal,
-      locatarioNome: form.locatarioNome, locatarioCPF: form.locatarioCPF,
-      locatarioTelefone: form.locatarioTelefone, locatarioEmail: form.locatarioEmail,
+      viaImobiliaria: form.viaImobiliaria, locatarioNome: form.viaImobiliaria ? "" : form.locatarioNome, locatarioCPF: form.viaImobiliaria ? "" : form.locatarioCPF,
+      locatarioTelefone: form.viaImobiliaria ? "" : form.locatarioTelefone, locatarioEmail: form.viaImobiliaria ? "" : form.locatarioEmail,
       locatarioGarantia: form.locatarioGarantia, locatarios: [], historico: [],
     });
   };
@@ -3300,7 +3300,7 @@ function AddImovelModal({ onSave, onClose, nextId }) {
                     <input type="number" style={{ ...S.input, paddingRight: 32 }} value={form.adminPct} placeholder="8" min="0" max="20" step="0.5" onChange={e=>set("adminPct",e.target.value)} />
                     <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: T.muted, fontSize: 14, fontWeight: 700 }}>%</span>
                   </div>
-                  {form.rent && <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>= {new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Math.round((parseFloat(form.rent)||0)*(parseFloat(form.adminPct)||8)/100))}/mês</div>}
+                  {form.rent && <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>= {new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Math.round((parseFloat(form.rent)||0)*(parseFloat(form.adminPct)||0)/100))}/mês</div>}
                 </div>
                 <div>
                   <label style={S.label}>DESCONTO NO ALUGUEL (R$/mês)</label>
@@ -3327,30 +3327,45 @@ function AddImovelModal({ onSave, onClose, nextId }) {
               {/* Locatário */}
               <div style={{ marginTop: 16 }}>
                 <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>LOCATÁRIO</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div style={{ gridColumn: "1/-1" }}>
-                    <label style={S.label}>NOME COMPLETO</label>
-                    <input style={S.input} value={form.locatarioNome} placeholder="Nome do locatário" onChange={e=>set("locatarioNome",e.target.value)} />
-                  </div>
+                {/* Toggle imobiliária */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, background: T.s1, borderRadius: 10, padding: "10px 14px", border: `1px solid ${T.border}` }}>
+                  <input type="checkbox" checked={form.viaImobiliaria} onChange={e=>set("viaImobiliaria",e.target.checked)} style={{ width:16, height:16, accentColor:T.gold, cursor:"pointer" }} />
                   <div>
-                    <label style={S.label}>CPF / CNPJ</label>
-                    <input style={S.input} value={form.locatarioCPF} placeholder="000.000.000-00" onChange={e=>set("locatarioCPF",e.target.value)} />
-                  </div>
-                  <div>
-                    <label style={S.label}>TELEFONE</label>
-                    <input style={S.input} value={form.locatarioTelefone} placeholder="(11) 99999-9999" onChange={e=>set("locatarioTelefone",e.target.value)} />
-                  </div>
-                  <div style={{ gridColumn: "1/-1" }}>
-                    <label style={S.label}>EMAIL</label>
-                    <input style={S.input} value={form.locatarioEmail} placeholder="email@exemplo.com" onChange={e=>set("locatarioEmail",e.target.value)} />
-                  </div>
-                  <div>
-                    <label style={S.label}>GARANTIA</label>
-                    <select style={S.sel} value={form.locatarioGarantia} onChange={e=>set("locatarioGarantia",e.target.value)}>
-                      {["Fiador","Seguro Fiança","Caução","Título de Capitalização","Sem garantia"].map(o=><option key={o}>{o}</option>)}
-                    </select>
+                    <div style={{ color: T.text, fontSize: 13, fontWeight: 600 }}>Gerenciado por imobiliária</div>
+                    <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>Quando marcado, os dados do locatário não são necessários</div>
                   </div>
                 </div>
+                {!form.viaImobiliaria && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <div style={{ gridColumn: "1/-1" }}>
+                      <label style={S.label}>NOME COMPLETO</label>
+                      <input style={S.input} value={form.locatarioNome} placeholder="Nome do locatário" onChange={e=>set("locatarioNome",e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={S.label}>CPF / CNPJ</label>
+                      <input style={S.input} value={form.locatarioCPF} placeholder="000.000.000-00" onChange={e=>set("locatarioCPF",e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={S.label}>TELEFONE</label>
+                      <input style={S.input} value={form.locatarioTelefone} placeholder="(11) 99999-9999" onChange={e=>set("locatarioTelefone",e.target.value)} />
+                    </div>
+                    <div style={{ gridColumn: "1/-1" }}>
+                      <label style={S.label}>EMAIL</label>
+                      <input style={S.input} value={form.locatarioEmail} placeholder="email@exemplo.com" onChange={e=>set("locatarioEmail",e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={S.label}>GARANTIA</label>
+                      <select style={S.sel} value={form.locatarioGarantia} onChange={e=>set("locatarioGarantia",e.target.value)}>
+                        {["Fiador","Seguro Fiança","Caução","Título de Capitalização","Sem garantia"].map(o=><option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
+                {form.viaImobiliaria && (
+                  <div style={{ color: T.dim, fontSize: 12, padding: "10px 14px", background: T.s1, borderRadius: 8, border: `1px solid ${T.border}` }}>
+                    🏢 Os dados do locatário são gerenciados pela imobiliária
+                  </div>
+                )}
               </div>
 
               {/* Condomínio */}
