@@ -1352,7 +1352,7 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
     const valorCompra = p.valorCompra || 0;
     const ganhoCapital = valorCompra > 0 ? valorEstimado - valorCompra : null;
     const ganhoCapitalPct = valorCompra > 0 ? ganhoCapital / valorCompra : null;
-    const capRate = valorEstimado > 0 ? p.totalIncome / valorEstimado : 0;
+    const capRate = valorEstimado > 0 ? (p.lucroLiquido || p.noi) / valorEstimado : 0;
     return { ...p, m2ref, valorEstimado, valorCompra, ganhoCapital, ganhoCapitalPct, capRate, var12m: bm.var12m, valorizacaoAnual: valorEstimado * bm.var12m, fonteM2: bm.fonte, isManual: p.valorMercado > 0 };
   });
 
