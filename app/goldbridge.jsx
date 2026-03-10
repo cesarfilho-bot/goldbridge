@@ -2963,6 +2963,72 @@ function PageLocatarios({ PROPS, onUpdateProps }) {
           </div>
         </div>
       )}
+
+      {/* IPTU — imóveis sem imobiliária */}
+      {(() => {
+        const semImob = PROPS.filter(p => !p.viaImobiliaria && (p.iptu||0) > 0);
+        if (semImob.length === 0) return null;
+        const hoje3 = new Date();
+        const getStatus = (p) => {
+          if (!p.iptuVencimento) return "sem_data";
+          const dias = Math.round((new Date(p.iptuVencimento+"-01") - hoje3) / 86400000);
+          if (dias < -5) return "vencido";
+          if (dias <= 30) return "urgente";
+          return "ok";
+        };
+        const COR = { vencido:T.red, urgente:T.amber, ok:T.green, sem_data:T.muted };
+        const LBL = { vencido:"Vencido", urgente:"Vence em breve", ok:"Em dia", sem_data:"Sem data" };
+        const totalAnual = semImob.reduce((s,p)=>s+(p.iptu||0),0);
+        return (
+          <div style={{ ...S.card, padding:0, overflow:"hidden" }}>
+            <div style={{ padding:"16px 20px", borderBottom:`1px solid ${T.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div style={{ color:T.gold, fontSize:12, fontWeight:700, letterSpacing:1 }}>🏛️ IPTU — VENCIMENTOS E PAGAMENTOS</div>
+              <div style={{ color:T.dim, fontSize:12 }}>Previsão anual: <span style={{ color:T.goldBright, fontWeight:700 }}>{fmt.brl(totalAnual)}</span></div>
+            </div>
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+              <thead>
+                <tr style={{ background:T.s2 }}>
+                  {["IMÓVEL","BAIRRO","IPTU ANUAL","PARCELA (÷10)","VENCIMENTO","STATUS"].map(h=>(
+                    <th key={h} style={{ ...S.th, textAlign:"left" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {semImob.map((p,i) => {
+                  const st = getStatus(p);
+                  const cor = COR[st];
+                  const diasAte = p.iptuVencimento
+                    ? Math.round((new Date(p.iptuVencimento+"-01") - hoje3) / 86400000)
+                    : null;
+                  const vencFmt = p.iptuVencimento
+                    ? new Date(p.iptuVencimento+"-01").toLocaleDateString("pt-BR",{month:"long",year:"numeric"})
+                    : "Não cadastrado";
+                  return (
+                    <tr key={p.id} style={{ background:i%2===0?T.s0:T.s1, borderBottom:`1px solid ${T.border}40` }}>
+                      <td style={{ ...S.td, fontWeight:600, color:T.goldBright }}>{p.name}</td>
+                      <td style={{ ...S.td, color:T.muted }}>{p.neighborhood}</td>
+                      <td style={{ ...S.td, ...S.mono, fontWeight:700 }}>{fmt.brl(p.iptu)}</td>
+                      <td style={{ ...S.td, ...S.mono, color:T.dim }}>{fmt.brl(Math.round((p.iptu||0)/10))}</td>
+                      <td style={{ ...S.td }}>
+                        <div style={{ color:T.text }}>{vencFmt}</div>
+                        {diasAte !== null && (
+                          <div style={{ fontSize:11, color:cor, fontWeight:600, marginTop:2 }}>
+                            {diasAte < 0 ? `${Math.abs(diasAte)} dias atrás` : diasAte === 0 ? "Hoje" : `em ${diasAte} dias`}
+                          </div>
+                        )}
+                      </td>
+                      <td style={S.td}><span style={{ ...S.badge(cor), fontSize:11 }}>{LBL[st]}</span></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <div style={{ padding:"10px 20px", borderTop:`1px solid ${T.border}`, background:T.s2 }}>
+              <span style={{ color:T.dim, fontSize:11 }}>💡 Parcela estimada em 10x. Data de vencimento cadastrada no perfil do imóvel (1ª parcela ou cota única).</span>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
