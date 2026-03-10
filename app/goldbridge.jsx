@@ -3826,23 +3826,7 @@ export default function App() {
 
   const handleAddImovel = async (newProp) => {
     if (!portfolioId || !user) { setAddingImovel(false); return; }
-    const dbData = {
-      portfolio_id: portfolioId, user_id: user.id,
-      name: newProp.name, address: newProp.address, neighborhood: newProp.neighborhood,
-      city: newProp.city, type: newProp.type, status: newProp.status, size: newProp.size,
-      rent: newProp.rent, iptu: newProp.iptu, maint_monthly: newProp.maintMonthly,
-      insurance: newProp.insurance, admin: newProp.admin, vacancy_days: newProp.vacancyDays,
-      avaliacoes: newProp.avaliacoes||[], has_condominio: newProp.hasCondominio||false, condo_fee: newProp.condoFee||0,
-      fundo_reserva: newProp.fundoReserva||0, chamada_extra: newProp.chamadaExtra||0,
-      desconto_aluguel: newProp.descontoAluguel||0, contrato_anos: newProp.contratoAnos||1,
-      contrato_inicio: newProp.contratoInicio||null, market_value_manual: newProp.marketValueManual||0,
-      valor_mercado: newProp.valorMercado||0, valor_compra: newProp.valorCompra||0, ano_compra: newProp.anoCompra||null,
-      obras: newProp.obras||[], prestadores: newProp.prestadores||[], pagamentos: newProp.pagamentos||{},
-      monthly_data: newProp.monthlyData||[], dia_vencimento: newProp.diaVencimento||10,
-      condo_pago_por: newProp.condoPagoPor||"proprietario", regime_fiscal: newProp.regimeFiscal||"PF",
-      locatarios: newProp.locatarios||[], historico: newProp.historico||[],
-      iptu_vencimento: newProp.iptuVencimento||null, indice_reajuste: newProp.indiceReajuste||"IGPM",
-    };
+    const dbData = toDB({ ...newProp, avaliacoes: newProp.avaliacoes||[] });
     const { data, error } = await supabase.from("imoveis").insert(dbData).select().single();
     if (error) { console.error("Erro ao adicionar imóvel:", error); setAddingImovel(false); return; }
     if (data) {
