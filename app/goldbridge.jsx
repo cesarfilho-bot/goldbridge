@@ -634,26 +634,28 @@ function BenchmarkBar({ label, value, benchmark, unit = "", delta }) {
 // ─── EDIT MODAL ──────────────────────────────────────────────────────────────
 function EditModal({ prop, onSave, onClose }) {
   const [form, setForm] = useState({
-    name: prop.name, address: prop.address, neighborhood: prop.neighborhood,
-    city: prop.city, type: prop.type, status: prop.status, size: prop.size,
-    rent: prop.rent, iptu: prop.iptu, maintMonthly: prop.maintMonthly,
-    insurance: prop.insurance, admin: prop.admin, vacancyDays: prop.vacancyDays,
+    name: prop.name || "", address: prop.address || "", neighborhood: prop.neighborhood || "",
+    city: prop.city || "Americana", type: prop.type || "Residencial", status: prop.status || "Ocupado", size: prop.size ?? 0,
+    rent: prop.rent ?? 0, iptu: prop.iptu ?? 0, maintMonthly: prop.maintMonthly ?? 0,
+    insurance: prop.insurance ?? 0, admin: prop.admin ?? 0, vacancyDays: prop.vacancyDays ?? 0,
+    adminPct: prop.adminPct != null ? prop.adminPct : 8,
     hasCondominio: prop.hasCondominio || false,
-    condoFee: prop.condoFee || 0,
-    fundoReserva: prop.fundoReserva || 0,
-    chamadaExtra: prop.chamadaExtra || 0,
+    condoFee: prop.condoFee ?? 0,
+    fundoReserva: prop.fundoReserva ?? 0,
+    chamadaExtra: prop.chamadaExtra ?? 0,
     condoPagoPor: prop.condoPagoPor || "proprietario",
-    descontoAluguel: prop.descontoAluguel || 0,
-    contratoAnos: prop.contratoAnos || 1,
+    descontoAluguel: prop.descontoAluguel ?? 0,
+    contratoAnos: prop.contratoAnos ?? 1,
     contratoInicio: prop.contratoInicio || "",
     indiceReajuste: prop.indiceReajuste || "IGPM",
     iptuVencimento: prop.iptuVencimento || "",
+    viaImobiliaria: prop.viaImobiliaria || false,
     locatarioNome: prop.locatarioNome || "",
     locatarioCPF: prop.locatarioCPF || "",
     locatarioTelefone: prop.locatarioTelefone || "",
     locatarioEmail: prop.locatarioEmail || "",
     locatarioGarantia: prop.locatarioGarantia || "Fiador",
-    marketValueManual: prop.marketValueManual || 0,
+    marketValueManual: prop.marketValueManual ?? 0,
     regimeFiscal: prop.regimeFiscal || "PF",
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -681,7 +683,7 @@ function EditModal({ prop, onSave, onClose }) {
     leakage = Math.min(98, Math.max(2, Math.round(leakage)));
     const proximoReajuste = form.contratoInicio ? (() => { const d = new Date(form.contratoInicio); const now = new Date(); let y = now.getFullYear(); if (new Date(y, d.getMonth(), d.getDate()) <= now) y++; return new Date(y, d.getMonth(), d.getDate()).toLocaleDateString("pt-BR"); })() : "";
     const adminFromPct = Math.round(Number(form.rent) * (Number(form.adminPct)||0) / 100);
-    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: adminFromPct, adminPct: Number(form.adminPct), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, locatarioNome: form.locatarioNome, locatarioCPF: form.locatarioCPF, locatarioTelefone: form.locatarioTelefone, locatarioEmail: form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
+    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: adminFromPct, adminPct: Number(form.adminPct), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, viaImobiliaria: form.viaImobiliaria, locatarioNome: form.viaImobiliaria ? "" : form.locatarioNome, locatarioCPF: form.viaImobiliaria ? "" : form.locatarioCPF, locatarioTelefone: form.viaImobiliaria ? "" : form.locatarioTelefone, locatarioEmail: form.viaImobiliaria ? "" : form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
   };
 
   return (
@@ -787,13 +789,27 @@ function EditModal({ prop, onSave, onClose }) {
           </div>
           <div>
             <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>LOCATÁRIO</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div style={{ gridColumn: "1/-1" }}><label style={S.label}>NOME DO LOCATÁRIO</label><input style={S.input} value={form.locatarioNome} placeholder="Nome completo" onChange={e=>set("locatarioNome",e.target.value)} /></div>
-              <div><label style={S.label}>CPF / CNPJ</label><input style={S.input} value={form.locatarioCPF} placeholder="000.000.000-00" onChange={e=>set("locatarioCPF",e.target.value)} /></div>
-              <div><label style={S.label}>TELEFONE</label><input style={S.input} value={form.locatarioTelefone} placeholder="(11) 99999-9999" onChange={e=>set("locatarioTelefone",e.target.value)} /></div>
-              <div style={{ gridColumn: "1/-1" }}><label style={S.label}>EMAIL</label><input style={S.input} value={form.locatarioEmail} placeholder="email@exemplo.com" onChange={e=>set("locatarioEmail",e.target.value)} /></div>
-              <div><label style={S.label}>GARANTIA</label><select style={S.sel} value={form.locatarioGarantia} onChange={e=>set("locatarioGarantia",e.target.value)}>{["Fiador","Seguro Fiança","Caução","Título de Capitalização","Sem garantia"].map(o=><option key={o}>{o}</option>)}</select></div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, background: T.s1, borderRadius: 10, padding: "10px 14px", border: `1px solid ${T.border}` }}>
+              <input type="checkbox" checked={form.viaImobiliaria} onChange={e=>set("viaImobiliaria",e.target.checked)} style={{ width:16, height:16, accentColor:T.gold, cursor:"pointer" }} />
+              <div>
+                <div style={{ color: T.text, fontSize: 13, fontWeight: 600 }}>Gerenciado por imobiliária</div>
+                <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>Quando marcado, os dados do locatário não são necessários</div>
+              </div>
             </div>
+            {!form.viaImobiliaria && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div style={{ gridColumn: "1/-1" }}><label style={S.label}>NOME DO LOCATÁRIO</label><input style={S.input} value={form.locatarioNome} placeholder="Nome completo" onChange={e=>set("locatarioNome",e.target.value)} /></div>
+                <div><label style={S.label}>CPF / CNPJ</label><input style={S.input} value={form.locatarioCPF} placeholder="000.000.000-00" onChange={e=>set("locatarioCPF",e.target.value)} /></div>
+                <div><label style={S.label}>TELEFONE</label><input style={S.input} value={form.locatarioTelefone} placeholder="(11) 99999-9999" onChange={e=>set("locatarioTelefone",e.target.value)} /></div>
+                <div style={{ gridColumn: "1/-1" }}><label style={S.label}>EMAIL</label><input style={S.input} value={form.locatarioEmail} placeholder="email@exemplo.com" onChange={e=>set("locatarioEmail",e.target.value)} /></div>
+                <div><label style={S.label}>GARANTIA</label><select style={S.sel} value={form.locatarioGarantia} onChange={e=>set("locatarioGarantia",e.target.value)}>{["Fiador","Seguro Fiança","Caução","Título de Capitalização","Sem garantia"].map(o=><option key={o}>{o}</option>)}</select></div>
+              </div>
+            )}
+            {form.viaImobiliaria && (
+              <div style={{ color: T.dim, fontSize: 12, padding: "10px 14px", background: T.s1, borderRadius: 8, border: `1px solid ${T.border}` }}>
+                🏢 Os dados do locatário são gerenciados pela imobiliária
+              </div>
+            )}
           </div>
         </div>
         <div style={{ padding: "16px 28px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 12, justifyContent: "flex-end" }}>
@@ -3661,6 +3677,7 @@ export default function App() {
           regimeFiscal: r.regime_fiscal||"PF",
           locatarios: r.locatarios||[], historico: r.historico||[],
           iptuVencimento: r.iptu_vencimento||"", indiceReajuste: r.indice_reajuste||"IGPM", adminPct: r.admin_pct != null ? r.admin_pct : 8,
+          viaImobiliaria: r.via_imobiliaria||false, locatarioNome: r.locatario_nome||"", locatarioCPF: r.locatario_cpf||"", locatarioTelefone: r.locatario_telefone||"", locatarioEmail: r.locatario_email||"", locatarioGarantia: r.locatario_garantia||"Fiador",
         }, BENCHMARKS));
         setPropsRaw(mapped);
       }
@@ -3683,6 +3700,7 @@ export default function App() {
     monthly_data: prop.monthlyData||[], dia_vencimento: prop.diaVencimento||10,
     condo_pago_por: prop.condoPagoPor||"proprietario", regime_fiscal: prop.regimeFiscal||"PF", admin_pct: prop.adminPct != null ? Number(prop.adminPct) : 8,
     indice_reajuste: prop.indiceReajuste||"IGPM", iptu_vencimento: prop.iptuVencimento||null,
+    via_imobiliaria: prop.viaImobiliaria||false, locatario_nome: prop.locatarioNome||"", locatario_cpf: prop.locatarioCPF||"", locatario_telefone: prop.locatarioTelefone||"", locatario_email: prop.locatarioEmail||"", locatario_garantia: prop.locatarioGarantia||"Fiador",
     locatarios: prop.locatarios||[], historico: prop.historico||[],
   });
 
