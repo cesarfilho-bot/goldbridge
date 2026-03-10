@@ -681,7 +681,7 @@ function EditModal({ prop, onSave, onClose }) {
     leakage = Math.min(98, Math.max(2, Math.round(leakage)));
     const proximoReajuste = form.contratoInicio ? (() => { const d = new Date(form.contratoInicio); const now = new Date(); let y = now.getFullYear(); if (new Date(y, d.getMonth(), d.getDate()) <= now) y++; return new Date(y, d.getMonth(), d.getDate()).toLocaleDateString("pt-BR"); })() : "";
     const adminFromPct = Math.round(Number(form.rent) * (Number(form.adminPct)||8) / 100);
-    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: adminFromPct, adminPct: Number(form.adminPct)||8, vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, locatarioNome: form.locatarioNome, locatarioCPF: form.locatarioCPF, locatarioTelefone: form.locatarioTelefone, locatarioEmail: form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
+    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: adminFromPct, adminPct: Number(form.adminPct), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, locatarioNome: form.locatarioNome, locatarioCPF: form.locatarioCPF, locatarioTelefone: form.locatarioTelefone, locatarioEmail: form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
   };
 
   return (
@@ -3148,7 +3148,7 @@ function AddImovelModal({ onSave, onClose, nextId }) {
     const bm = BENCHMARKS[form.city]?.[form.type] || BENCHMARKS["São Paulo"][form.type];
     const size = parseFloat(form.size) || 0;
     const rent = alugado ? (parseFloat(form.rent) || 0) : 0;
-    const adminPct = parseFloat(form.adminPct) || 8;
+    const adminPct = form.adminPct !== "" ? (parseFloat(form.adminPct) || 0) : 8;
     const admin = Math.round(rent * adminPct / 100);
     const iptu = form.iptu !== "" ? (parseFloat(form.iptu) || 0) : Math.round(bm.iptu_m2 * size);
     const maintMonthly = form.maintMonthly !== "" ? (parseFloat(form.maintMonthly) || 0) : Math.round(bm.maintenance_annual_m2 * size / 12);
@@ -3645,7 +3645,7 @@ export default function App() {
           condoPagoPor: r.condo_pago_por||"proprietario",
           regimeFiscal: r.regime_fiscal||"PF",
           locatarios: r.locatarios||[], historico: r.historico||[],
-          iptuVencimento: r.iptu_vencimento||"", indiceReajuste: r.indice_reajuste||"IGPM", adminPct: r.admin_pct||8,
+          iptuVencimento: r.iptu_vencimento||"", indiceReajuste: r.indice_reajuste||"IGPM", adminPct: r.admin_pct != null ? r.admin_pct : 8,
         }, BENCHMARKS));
         setPropsRaw(mapped);
       }
@@ -3666,7 +3666,7 @@ export default function App() {
     valor_mercado: prop.valorMercado||0, valor_compra: prop.valorCompra||0, ano_compra: prop.anoCompra||null,
     obras: prop.obras||[], prestadores: prop.prestadores||[], pagamentos: prop.pagamentos||{},
     monthly_data: prop.monthlyData||[], dia_vencimento: prop.diaVencimento||10,
-    condo_pago_por: prop.condoPagoPor||"proprietario", regime_fiscal: prop.regimeFiscal||"PF", admin_pct: prop.adminPct||8,
+    condo_pago_por: prop.condoPagoPor||"proprietario", regime_fiscal: prop.regimeFiscal||"PF", admin_pct: prop.adminPct != null ? Number(prop.adminPct) : 8,
     indice_reajuste: prop.indiceReajuste||"IGPM", iptu_vencimento: prop.iptuVencimento||null,
     locatarios: prop.locatarios||[], historico: prop.historico||[],
   });
