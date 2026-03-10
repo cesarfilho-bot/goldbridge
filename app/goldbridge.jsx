@@ -1404,12 +1404,6 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
     });
   };
 
-  const zapUrl = (p) => {
-    const tipos = { "Apartamento":"apartamentos","Casa":"casas","Terreno":"terrenos","Comercial":"imoveis-comerciais","Sala Comercial":"salas-comerciais","Galpão/Industrial":"galpoes","Studio/Kitnet":"apartamentos" };
-    const tipo = tipos[p.type] || "imoveis";
-    const norm = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g,"-");
-    return "https://www.zapimoveis.com.br/venda/"+tipo+"/sp-"+norm(p.city||"americana")+"+"+norm(p.neighborhood||"")+"/";
-  };
 
   // top 12 para o gráfico
   const top12 = [...propsComValor].sort((a, b) => b.valorEstimado - a.valorEstimado).slice(0, 12);
@@ -1522,9 +1516,7 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
                             onChange={e => setEditForm(f => ({ ...f, valorMercado: e.target.value }))}
                             placeholder={`~${fmt.brlK(p.m2ref * p.size)}`}
                           />
-                          <a href={zapUrl(p)} target="_blank" rel="noopener noreferrer"
-                            style={{ padding: "6px 10px", background: T.s2, border: `1px solid ${T.border}`, borderRadius: 8, color: T.gold, fontSize: 11, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", cursor: "pointer" }}
-                            title="Buscar comparáveis no ZAP Imóveis">🔍 ZAP</a>
+
                         </div>
                         <input type="date" style={{ ...S.input, padding: "6px 10px", fontSize: 11 }}
                           value={editForm.dataAvaliacao}
@@ -1619,7 +1611,14 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
                         <button style={{ ...S.btnGhost, padding: "6px 12px", fontSize: 12 }} onClick={() => setEditingId(null)}>✕</button>
                       </div>
                     ) : (
-                      <button style={{ ...S.btnGhost, padding: "6px 14px", fontSize: 12 }} onClick={() => startEdit(p)}>✎</button>
+                      <div style={{ display: "flex", gap: 6, flexDirection: "column" }}>
+                        <button style={{ ...S.btnGhost, padding: "6px 14px", fontSize: 12 }} onClick={() => startEdit(p)}>✎ Editar</button>
+                        <a href={`https://wa.me/5519997010594?text=${encodeURIComponent("Olá! Gostaria de solicitar um estudo de mercado para o imóvel: " + p.name + (p.neighborhood ? " - " + p.neighborhood : "") + (p.city ? ", " + p.city : "") + ".")}`}
+                          target="_blank" rel="noopener noreferrer"
+                          style={{ padding: "6px 10px", background: "#25D366", border: "none", borderRadius: 8, color: "#fff", fontSize: 11, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", cursor: "pointer", textAlign: "center" }}>
+                          📊 Pedir Estudo
+                        </a>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -2062,6 +2061,11 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <button style={S.btnGhost} onClick={() => onEdit(prop)}>✏️ Editar</button>
           <button style={S.btnGhost} onClick={() => onObras(prop)}>🔨 Obras {obrasCount > 0 ? `(${obrasCount})` : ""}</button>
+          <a href={"https://wa.me/5519997010594?text=" + encodeURIComponent("Olá! Gostaria de solicitar um estudo de mercado para o imóvel: " + prop.name + (prop.neighborhood ? " - " + prop.neighborhood : "") + (prop.city ? ", " + prop.city : "") + ".")}
+            target="_blank" rel="noopener noreferrer"
+            style={{ ...S.btnGhost, background: "#25D36618", borderColor: "#25D366", color: "#25D366", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
+            📊 Pedir Estudo de Mercado
+          </a>
           {prop.status === "Ocupado" && <button style={{ ...S.btnDanger, borderColor: T.amber, color: T.amber }} onClick={() => onCancelarContrato(prop)}>⚠️ Cancelar Contrato</button>}
           {prop.status === "Em desocupação" && <button style={{ ...S.btnGhost, borderColor: T.green, color: T.green }} onClick={() => onCancelarContrato(prop)}>🔑 Registrar Entrega</button>}
           <button style={S.btnDanger} onClick={() => onDelete(prop)}>🗑 Remover</button>
