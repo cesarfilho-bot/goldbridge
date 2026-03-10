@@ -374,9 +374,10 @@ function NeighborhoodSearch({ city, value, onChange }) {
 }
 
 function getFipeZAP(neighborhood, city, type) {
-  return FIPEZAP_M2[neighborhood]
-    || FIPEZAP_M2[`_default_${city}`]
-    || FIPEZAP_M2["_default_São Paulo"];
+  const data = FIPEZAP_M2[neighborhood] || FIPEZAP_M2[`_default_${city}`] || FIPEZAP_M2["_default_São Paulo"];
+  // Terrenos: ~60% do valor residencial
+  if (type === "Terreno") return { ...data, res: Math.round(data.res * 0.6), com: Math.round(data.com * 0.6) };
+  return data;
 }
 
 const SP_ADDRESSES = [
@@ -704,7 +705,7 @@ function EditModal({ prop, onSave, onClose }) {
               <div style={{ gridColumn: "1/-1" }}><div><label style={S.label}>ENDEREÇO</label><input style={S.input} value={form.address} onChange={e=>set("address",e.target.value)} /></div></div>
               <div><label style={S.label}>BAIRRO</label><NeighborhoodSearch city={form.city} value={form.neighborhood} onChange={v=>set("neighborhood",v)} /></div>
               <div><label style={S.label}>CIDADE</label><select style={S.sel} value={form.city} onChange={e=>set("city",e.target.value)}>{["São Paulo","Campinas","Santo André","Americana"].map(o=><option key={o}>{o}</option>)}</select></div>
-              <div><label style={S.label}>TIPO</label><select style={S.sel} value={form.type} onChange={e=>set("type",e.target.value)}>{["Residencial","Comercial"].map(o=><option key={o}>{o}</option>)}</select></div>
+              <div><label style={S.label}>TIPO</label><select style={S.sel} value={form.type} onChange={e=>set("type",e.target.value)}>{["Apartamento","Casa","Terreno","Comercial","Sala Comercial","Galpão/Industrial","Studio/Kitnet"].map(o=><option key={o}>{o}</option>)}</select></div>
               <div><label style={S.label}>STATUS</label><select style={S.sel} value={form.status} onChange={e=>set("status",e.target.value)}>{["Ocupado","Em desocupação","Vago"].map(o=><option key={o}>{o}</option>)}</select></div>
               <div><label style={S.label}>ÁREA (m²)</label><input type="number" style={S.input} value={form.size} onChange={e=>set("size",e.target.value)} /></div>
             </div>
@@ -1354,11 +1355,19 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
   const totalGanho     = propsComValor.filter(p => p.valorCompra > 0).reduce((s, p) => s + (p.ganhoCapital || 0), 0);
 
   const saveEdit = () => {
-    const newProps = PROPS.map(p => p.id !== editingId ? p : {
-      ...p,
-      valorMercado: parseFloat(editForm.valorMercado) || 0,
-      valorCompra:  parseFloat(editForm.valorCompra)  || 0,
-      anoCompra:    editForm.anoCompra || null,
+    const vm = parseFloat(editForm.valorMercado) || 0;
+    const newProps = PROPS.map(p => {
+      if (p.id !== editingId) return p;
+      // Append to avaliacoes history if value changed and non-zero
+      const avaliacoes = p.avaliacoes || [];
+      const novaAvaliacao = vm > 0 ? {
+        data: editForm.dataAvaliacao || new Date().toISOString().slice(0,10),
+        valor: vm,
+        fonte: editForm.fonteAvaliacao || "Manual",
+        obs: editForm.obsAvaliacao || "",
+      } : null;
+      const newAvaliacoes = novaAvaliacao ? [...avaliacoes.filter(a => a.data !== novaAvaliacao.data), novaAvaliacao] : avaliacoes;
+      return { ...p, valorMercado: vm, valorCompra: parseFloat(editForm.valorCompra)||0, anoCompra: editForm.anoCompra||null, avaliacoes: newAvaliacoes };
     });
     onUpdateProps(newProps);
     setEditingId(null);
@@ -1366,7 +1375,21 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
 
   const startEdit = (p) => {
     setEditingId(p.id);
-    setEditForm({ valorMercado: p.valorMercado || "", valorCompra: p.valorCompra || "", anoCompra: p.anoCompra || "" });
+    setEditForm({
+      valorMercado: p.valorMercado || "",
+      valorCompra: p.valorCompra || "",
+      anoCompra: p.anoCompra || "",
+      dataAvaliacao: new Date().toISOString().slice(0,10),
+      fonteAvaliacao: "Manual",
+      obsAvaliacao: "",
+    });
+  };
+
+  const zapUrl = (p) => {
+    const tipos = { "Apartamento":"apartamentos","Casa":"casas","Terreno":"terrenos","Comercial":"imoveis-comerciais","Sala Comercial":"salas-comerciais","Galpão/Industrial":"galpoes","Studio/Kitnet":"apartamentos" };
+    const tipo = tipos[p.type] || "imoveis";
+    const norm = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g,"-");
+    return "https://www.zapimoveis.com.br/venda/"+tipo+"/sp-"+norm(p.city||"americana")+"+"+norm(p.neighborhood||"")+"/";
   };
 
   // top 12 para o gráfico
@@ -1432,7 +1455,7 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
       {/* Filtros */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <select style={S.sel} value={filterType} onChange={e => setFilterType(e.target.value)}>
-          <option>Todos</option><option>Residencial</option><option>Comercial</option>
+          <option>Todos</option><option>Apartamento</option><option>Casa</option><option>Terreno</option><option>Comercial</option><option>Sala Comercial</option><option>Galpão/Industrial</option><option>Studio/Kitnet</option>
         </select>
         <select style={S.sel} value={sortBy} onChange={e => setSortBy(e.target.value)}>
           <option value="valor_desc">↓ Maior valor</option>
@@ -1473,15 +1496,48 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
                   {/* Valor estimado / manual */}
                   <td style={{ ...S.td, ...S.mono }}>
                     {isEditing ? (
-                      <input type="number" style={{ ...S.input, padding: "6px 10px", fontSize: 12, width: 130 }}
-                        value={editForm.valorMercado}
-                        onChange={e => setEditForm(f => ({ ...f, valorMercado: e.target.value }))}
-                        placeholder={`~${fmt.brlK(p.m2ref * p.size)}`}
-                      />
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 200 }}>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <input type="number" style={{ ...S.input, padding: "6px 10px", fontSize: 12, flex: 1 }}
+                            value={editForm.valorMercado}
+                            onChange={e => setEditForm(f => ({ ...f, valorMercado: e.target.value }))}
+                            placeholder={`~${fmt.brlK(p.m2ref * p.size)}`}
+                          />
+                          <a href={zapUrl(p)} target="_blank" rel="noopener noreferrer"
+                            style={{ padding: "6px 10px", background: T.s2, border: `1px solid ${T.border}`, borderRadius: 8, color: T.gold, fontSize: 11, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", cursor: "pointer" }}
+                            title="Buscar comparáveis no ZAP Imóveis">🔍 ZAP</a>
+                        </div>
+                        <input type="date" style={{ ...S.input, padding: "6px 10px", fontSize: 11 }}
+                          value={editForm.dataAvaliacao}
+                          onChange={e => setEditForm(f => ({ ...f, dataAvaliacao: e.target.value }))}
+                        />
+                        <select style={{ ...S.sel, padding: "6px 10px", fontSize: 11 }}
+                          value={editForm.fonteAvaliacao}
+                          onChange={e => setEditForm(f => ({ ...f, fonteAvaliacao: e.target.value }))}>
+                          {["Manual","ZAP Imóveis","VivaReal","Imobiliária","ITBI","Avaliação formal"].map(o=><option key={o}>{o}</option>)}
+                        </select>
+                        <input style={{ ...S.input, padding: "6px 10px", fontSize: 11 }}
+                          value={editForm.obsAvaliacao} placeholder="Observação (opcional)"
+                          onChange={e => setEditForm(f => ({ ...f, obsAvaliacao: e.target.value }))}
+                        />
+                      </div>
                     ) : (
                       <div>
                         <div style={{ color: T.gold, fontWeight: 700 }}>{fmt.brlK(p.valorEstimado)}</div>
-                        <div style={{ color: T.dim, fontSize: 10 }}>{p.isManual ? "✎ manual" : `auto · ${fmt.num(p.m2ref)}/m²`}</div>
+                        <div style={{ color: T.dim, fontSize: 10 }}>
+                          {p.isManual ? (
+                            <span>✎ manual
+                              {p.avaliacoes && p.avaliacoes.length > 0 && (
+                                <span style={{ marginLeft: 4, color: T.teal }}>· {p.avaliacoes.length} aval.</span>
+                              )}
+                            </span>
+                          ) : `auto · ${fmt.num(p.m2ref)}/m²`}
+                        </div>
+                        {p.avaliacoes && p.avaliacoes.length > 0 && (
+                          <div style={{ color: T.dim, fontSize: 10, marginTop: 2 }}>
+                            última: {p.avaliacoes[p.avaliacoes.length-1].data}
+                          </div>
+                        )}
                       </div>
                     )}
                   </td>
@@ -1554,6 +1610,44 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
         </table>
       </div>
 
+      {/* Histórico de avaliações */}
+      {(() => {
+        const comAval = PROPS.filter(p => p.avaliacoes && p.avaliacoes.length > 0);
+        if (comAval.length === 0) return null;
+        const todasAval = comAval.flatMap(p => p.avaliacoes.map(a => ({ ...a, imovel: p.name, id: p.id })))
+          .sort((a, b) => b.data.localeCompare(a.data));
+        return (
+          <div style={{ background: T.s1, borderRadius: 14, border: `1px solid ${T.border}`, overflow: "hidden" }}>
+            <div style={{ padding: "14px 20px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>📈 HISTÓRICO DE AVALIAÇÕES</div>
+              <div style={{ color: T.dim, fontSize: 11 }}>{todasAval.length} registro{todasAval.length !== 1 ? "s" : ""} em {comAval.length} imóvel{comAval.length !== 1 ? "is" : ""}</div>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: T.s2 }}>
+                    {["DATA","IMÓVEL","VALOR","FONTE","OBSERVAÇÃO"].map(h => (
+                      <th key={h} style={{ ...S.th, textAlign: "left" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {todasAval.map((a, i) => (
+                    <tr key={i} style={{ background: i%2===0 ? T.s0 : T.s1, borderBottom: `1px solid ${T.border}40` }}>
+                      <td style={{ ...S.td, color: T.muted, whiteSpace: "nowrap" }}>{a.data}</td>
+                      <td style={{ ...S.td, color: T.goldBright, fontWeight: 600 }}>{a.imovel}</td>
+                      <td style={{ ...S.td, ...S.mono, color: T.gold, fontWeight: 700 }}>{fmt.brl(a.valor)}</td>
+                      <td style={{ ...S.td, color: T.muted }}>{a.fonte}</td>
+                      <td style={{ ...S.td, color: T.dim }}>{a.obs || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Nota metodologia */}
       <div style={{ padding: "12px 16px", background: T.s1, borderRadius: 10, border: `1px solid ${T.border}` }}>
         <div style={{ color: T.muted, fontSize: 12, marginBottom: 4, fontWeight: 600 }}>📊 Metodologia</div>
@@ -1561,7 +1655,7 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
           Estimativas baseadas no Índice FipeZAP dez/2025 por bairro (residencial e comercial separados).
           Média SP residencial: <strong style={{ color: T.gold }}>R$11.915/m²</strong> · Valorização 12m: <strong style={{ color: T.teal }}>+4,56%</strong>.
           Cap rate = receita anual líquida ÷ valor de mercado. Meta de mercado SP: 5–8% residencial.
-          Clique em ✎ para inserir valor de mercado real e valor de compra — o ganho de capital é calculado automaticamente.
+          Clique em ✎ para inserir valor de mercado real, data, fonte e observação — o histórico é salvo automaticamente.
         </div>
       </div>
     </div>
@@ -1729,7 +1823,7 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
       </div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
         <input placeholder="Buscar imóvel, bairro ou endereço..." style={{ ...S.input, maxWidth: 280 }} value={search} onChange={e => setSearch(e.target.value)} />
-        <select style={S.sel} value={filterType} onChange={e => setFilterType(e.target.value)}><option value="">Todos os tipos</option><option>Residencial</option><option>Comercial</option></select>
+        <select style={S.sel} value={filterType} onChange={e => setFilterType(e.target.value)}><option value="">Todos os tipos</option><option>Apartamento</option><option>Casa</option><option>Terreno</option><option>Comercial</option><option>Sala Comercial</option><option>Galpão/Industrial</option><option>Studio/Kitnet</option></select>
         <select style={S.sel} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}><option value="">Todos os status</option><option>Ocupado</option><option>Vago</option></select>
         <span style={{ color: T.muted, fontSize: 12 }}>{sorted.length} imóveis</span>
       </div>
@@ -2060,7 +2154,7 @@ function PageDecision({ PROPS, onProp, onNav }) {
         ))}
       </div>
       <div style={{ display:"flex", gap:12, alignItems:"center" }}>
-        <select style={S.sel} value={filterType} onChange={e=>setFilterType(e.target.value)}><option value="">Todos os tipos</option><option>Residencial</option><option>Comercial</option></select>
+        <select style={S.sel} value={filterType} onChange={e=>setFilterType(e.target.value)}><option value="">Todos os tipos</option><option>Apartamento</option><option>Casa</option><option>Terreno</option><option>Comercial</option><option>Sala Comercial</option><option>Galpão/Industrial</option><option>Studio/Kitnet</option></select>
         {filterRec&&<button style={{ ...S.btnGhost, padding:"8px 14px", fontSize:12 }} onClick={()=>setFilterRec("")}>✕ Limpar</button>}
         <span style={{ color:T.muted, fontSize:12 }}>{filtered.length} imóveis</span>
       </div>
@@ -3257,7 +3351,7 @@ function AddImovelModal({ onSave, onClose, nextId }) {
               <div>
                 <label style={S.label}>TIPO</label>
                 <select style={S.sel} value={form.type} onChange={e=>set("type",e.target.value)}>
-                  {["Residencial","Comercial"].map(o=><option key={o}>{o}</option>)}
+                  {["Apartamento","Casa","Terreno","Comercial","Sala Comercial","Galpão/Industrial","Studio/Kitnet"].map(o=><option key={o}>{o}</option>)}
                 </select>
               </div>
               <div>
@@ -3677,7 +3771,7 @@ export default function App() {
           regimeFiscal: r.regime_fiscal||"PF",
           locatarios: r.locatarios||[], historico: r.historico||[],
           iptuVencimento: r.iptu_vencimento||"", indiceReajuste: r.indice_reajuste||"IGPM", adminPct: r.admin_pct != null ? r.admin_pct : 8,
-          viaImobiliaria: r.via_imobiliaria||false, locatarioNome: r.locatario_nome||"", locatarioCPF: r.locatario_cpf||"", locatarioTelefone: r.locatario_telefone||"", locatarioEmail: r.locatario_email||"", locatarioGarantia: r.locatario_garantia||"Fiador",
+          avaliacoes: r.avaliacoes||[], viaImobiliaria: r.via_imobiliaria||false, locatarioNome: r.locatario_nome||"", locatarioCPF: r.locatario_cpf||"", locatarioTelefone: r.locatario_telefone||"", locatarioEmail: r.locatario_email||"", locatarioGarantia: r.locatario_garantia||"Fiador",
         }, BENCHMARKS));
         setPropsRaw(mapped);
       }
@@ -3700,7 +3794,7 @@ export default function App() {
     monthly_data: prop.monthlyData||[], dia_vencimento: prop.diaVencimento||10,
     condo_pago_por: prop.condoPagoPor||"proprietario", regime_fiscal: prop.regimeFiscal||"PF", admin_pct: prop.adminPct != null ? Number(prop.adminPct) : 8,
     indice_reajuste: prop.indiceReajuste||"IGPM", iptu_vencimento: prop.iptuVencimento||null,
-    via_imobiliaria: prop.viaImobiliaria||false, locatario_nome: prop.locatarioNome||"", locatario_cpf: prop.locatarioCPF||"", locatario_telefone: prop.locatarioTelefone||"", locatario_email: prop.locatarioEmail||"", locatario_garantia: prop.locatarioGarantia||"Fiador",
+    avaliacoes: prop.avaliacoes||[], via_imobiliaria: prop.viaImobiliaria||false, locatario_nome: prop.locatarioNome||"", locatario_cpf: prop.locatarioCPF||"", locatario_telefone: prop.locatarioTelefone||"", locatario_email: prop.locatarioEmail||"", locatario_garantia: prop.locatarioGarantia||"Fiador",
     locatarios: prop.locatarios||[], historico: prop.historico||[],
   });
 
@@ -3719,7 +3813,7 @@ export default function App() {
       city: newProp.city, type: newProp.type, status: newProp.status, size: newProp.size,
       rent: newProp.rent, iptu: newProp.iptu, maint_monthly: newProp.maintMonthly,
       insurance: newProp.insurance, admin: newProp.admin, vacancy_days: newProp.vacancyDays,
-      has_condominio: newProp.hasCondominio||false, condo_fee: newProp.condoFee||0,
+      avaliacoes: newProp.avaliacoes||[], has_condominio: newProp.hasCondominio||false, condo_fee: newProp.condoFee||0,
       fundo_reserva: newProp.fundoReserva||0, chamada_extra: newProp.chamadaExtra||0,
       desconto_aluguel: newProp.descontoAluguel||0, contrato_anos: newProp.contratoAnos||1,
       contrato_inicio: newProp.contratoInicio||null, market_value_manual: newProp.marketValueManual||0,
