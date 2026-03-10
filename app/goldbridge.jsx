@@ -669,6 +669,7 @@ function EditModal({ prop, onSave, onClose }) {
     contratoInicio: prop.contratoInicio || "",
     indiceReajuste: prop.indiceReajuste || "IGPM",
     iptuVencimento: prop.iptuVencimento || "",
+    iptuParcelas: prop.iptuParcelas || 10,
     viaImobiliaria: prop.viaImobiliaria || false,
     locatarioNome: prop.locatarioNome || "",
     locatarioCPF: prop.locatarioCPF || "",
@@ -703,7 +704,7 @@ function EditModal({ prop, onSave, onClose }) {
     leakage = Math.min(98, Math.max(2, Math.round(leakage)));
     const proximoReajuste = form.contratoInicio ? (() => { const d = new Date(form.contratoInicio); const now = new Date(); let y = now.getFullYear(); if (new Date(y, d.getMonth(), d.getDate()) <= now) y++; return new Date(y, d.getMonth(), d.getDate()).toLocaleDateString("pt-BR"); })() : "";
     const adminFromPct = Math.round(Number(form.rent) * (Number(form.adminPct)||0) / 100);
-    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: adminFromPct, adminPct: Number(form.adminPct), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, viaImobiliaria: form.viaImobiliaria, locatarioNome: form.viaImobiliaria ? "" : form.locatarioNome, locatarioCPF: form.viaImobiliaria ? "" : form.locatarioCPF, locatarioTelefone: form.viaImobiliaria ? "" : form.locatarioTelefone, locatarioEmail: form.viaImobiliaria ? "" : form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
+    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: adminFromPct, adminPct: Number(form.adminPct), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, iptuParcelas: Number(form.iptuParcelas)||10, iptuParcelas: Number(form.iptuParcelas)||10, viaImobiliaria: form.viaImobiliaria, locatarioNome: form.viaImobiliaria ? "" : form.locatarioNome, locatarioCPF: form.viaImobiliaria ? "" : form.locatarioCPF, locatarioTelefone: form.viaImobiliaria ? "" : form.locatarioTelefone, locatarioEmail: form.viaImobiliaria ? "" : form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
   };
 
   return (
@@ -797,7 +798,10 @@ function EditModal({ prop, onSave, onClose }) {
                   ))}
                 </div>
               </div>
-              <div><label style={S.label}>VENCIMENTO IPTU (mês/ano — 1ª parcela ou cota única)</label><input type="month" style={S.input} value={form.iptuVencimento||""} onChange={e=>set("iptuVencimento",e.target.value)} /><div style={{ color:T.dim, fontSize:10, marginTop:4 }}>O sistema gera alertas 30 dias antes do vencimento</div></div>
+              <div style={{ display:"flex", gap:12 }}>
+                <div style={{ flex:2 }}><label style={S.label}>VENCIMENTO IPTU (mês/ano — 1ª parcela ou cota única)</label><input type="month" style={S.input} value={form.iptuVencimento||""} onChange={e=>set("iptuVencimento",e.target.value)} /><div style={{ color:T.dim, fontSize:10, marginTop:4 }}>O sistema gera alertas 30 dias antes do vencimento</div></div>
+                <div style={{ flex:1 }}><label style={S.label}>PARCELAS IPTU</label><select style={S.sel} value={form.iptuParcelas||10} onChange={e=>set("iptuParcelas",Number(e.target.value))}>{[1,2,3,4,5,6,7,8,9,10,11,12].map(n=><option key={n} value={n}>{n}x</option>)}</select></div>
+              </div>
             </div>
             {form.contratoInicio && (
               <div style={{ marginTop: 10, padding: "10px 14px", background: T.s3, borderRadius: 8, color: T.muted, fontSize: 12 }}>
@@ -2848,7 +2852,7 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
             <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
               <thead>
                 <tr style={{ background:T.s2 }}>
-                  {["IMÓVEL","BAIRRO","IPTU ANUAL","PARCELA (÷10)","VENCIMENTO","STATUS"].map(h=>(
+                  {["IMÓVEL","BAIRRO","IPTU ANUAL","PARCELA/Nº","VENCIMENTO","STATUS"].map(h=>(
                     <th key={h} style={{ ...S.th, textAlign:"left" }}>{h}</th>
                   ))}
                 </tr>
@@ -2868,7 +2872,7 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
                       <td style={{ ...S.td, fontWeight:600, color:T.goldBright }}>{p.name}</td>
                       <td style={{ ...S.td, color:T.muted }}>{p.neighborhood}</td>
                       <td style={{ ...S.td, ...S.mono, fontWeight:700 }}>{fmt.brl(p.iptu||0)}</td>
-                      <td style={{ ...S.td, ...S.mono, color:T.dim }}>{fmt.brl(Math.round((p.iptu||0)/10))}</td>
+                      <td style={{ ...S.td, ...S.mono, color:T.dim }}>{fmt.brl(Math.round((p.iptu||0)/(p.iptuParcelas||10)))}<span style={{ color:T.dim, fontSize:10 }}> ×{p.iptuParcelas||10}</span></td>
                       <td style={{ ...S.td }}>
                         <div style={{ color:T.text }}>{vencFmt}</div>
                         {diasAte !== null && (
@@ -3361,6 +3365,7 @@ function AddImovelModal({ onSave, onClose, nextId }) {
     type: "Residencial", status: "Vago", size: "",
     iptu: "", maintMonthly: "", insurance: "", valorCompra: "", valorMercado: "",
     iptuVencimento: "",
+    iptuParcelas: 10,
     // Aluguel (só se ocupado)
     rent: "", adminPct: "8", descontoAluguel: "0", contratoAnos: "1",
     contratoInicio: "", indiceReajuste: "IGPM",
@@ -3417,7 +3422,7 @@ function AddImovelModal({ onSave, onClose, nextId }) {
       vacancyBenchmark: bm.vacancy_days, vacancyDelta, monthlyData, isProblematic: false,
       obras: [], prestadores: [], pagamentos: {}, valorMercado: parseFloat(form.valorMercado)||0,
       valorCompra: parseFloat(form.valorCompra)||0, anoCompra: null,
-      indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento,
+      indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, iptuParcelas: Number(form.iptuParcelas)||10,
       descontoAluguel, contratoAnos: parseFloat(form.contratoAnos)||1,
       contratoInicio: form.contratoInicio, hasCondominio: form.hasCondominio,
       condoFee: parseFloat(form.condoFee)||0, fundoReserva: parseFloat(form.fundoReserva)||0,
@@ -3492,7 +3497,10 @@ function AddImovelModal({ onSave, onClose, nextId }) {
               </div>
               <div>
                 <label style={S.label}>VENCIMENTO IPTU</label>
-                <input type="month" style={S.input} value={form.iptuVencimento} onChange={e=>set("iptuVencimento",e.target.value)} />
+                <div style={{ display:"flex", gap:10 }}>
+                  <input type="month" style={{ ...S.input, flex:2 }} value={form.iptuVencimento} onChange={e=>set("iptuVencimento",e.target.value)} />
+                  <select style={{ ...S.sel, flex:1 }} value={form.iptuParcelas||10} onChange={e=>set("iptuParcelas",Number(e.target.value))}>{[1,2,3,4,5,6,7,8,9,10,11,12].map(n=><option key={n} value={n}>{n}x</option>)}</select>
+                </div>
               </div>
               <div>
                 <label style={S.label}>MANUTENÇÃO MENSAL (R$)</label>
@@ -3976,7 +3984,7 @@ export default function App() {
           condoPagoPor: r.condo_pago_por||"proprietario",
           regimeFiscal: r.regime_fiscal||"PF",
           locatarios: r.locatarios||[], historico: r.historico||[],
-          iptuVencimento: r.iptu_vencimento||"", indiceReajuste: r.indice_reajuste||"IGPM", adminPct: r.admin_pct != null ? r.admin_pct : 8,
+          iptuVencimento: r.iptu_vencimento||"", iptuParcelas: r.iptu_parcelas||10, indiceReajuste: r.indice_reajuste||"IGPM", adminPct: r.admin_pct != null ? r.admin_pct : 8,
           avaliacoes: r.avaliacoes||[], viaImobiliaria: r.via_imobiliaria||false, locatarioNome: r.locatario_nome||"", locatarioCPF: r.locatario_cpf||"", locatarioTelefone: r.locatario_telefone||"", locatarioEmail: r.locatario_email||"", locatarioGarantia: r.locatario_garantia||"Fiador",
         }, BENCHMARKS));
         setPropsRaw(mapped);
@@ -3999,7 +4007,7 @@ export default function App() {
     obras: prop.obras||[], prestadores: prop.prestadores||[], pagamentos: prop.pagamentos||{},
     monthly_data: prop.monthlyData||[], dia_vencimento: prop.diaVencimento||10,
     condo_pago_por: prop.condoPagoPor||"proprietario", regime_fiscal: prop.regimeFiscal||"PF", admin_pct: prop.adminPct != null ? Number(prop.adminPct) : 8,
-    indice_reajuste: prop.indiceReajuste||"IGPM", iptu_vencimento: prop.iptuVencimento||null,
+    indice_reajuste: prop.indiceReajuste||"IGPM", iptu_vencimento: prop.iptuVencimento||null, iptu_parcelas: prop.iptuParcelas||10,
     avaliacoes: prop.avaliacoes||[], via_imobiliaria: prop.viaImobiliaria||false, locatario_nome: prop.locatarioNome||"", locatario_cpf: prop.locatarioCPF||"", locatario_telefone: prop.locatarioTelefone||"", locatario_email: prop.locatarioEmail||"", locatario_garantia: prop.locatarioGarantia||"Fiador",
     locatarios: prop.locatarios||[], historico: prop.historico||[],
   });
