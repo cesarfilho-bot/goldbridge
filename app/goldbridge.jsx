@@ -910,7 +910,6 @@ function EditModal({ prop, onSave, onClose, userId }) {
             )}
           </div>
         </div>
-        </div>
         )} {/* end editTab === dados */}
 
         <div style={{ padding: "16px 28px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 12, justifyContent: "flex-end" }}>
