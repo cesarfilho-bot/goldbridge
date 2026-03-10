@@ -470,7 +470,7 @@ function EditModal({ prop, onSave, onClose }) {
               <div><label style={S.label}>BAIRRO</label><input style={S.input} value={form.neighborhood} onChange={e=>set("neighborhood",e.target.value)} /></div>
               <div><label style={S.label}>CIDADE</label><select style={S.sel} value={form.city} onChange={e=>set("city",e.target.value)}>{["São Paulo","Campinas","Santo André","Americana"].map(o=><option key={o}>{o}</option>)}</select></div>
               <div><label style={S.label}>TIPO</label><select style={S.sel} value={form.type} onChange={e=>set("type",e.target.value)}>{["Residencial","Comercial"].map(o=><option key={o}>{o}</option>)}</select></div>
-              <div><label style={S.label}>STATUS</label><select style={S.sel} value={form.status} onChange={e=>set("status",e.target.value)}>{["Ocupado","Vago"].map(o=><option key={o}>{o}</option>)}</select></div>
+              <div><label style={S.label}>STATUS</label><select style={S.sel} value={form.status} onChange={e=>set("status",e.target.value)}>{["Ocupado","Em desocupação","Vago"].map(o=><option key={o}>{o}</option>)}</select></div>
               <div><label style={S.label}>ÁREA (m²)</label><input type="number" style={S.input} value={form.size} onChange={e=>set("size",e.target.value)} /></div>
             </div>
           </div>
@@ -1581,9 +1581,27 @@ function PageLeakage({ PROPS }) {
   const INSIGHTS = buildInsights(PROPS);
   const TOTAL_MIN = INSIGHTS.reduce((s, i) => s + i.impactMin, 0), TOTAL_MAX = INSIGHTS.reduce((s, i) => s + i.impactMax, 0);
   const [expanded, setExpanded] = useState(1);
+  const emDesocupacao = PROPS.filter(p => p.status === "Em desocupação");
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <div><div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>DIAGNÓSTICO</div><h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Alertas</h1></div>
+
+      {emDesocupacao.length > 0 && (
+        <div style={{ background: T.amber+"18", border: `1px solid ${T.amber}55`, borderRadius: 14, padding: 20 }}>
+          <div style={{ color: T.amber, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>🔑 IMÓVEIS EM DESOCUPAÇÃO ({emDesocupacao.length})</div>
+          {emDesocupacao.map(p => (
+            <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${T.amber}22` }}>
+              <div>
+                <div style={{ color: T.text, fontWeight: 600 }}>{p.name}</div>
+                <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>{p.neighborhood} · Entrega prevista: {p.desocupacaoDataEntrega ? new Date(p.desocupacaoDataEntrega+"-01").toLocaleDateString("pt-BR",{month:"long",year:"numeric"}) : "a definir"}</div>
+              </div>
+              <span style={S.badge(T.amber)}>Em desocupação</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div style={{ ...S.cardGold, display: "flex", gap: 32, alignItems: "center", flexWrap: "wrap" }}>
         <div><div style={{ color: T.goldDim, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>PERDA ESTIMADA ANUAL</div><div style={{ color: T.red, fontSize: 36, fontWeight: 900, ...S.mono }}>{fmt.brlK(TOTAL_MIN)}</div><div style={{ color: T.muted, fontSize: 13, marginTop: 4 }}>até {fmt.brlK(TOTAL_MAX)}</div></div>
         <div style={{ width: 1, height: 60, background: T.goldDim }} />
@@ -1647,7 +1665,7 @@ function PageLeakage({ PROPS }) {
 }
 
 // ─── DETAIL PAGE ──────────────────────────────────────────────────────────────
-function PageDetail({ prop, onBack, onEdit, onObras, onDelete }) {
+function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrato }) {
   if (!prop) return null;
   const obrasCount = (prop.obras || []).length, obrasEmAndamento = (prop.obras || []).filter(o => o.status === "Em andamento"), totalOrcado = (prop.obras || []).reduce((s, o) => s + (o.orcado || 0), 0), totalExecutado = (prop.obras || []).reduce((s, o) => s + (o.executado || 0), 0);
   const opportunities = [];
@@ -1675,13 +1693,15 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete }) {
           <h1 style={{ color: T.text, fontSize: 22, fontWeight: 800, margin: 0 }}>{prop.name}</h1>
           <div style={{ color: T.muted, fontSize: 13, marginTop: 4, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <span>{prop.address}</span><span>·</span><span>{prop.neighborhood}, {prop.city}</span><span>·</span><span>{prop.size}m²</span>
-            <span style={S.badge(prop.status === "Ocupado" ? T.green : T.red)}>{prop.status}</span>
+            <span style={S.badge(prop.status === "Ocupado" ? T.green : prop.status === "Em desocupação" ? T.amber : T.red)}>{prop.status}</span>
             <span style={S.badge(prop.type === "Comercial" ? T.blue : T.teal)}>{prop.type}</span>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <button style={S.btnGhost} onClick={() => onEdit(prop)}>✏️ Editar</button>
           <button style={S.btnGhost} onClick={() => onObras(prop)}>🔨 Obras {obrasCount > 0 ? `(${obrasCount})` : ""}</button>
+          {prop.status === "Ocupado" && <button style={{ ...S.btnDanger, borderColor: T.amber, color: T.amber }} onClick={() => onCancelarContrato(prop)}>⚠️ Cancelar Contrato</button>}
+          {prop.status === "Em desocupação" && <button style={{ ...S.btnGhost, borderColor: T.green, color: T.green }} onClick={() => onCancelarContrato(prop)}>🔑 Registrar Entrega</button>}
           <button style={S.btnDanger} onClick={() => onDelete(prop)}>🗑 Remover</button>
         </div>
         <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ color: T.muted, fontSize: 11, marginBottom: 4 }}>LEAKAGE</div><div style={{ color: prop.leakage > 60 ? T.red : prop.leakage > 30 ? T.amber : T.green, fontSize: 40, fontWeight: 900, ...S.mono, lineHeight: 1 }}>{prop.leakage}</div></div>
@@ -3232,6 +3252,7 @@ export default function App() {
   const [obrasProps, setObrasProps] = useState(null);
   const [addingImovel, setAddingImovel] = useState(false);
   const [deletingProp, setDeletingProp] = useState(null);
+  const [cancelandoProp, setCancelandoProp] = useState(null);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") return localStorage.getItem("gb_theme") !== "light";
     return true;
@@ -3351,6 +3372,28 @@ export default function App() {
 
   const handleDeleteImovel = (prop) => setDeletingProp(prop);
 
+  const handleCancelarContrato = (prop) => setCancelandoProp(prop);
+
+  const confirmCancelarContrato = async ({ dataEntrega, vistoria, multaValor, multaMeses }) => {
+    const prop = cancelandoProp;
+    const isDesocupando = prop.status === "Em desocupação";
+    const novoStatus = isDesocupando ? "Vago" : "Em desocupação";
+    const eventoHistorico = isDesocupando
+      ? { id: Date.now(), tipo: "Rescisão de Contrato", data: dataEntrega || new Date().toISOString().split("T")[0], titulo: "Entrega das chaves", descricao: `Vistoria concluída. Imóvel desocupado.`, valor: 0 }
+      : { id: Date.now(), tipo: "Rescisão de Contrato", data: new Date().toISOString().split("T")[0], titulo: "Cancelamento de contrato", descricao: `Multa: ${multaMeses} meses (${fmt.brl(multaValor)}). Entrega prevista: ${dataEntrega || "a definir"}.`, valor: multaValor };
+    const updated = {
+      ...prop,
+      status: novoStatus,
+      desocupacaoDataEntrega: isDesocupando ? (dataEntrega || new Date().toISOString().split("T")[0]) : dataEntrega,
+      desocupacaoVistoria: vistoria,
+      historico: [...(prop.historico || []), eventoHistorico],
+      ...(isDesocupando ? { locatarioNome: "", locatarioCPF: "", locatarioTelefone: "", locatarioEmail: "" } : {}),
+    };
+    await handleUpdateProps(props.map(p => p.id === prop.id ? updated : p));
+    setCancelandoProp(null);
+    if (isDesocupando) nav("noi");
+  };
+
   const confirmDelete = async () => {
     await supabase.from("imoveis").delete().eq("id", deletingProp.id).eq("user_id", user.id);
     setPropsRaw(prev => prev.filter(p => p.id !== deletingProp.id));
@@ -3421,7 +3464,7 @@ export default function App() {
     mercado:   <PageValorMercado PROPS={props} onUpdateProps={handleUpdateProps} />,
     leakage:   <PageLeakage PROPS={props} />,
     decision:  <PageDecision PROPS={props} onProp={setSelectedProp} onNav={nav} />,
-    detail:    <PageDetail prop={selectedProp} onBack={() => nav("noi")} onEdit={handleEdit} onObras={(prop) => setObrasProps(props.find(p => p.id === prop.id) || prop)} onDelete={handleDeleteImovel} />,
+    detail:    <PageDetail prop={selectedProp} onBack={() => nav("noi")} onEdit={handleEdit} onObras={(prop) => setObrasProps(props.find(p => p.id === prop.id) || prop)} onDelete={handleDeleteImovel} onCancelarContrato={handleCancelarContrato} />,
     report:    <PageReport PROPS={props} />,
     ia:        <PageIA PROPS={props} />,
     pagamentos: <PagePagamentos PROPS={props} onUpdateProps={handleUpdateProps} />,
@@ -3446,6 +3489,7 @@ export default function App() {
       {obrasProps && <ObrasModal prop={obrasProps} onSave={handleSaveObras} onClose={() => setObrasProps(null)} />}
       {addingImovel && <AddImovelModal nextId={nextId} onSave={handleAddImovel} onClose={() => setAddingImovel(false)} />}
       {deletingProp && <DeleteConfirmModal prop={deletingProp} onConfirm={confirmDelete} onClose={() => setDeletingProp(null)} />}
+      {cancelandoProp && <CancelarContratoModal prop={cancelandoProp} onConfirm={confirmCancelarContrato} onClose={() => setCancelandoProp(null)} />}
 
       <div style={{ display: "flex", minHeight: "100vh", background: T.bg }}>
         {/* Sidebar */}
