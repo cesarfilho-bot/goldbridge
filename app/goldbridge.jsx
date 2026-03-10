@@ -2309,89 +2309,117 @@ Exemplos do que você pode me perguntar:
   }, [messages, loading]);
 
   const buildContext = () => {
+    const brl = v => "R$ " + (v||0).toLocaleString("pt-BR", {minimumFractionDigits:0,maximumFractionDigits:0});
+    const pct = v => ((v||0)*100).toFixed(1) + "%";
     const total = PROPS.length;
-    const totalNOI = PROPS.reduce((s, p) => s + p.noi, 0);
-    const totalReceita = PROPS.reduce((s, p) => s + p.totalIncome, 0);
-    const totalDespesas = PROPS.reduce((s, p) => s + p.totalExpenses, 0);
+    const ocupados = PROPS.filter(p => p.status === "Ocupado");
     const vagos = PROPS.filter(p => p.status === "Vago");
-    const altoLeakage = PROPS.filter(p => p.leakage > 60).sort((a,b) => b.leakage - a.leakage);
-    const baixoNOI = [...PROPS].sort((a,b) => a.noi - b.noi).slice(0, 5);
-    const altoNOI = [...PROPS].sort((a,b) => b.noi - a.noi).slice(0, 5);
+    const desocupando = PROPS.filter(p => p.status === "Em desocupação");
+    const totalReceita = PROPS.reduce((s,p) => s+(p.totalIncome||0), 0);
+    const totalDespesas = PROPS.reduce((s,p) => s+(p.totalExpenses||0), 0);
+    const totalNOI = PROPS.reduce((s,p) => s+(p.noi||0), 0);
+    const totalIR = PROPS.reduce((s,p) => s+(p.ir||0), 0);
+    const totalLiquido = PROPS.reduce((s,p) => s+(p.lucroLiquido||p.noi||0), 0);
+    const margemLiquida = totalLiquido / (totalReceita||1);
+    const altoLeakage = [...PROPS].filter(p=>p.leakage>60).sort((a,b)=>b.leakage-a.leakage);
     const porBairro = {};
     PROPS.forEach(p => {
-      if (!porBairro[p.neighborhood]) porBairro[p.neighborhood] = { count: 0, noi: 0, receita: 0 };
+      if (!porBairro[p.neighborhood]) porBairro[p.neighborhood] = {count:0,noi:0,liquido:0,receita:0};
       porBairro[p.neighborhood].count++;
-      porBairro[p.neighborhood].noi += p.noi;
-      porBairro[p.neighborhood].receita += p.totalIncome;
+      porBairro[p.neighborhood].noi += p.noi||0;
+      porBairro[p.neighborhood].liquido += p.lucroLiquido||p.noi||0;
+      porBairro[p.neighborhood].receita += p.totalIncome||0;
     });
-    const bairrosRanking = Object.entries(porBairro)
-      .map(([b, d]) => ({ bairro: b, ...d, noiMedio: d.noi / d.count }))
-      .sort((a, b) => b.noiMedio - a.noiMedio);
+    const bairros = Object.entries(porBairro).map(([b,d])=>({b,...d,liqMedio:d.liquido/d.count})).sort((a,z)=>z.liqMedio-a.liqMedio);
     const NL = "\n";
-    const lines = [
-      "Voce e a IA do Goldbridge Brasil, sistema de gestao de portfolio imobiliario.",
-      "Responda sempre em portugues brasileiro, de forma direta e analitica. Use dados concretos.",
-      NL + "=== RESUMO DO PORTFOLIO ===",
-      "Total de imoveis: " + total,
-      "NOI anual total: R$ " + totalNOI.toLocaleString("pt-BR"),
-      "Receita anual: R$ " + totalReceita.toLocaleString("pt-BR"),
-      "Despesas anuais: R$ " + totalDespesas.toLocaleString("pt-BR"),
-      "Margem Operacional media: " + ((totalNOI/totalReceita)*100).toFixed(1) + "%",
-      "Imoveis vagos: " + vagos.length,
-      NL + "=== MAIOR LEAKAGE (TOP 5) ===",
-      ...altoLeakage.slice(0,5).map(p => p.name + " (" + p.neighborhood + "): Leakage " + p.leakage + "/100, NOI R$" + p.noi.toLocaleString("pt-BR") + "/ano"),
-      NL + "=== PIORES NOI ===",
-      ...baixoNOI.map(p => p.name + " (" + p.neighborhood + "): NOI R$" + p.noi.toLocaleString("pt-BR") + "/ano, Margem " + (p.noiPct*100).toFixed(1) + "%"),
-      NL + "=== MELHORES NOI ===",
-      ...altoNOI.map(p => p.name + " (" + p.neighborhood + "): NOI R$" + p.noi.toLocaleString("pt-BR") + "/ano, Aluguel R$" + p.rent.toLocaleString("pt-BR") + "/mes"),
-      NL + "=== BAIRROS ===",
-      ...bairrosRanking.slice(0,8).map(b => b.bairro + ": " + b.count + " imovel(is), NOI medio R$" + b.noiMedio.toLocaleString("pt-BR") + "/ano"),
-      NL + "=== IMOVEIS VAGOS ===",
-      vagos.length > 0 ? vagos.map(p => p.name + " (" + p.neighborhood + ")").join(", ") : "Nenhum",
-      NL + "=== TODOS OS IMOVEIS ===",
-      ...PROPS.map(p => "ID:" + p.id + " | " + p.name + " | " + p.neighborhood + " | " + p.type + " | " + p.status + " | " + p.size + "m2 | R$" + p.rent + "/mes | NOI:R$" + p.noi + "/ano | Margem:" + (p.noiPct*100).toFixed(1) + "% | Leakage:" + p.leakage),
-    ];
-    return lines.join(NL);
+    const fmt = (p) => {
+      const vm = p.valorMercado > 0 ? p.valorMercado : (p.marketValueManual||0);
+      const capRate = vm > 0 ? (p.lucroLiquido||p.noi||0)/vm : 0;
+      const lastAval = p.avaliacoes && p.avaliacoes.length > 0 ? p.avaliacoes[p.avaliacoes.length-1] : null;
+      return [
+        p.name + " | " + (p.neighborhood||"") + " | " + (p.city||"") + " | " + (p.type||"") + " | " + p.status,
+        "  Área: " + (p.size||0) + "m² | Aluguel: " + brl(p.rent) + "/mês | Taxa ADM: " + (p.adminPct||0) + "%",
+        "  Receita anual: " + brl(p.totalIncome) + " | Despesas: " + brl(p.totalExpenses) + " | NOI: " + brl(p.noi) + " | IR: " + brl(p.ir) + " | Lucro líquido: " + brl(p.lucroLiquido||p.noi),
+        "  Margem líquida: " + pct((p.lucroLiquido||p.noi||0)/(p.totalIncome||1)) + " | Leakage: " + p.leakage + "/100" + (capRate>0 ? " | Cap rate: " + pct(capRate) : ""),
+        "  IPTU: " + brl(p.iptu) + "/ano | Manutenção: " + brl(p.maintMonthly) + "/mês | Seguro: " + brl(p.insurance) + "/ano",
+        p.hasCondominio ? "  Condomínio: " + brl(p.condoFee) + "/mês (pago pelo: " + (p.condoPagoPor||"?") + ")" : "",
+        "  Regime fiscal: " + (p.regimeFiscal||"PF") + " | Índice reajuste: " + (p.indiceReajuste||"IGPM"),
+        p.locatarioNome ? "  Locatário: " + p.locatarioNome + (p.contratoInicio ? " | Contrato desde: " + p.contratoInicio : "") + (p.contratoAnos ? " (" + p.contratoAnos + " anos)" : "") : (p.viaImobiliaria ? "  Gerenciado por imobiliária" : ""),
+        vm > 0 ? "  Valor de mercado: " + brl(vm) + (lastAval ? " (avaliado em "+lastAval.data+" via "+lastAval.fonte+")" : "") : "",
+        p.valorCompra > 0 ? "  Valor de compra: " + brl(p.valorCompra) + (p.anoCompra ? " ("+p.anoCompra+")" : "") + (vm>0 ? " | Ganho capital: " + brl(vm-p.valorCompra) : "") : "",
+        p.obras && p.obras.length > 0 ? "  Obras: " + p.obras.map(o=>o.label||o.tipo+" ("+o.status+", R$"+(o.executado||o.orcado||0)+")").join("; ") : "",
+      ].filter(Boolean).join(NL);
+    };
+    return [
+      "Você é a IA do Goldbridge, sistema brasileiro de gestão de portfólio imobiliário.",
+      "Responda sempre em português brasileiro. Seja direto, analítico e use os dados concretos abaixo.",
+      "Quando identificar problemas, aponte a causa e sugira ação específica.",
+      NL+"=== PORTFÓLIO — RESUMO ===",
+      "Imóveis: "+total+" ("+ocupados.length+" ocupados, "+vagos.length+" vagos, "+desocupando.length+" em desocupação)",
+      "Receita anual bruta: "+brl(totalReceita),
+      "Despesas anuais: "+brl(totalDespesas),
+      "NOI anual: "+brl(totalNOI)+" | IR estimado: "+brl(totalIR)+" | Lucro líquido: "+brl(totalLiquido),
+      "Margem líquida média: "+pct(margemLiquida),
+      NL+"=== RANKING POR BAIRRO ===",
+      ...bairros.slice(0,8).map(b=>b.b+": "+b.count+" imóvel(is), lucro líquido médio "+brl(b.liqMedio)+"/ano"),
+      NL+"=== IMÓVEIS COM ALTO LEAKAGE (>60) ===",
+      altoLeakage.length > 0 ? altoLeakage.slice(0,5).map(p=>p.name+" — Leakage "+p.leakage+"/100").join(NL) : "Nenhum",
+      NL+"=== TODOS OS IMÓVEIS ===",
+      ...PROPS.map(fmt),
+    ].join(NL);
   };
 
   const send = async () => {
     if (!input.trim() || loading) return;
     const userMsg = { role: "user", content: input.trim(), ts: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) };
-    setMessages(prev => [...prev, userMsg]);
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setInput("");
     setLoading(true);
 
-    const history = messages.filter(m => m.role !== "system").map(m => ({ role: m.role, content: m.content }));
+    const history = newMessages
+      .filter(m => m.role === "user" || m.role === "assistant")
+      .map(m => ({ role: m.role, content: m.content }));
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY || "",
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
         body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1500,
           system: buildContext(),
-          messages: [...history, { role: "user", content: input.trim() }],
+          messages: history,
         }),
       });
       const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
       const text = data.content?.[0]?.text || "Erro ao processar resposta.";
       setMessages(prev => [...prev, {
         role: "assistant",
         content: text,
         ts: new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
       }]);
-    } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: "Erro de conexão. Tente novamente.", ts: "" }]);
+    } catch(e) {
+      setMessages(prev => [...prev, { role: "assistant", content: "Erro de conexão: " + e.message, ts: "" }]);
     }
     setLoading(false);
   };
 
   const SUGESTOES = [
-    "Qual imóvel está me dando mais prejuízo?",
-    "Quais imóveis têm vacância acima do benchmark?",
-    "Onde estou perdendo mais dinheiro?",
-    "Qual bairro tem melhor desempenho?",
-    "Quais imóveis priorizar para reforma?",
     "Me dê um resumo executivo do portfólio",
+    "Qual imóvel tem o maior lucro líquido?",
+    "Onde estou perdendo mais dinheiro?",
+    "Qual bairro tem melhor cap rate?",
+    "Quais imóveis devo priorizar para reforma?",
+    "Como está minha carga de IR? Tem como reduzir?",
+    "Quais imóveis têm margem líquida abaixo de 40%?",
+    "Me explica o leakage dos imóveis mais críticos",
   ];
 
   const renderMsg = (text) => {
