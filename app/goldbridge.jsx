@@ -3191,16 +3191,19 @@ function PageHistorico({ PROPS, onUpdateProps }) {
                       <div>
                         <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:4 }}>
                           <span style={S.badge(cor)}>{ev.tipo}</span>
+                          {ev.auto && <span style={{ fontSize:10, color:T.teal, border:"1px solid "+T.teal, borderRadius:4, padding:"1px 5px" }}>auto</span>}
                           <span style={{ color:T.dim, fontSize:12 }}>{ev.data ? new Date(ev.data+"T12:00").toLocaleDateString("pt-BR") : "—"}</span>
                         </div>
                         <div style={{ color:T.text, fontWeight:600 }}>{ev.titulo||ev.tipo}</div>
                         {ev.descricao && <div style={{ color:T.muted, fontSize:13, marginTop:4 }}>{ev.descricao}</div>}
                         {ev.valor > 0 && <div style={{ color:T.gold, fontSize:13, marginTop:4, fontWeight:700, ...S.mono }}>{fmt.brl(ev.valor)}</div>}
                       </div>
-                      <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-                        <button style={{ background:T.s3, border:"1px solid "+T.border, color:T.muted, borderRadius:7, padding:"4px 8px", cursor:"pointer" }} onClick={() => openForm(i)}>✏️</button>
-                        <button style={{ background:T.s3, border:"1px solid "+T.redDim, color:T.red, borderRadius:7, padding:"4px 8px", cursor:"pointer" }} onClick={() => removeEvento(i)}>🗑</button>
-                      </div>
+                      {!ev.auto && (
+                        <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                          <button style={{ background:T.s3, border:"1px solid "+T.border, color:T.muted, borderRadius:7, padding:"4px 8px", cursor:"pointer" }} onClick={() => openForm(i)}>✏️</button>
+                          <button style={{ background:T.s3, border:"1px solid "+T.redDim, color:T.red, borderRadius:7, padding:"4px 8px", cursor:"pointer" }} onClick={() => removeEvento(i)}>🗑</button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -3695,6 +3698,92 @@ function calcIR(totalIncome, totalExpenses, regimeFiscal, deducoes) {
   return Math.round(baseCalculo * aliquota);
 }
 
+
+// ─── AUTO HISTÓRICO ──────────────────────────────────────────────────────────
+// Gera entradas automáticas no histórico baseado em mudanças detectadas
+function autoHistorico(oldProp, newProp) {
+  const hoje = new Date().toISOString().split("T")[0];
+  const hist = [...(newProp.historico || [])];
+  const existeId = (id) => hist.some(h => h.id === id);
+
+  // 1. Obras concluídas — gera entrada quando status muda para Concluída
+  const oldObras = oldProp?.obras || [];
+  const newObras = newProp.obras || [];
+  newObras.forEach(obra => {
+    if (obra.status === "Concluída") {
+      const obraid = "obra_" + obra.id;
+      if (!existeId(obraid)) {
+        hist.push({
+          id: obraid, tipo: "Reforma/CAPEX",
+          data: obra.fim || hoje,
+          titulo: obra.label || obra.tipo || "Obra concluída",
+          descricao: [obra.descricao, obra.executado ? "Custo: R$ " + Number(obra.executado).toLocaleString("pt-BR") : null].filter(Boolean).join(" — "),
+          valor: Number(obra.executado) || Number(obra.orcado) || 0,
+          auto: true,
+        });
+      }
+    }
+  });
+
+  // 2. Troca de locatário — detecta mudança no nome
+  const oldNome = oldProp?.locatarioNome || "";
+  const newNome = newProp.locatarioNome || "";
+  if (newNome && newNome !== oldNome) {
+    const locid = "loc_" + newNome.replace(/\s+/g,"_").toLowerCase() + "_" + hoje;
+    if (!existeId(locid)) {
+      hist.push({
+        id: locid, tipo: "Início de Locação",
+        data: newProp.contratoInicio || hoje,
+        titulo: "Novo locatário: " + newNome,
+        descricao: [
+          newProp.rent ? "Aluguel: " + new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(newProp.rent) + "/mês" : null,
+          newProp.contratoAnos ? "Contrato: " + newProp.contratoAnos + " ano(s)" : null,
+          newProp.locatarioGarantia ? "Garantia: " + newProp.locatarioGarantia : null,
+        ].filter(Boolean).join(" · "),
+        valor: (newProp.rent || 0) * 12,
+        auto: true,
+      });
+    }
+  }
+
+  // 3. Avaliação de mercado — quando valorMercado muda
+  const oldVM = oldProp?.valorMercado || 0;
+  const newVM = newProp.valorMercado || 0;
+  if (newVM > 0 && newVM !== oldVM) {
+    const avalid = "aval_" + hoje;
+    if (!existeId(avalid)) {
+      hist.push({
+        id: avalid, tipo: "Valorização/Avaliação",
+        data: hoje,
+        titulo: "Avaliação de mercado registrada",
+        descricao: "Valor: " + new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(newVM) +
+          (oldVM > 0 ? " (anterior: " + new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(oldVM) + ")" : ""),
+        valor: newVM,
+        auto: true,
+      });
+    }
+  }
+
+  // 4. Compra do imóvel — se valorCompra foi preenchido pela primeira vez
+  const oldVC = oldProp?.valorCompra || 0;
+  const newVC = newProp.valorCompra || 0;
+  if (newVC > 0 && oldVC === 0) {
+    const compraid = "compra_" + (newProp.anoCompra || hoje);
+    if (!existeId(compraid)) {
+      hist.push({
+        id: compraid, tipo: "Compra",
+        data: newProp.anoCompra ? newProp.anoCompra + "-01-01" : hoje,
+        titulo: "Imóvel adquirido",
+        descricao: "Valor de compra: " + new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(newVC),
+        valor: newVC,
+        auto: true,
+      });
+    }
+  }
+
+  return { ...newProp, historico: hist.sort((a,b) => b.data.localeCompare(a.data)) };
+}
+
 function recalcProp(prop, BENCHMARKS) {
   const bm = getBenchmark(prop.city, prop.type) || BENCHMARKS["São Paulo"]["Residencial"];
   const annualRent = (prop.rent || 0) * 12;
@@ -3872,7 +3961,9 @@ export default function App() {
   };
 
   const handleSaveEdit = async (updatedProp) => {
-    const recalced = recalcProp(updatedProp, BENCHMARKS);
+    const oldProp = props.find(p => p.id === updatedProp.id);
+    const withHist = autoHistorico(oldProp, updatedProp);
+    const recalced = recalcProp(withHist, BENCHMARKS);
     await supabase.from("imoveis").update(toDB(recalced)).eq("id", recalced.id).eq("user_id", user.id);
     setPropsRaw(prev => prev.map(p => p.id === recalced.id ? recalced : p));
     setEditingProp(null);
@@ -3880,9 +3971,11 @@ export default function App() {
   };
 
   const handleSaveObras = async (updatedProp) => {
-    await supabase.from("imoveis").update({ obras: updatedProp.obras||[], prestadores: updatedProp.prestadores||[] }).eq("id", updatedProp.id).eq("user_id", user.id);
-    setPropsRaw(prev => prev.map(p => p.id === updatedProp.id ? updatedProp : p));
-    if (selectedProp?.id === updatedProp.id) setSelectedProp(updatedProp);
+    const oldProp = props.find(p => p.id === updatedProp.id);
+    const withHist = autoHistorico(oldProp, updatedProp);
+    await supabase.from("imoveis").update({ obras: withHist.obras||[], prestadores: withHist.prestadores||[], historico: withHist.historico||[] }).eq("id", withHist.id).eq("user_id", user.id);
+    setPropsRaw(prev => prev.map(p => p.id === withHist.id ? withHist : p));
+    if (selectedProp?.id === withHist.id) setSelectedProp(withHist);
   };
 
   const handleUpdateProps = async (newPropsOrUpdater) => {
@@ -3895,7 +3988,9 @@ export default function App() {
         await supabase.from("imoveis").update({ pagamentos: np.pagamentos }).eq("id", np.id).eq("user_id", user.id);
       }
       if (old.valorMercado !== np.valorMercado || old.valorCompra !== np.valorCompra || old.anoCompra !== np.anoCompra) {
-        await supabase.from("imoveis").update({ valor_mercado: np.valorMercado||0, valor_compra: np.valorCompra||0, ano_compra: np.anoCompra||null }).eq("id", np.id).eq("user_id", user.id);
+        const withHistVM = autoHistorico(old, np);
+        await supabase.from("imoveis").update({ valor_mercado: withHistVM.valorMercado||0, valor_compra: withHistVM.valorCompra||0, ano_compra: withHistVM.anoCompra||null, historico: withHistVM.historico||[], avaliacoes: withHistVM.avaliacoes||[] }).eq("id", np.id).eq("user_id", user.id);
+        np.historico = withHistVM.historico;
       }
       if (JSON.stringify(old.locatarios) !== JSON.stringify(np.locatarios)) {
         await supabase.from("imoveis").update({ locatarios: np.locatarios||[] }).eq("id", np.id).eq("user_id", user.id);
