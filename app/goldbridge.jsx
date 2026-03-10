@@ -55,24 +55,43 @@ function applyTheme(theme) {
   }
 }
 
+// Mapeamento de tipos para categoria de benchmark
+const BM_TYPE_MAP = {
+  "Apartamento": "Residencial", "Casa": "Residencial", "Studio/Kitnet": "Residencial",
+  "Terreno": "Terreno", "Comercial": "Comercial", "Sala Comercial": "Comercial",
+  "Galpão/Industrial": "Comercial",
+  // legado
+  "Residencial": "Residencial",
+};
+
 const BENCHMARKS = {
   "São Paulo": {
     Residencial: { iptu_m2: 18, vacancy_days: 32, maintenance_annual_m2: 45, cap_rate: 0.055 },
     Comercial:   { iptu_m2: 28, vacancy_days: 48, maintenance_annual_m2: 65, cap_rate: 0.072 },
+    Terreno:     { iptu_m2: 10, vacancy_days: 0,  maintenance_annual_m2: 5,  cap_rate: 0.020 },
   },
   "Campinas": {
     Residencial: { iptu_m2: 12, vacancy_days: 28, maintenance_annual_m2: 38, cap_rate: 0.062 },
     Comercial:   { iptu_m2: 20, vacancy_days: 42, maintenance_annual_m2: 52, cap_rate: 0.078 },
+    Terreno:     { iptu_m2: 6,  vacancy_days: 0,  maintenance_annual_m2: 4,  cap_rate: 0.018 },
   },
   "Santo André": {
     Residencial: { iptu_m2: 10, vacancy_days: 35, maintenance_annual_m2: 35, cap_rate: 0.065 },
     Comercial:   { iptu_m2: 16, vacancy_days: 52, maintenance_annual_m2: 48, cap_rate: 0.082 },
+    Terreno:     { iptu_m2: 5,  vacancy_days: 0,  maintenance_annual_m2: 3,  cap_rate: 0.016 },
   },
   "Americana": {
-    Residencial: { iptu_m2: 8, vacancy_days: 30, maintenance_annual_m2: 32, cap_rate: 0.068 },
+    Residencial: { iptu_m2: 8,  vacancy_days: 30, maintenance_annual_m2: 32, cap_rate: 0.068 },
     Comercial:   { iptu_m2: 14, vacancy_days: 45, maintenance_annual_m2: 45, cap_rate: 0.085 },
+    Terreno:     { iptu_m2: 4,  vacancy_days: 0,  maintenance_annual_m2: 2,  cap_rate: 0.015 },
   },
 };
+
+function getBenchmark(city, type) {
+  const cat = BM_TYPE_MAP[type] || "Residencial";
+  return (BENCHMARKS[city] || BENCHMARKS["São Paulo"])[cat]
+      || BENCHMARKS["São Paulo"].Residencial;
+}
 
 // ─── FIPEZAP M²/BAIRRO ────────────────────────────────────────────────────────
 // Fonte: FipeZAP dez/2025 (residencial venda) + DataZAP SP 2025
@@ -414,7 +433,7 @@ function buildPortfolio() {
   const props = Array.from({ length: 47 }, (_, i) => {
     const addr = ALL_ADDRESSES[i % ALL_ADDRESSES.length];
     const type = i < 30 ? "Residencial" : "Comercial";
-    const bm = BENCHMARKS[addr.city]?.[type] || BENCHMARKS["São Paulo"][type];
+    const bm = getBenchmark(addr.city, type);
     const size = type === "Comercial" ? ri(80, 420) : ri(45, 180);
     const rent = type === "Comercial" ? ri(5000, 28000) : ri(2200, 9500);
     const isProblematic = [3, 7, 12, 18, 22, 28, 35].includes(i);
@@ -662,7 +681,7 @@ function EditModal({ prop, onSave, onClose }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const num = (k, v) => set(k, parseFloat(v) || 0);
   const handleSave = () => {
-    const bm = BENCHMARKS[form.city]?.[form.type] || BENCHMARKS["São Paulo"][form.type];
+    const bm = getBenchmark(form.city, form.type);
     const annualRent = form.rent * 12;
     const vacancyCost = Math.round((form.rent / 30) * form.vacancyDays);
     const descontoAnual = Number(form.descontoAluguel) * 12;
@@ -2118,10 +2137,10 @@ const RETROFIT_POTENTIAL = { "Jardins":{ multiplier:1.8, demand:"Alta" }, "Itaim
 const MARKET_APPRECIATION = { "São Paulo":{ Residencial:0.082, Comercial:0.045 }, "Campinas":{ Residencial:0.065, Comercial:0.038 }, "Santo André":{ Residencial:0.055, Comercial:0.030 }, "Americana":{ Residencial:0.028, Comercial:0.022 } };
 
 function buildDecision(prop) {
-  const bm=BENCHMARKS[prop.city]?.[prop.type]||BENCHMARKS["São Paulo"][prop.type], retro=RETROFIT_POTENTIAL[prop.neighborhood]||{ multiplier:1.3, demand:"Média" }, appreciation=MARKET_APPRECIATION[prop.city]?.[prop.type]||0.06, marketCapRate=bm.cap_rate;
+  const bm=getBenchmark(prop.city,prop.type), retro=RETROFIT_POTENTIAL[prop.neighborhood]||{ multiplier:1.3, demand:"Média" }, appreciation=MARKET_APPRECIATION[prop.city]?.[prop.type]||0.06, marketCapRate=bm.cap_rate;
   const impliedValue=prop.noi/marketCapRate, improvedNOI=prop.noi*1.15, improvedValue=improvedNOI/marketCapRate, saleValue=impliedValue, saleValueOptimistic=impliedValue*1.12, reinvestReturn=saleValue*(marketCapRate+0.01);
   const retroCost=prop.size*(prop.type==="Comercial"?1800:1200), retroRentIncrease=prop.rent*(retro.multiplier-1)*0.6, retroNewNOI=(prop.rent+retroRentIncrease)*12*0.85-prop.totalExpenses*0.9, retroNewValue=retroNewNOI/(marketCapRate-0.005), retroROI=((retroNewValue-impliedValue-retroCost)/retroCost)*100, retroPayback=retroCost/(retroRentIncrease*12);
-  const otherType=prop.type==="Residencial"?"Comercial":"Residencial", otherBm=BENCHMARKS[prop.city]?.[otherType]||BENCHMARKS["São Paulo"][otherType], reposRentEstimate=prop.size*(otherType==="Comercial"?85:55), reposNOI=reposRentEstimate*12*0.75, reposValue=reposNOI/otherBm.cap_rate, reposCost=prop.size*600;
+  const otherType=(BM_TYPE_MAP[prop.type]==="Comercial")?"Residencial":"Comercial", otherBm=getBenchmark(prop.city,otherType), reposRentEstimate=prop.size*(otherType==="Comercial"?85:55), reposNOI=reposRentEstimate*12*0.75, reposValue=reposNOI/otherBm.cap_rate, reposCost=prop.size*600;
   const keepScore=Math.min(95,Math.max(10,50+(prop.noiPct>0.6?25:prop.noiPct>0.5?15:prop.noiPct<0.4?-20:0)+(prop.vacancyDays<bm.vacancy_days?15:prop.vacancyDays>bm.vacancy_days*2?-20:0)+(prop.iptuDelta<10?10:0)+(prop.maintDelta<20?10:0)));
   const sellScore=Math.min(95,Math.max(10,50+(prop.noiPct<0.4?30:prop.noiPct<0.5?15:0)+(prop.vacancyDays>bm.vacancy_days*2?20:0)+(prop.leakage>70?15:0)+(prop.maintDelta>60?10:0)));
   const retroScore=Math.min(95,Math.max(10,40+(retro.demand==="Muito Alta"?30:retro.demand==="Alta"?20:retro.demand==="Média"?5:0)+(prop.type==="Comercial"?15:0)+(prop.size>100?10:0)+(retroROI>30?15:0)+(prop.noiPct<0.5?10:0)));
@@ -3255,7 +3274,7 @@ function AddImovelModal({ onSave, onClose, nextId }) {
 
   const handleSave = () => {
     if (!canSave) return;
-    const bm = BENCHMARKS[form.city]?.[form.type] || BENCHMARKS["São Paulo"][form.type];
+    const bm = getBenchmark(form.city, form.type);
     const size = parseFloat(form.size) || 0;
     const rent = alugado ? (parseFloat(form.rent) || 0) : 0;
     const adminPct = form.adminPct !== "" ? (parseFloat(form.adminPct) || 0) : 8;
@@ -3673,7 +3692,7 @@ function calcIR(totalIncome, totalExpenses, regimeFiscal, deducoes) {
 }
 
 function recalcProp(prop, BENCHMARKS) {
-  const bm = BENCHMARKS[prop.city]?.[prop.type] || BENCHMARKS["São Paulo"][prop.type] || BENCHMARKS["São Paulo"]["Residencial"];
+  const bm = getBenchmark(prop.city, prop.type) || BENCHMARKS["São Paulo"]["Residencial"];
   const annualRent = (prop.rent || 0) * 12;
   const descontoAnual = (prop.descontoAluguel || 0) * 12;
   const vacancyCost = Math.round(((prop.rent || 0) / 30) * (prop.vacancyDays || 0));
