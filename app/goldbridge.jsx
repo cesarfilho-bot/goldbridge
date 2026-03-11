@@ -4495,7 +4495,7 @@ export default function App() {
     if (!portfolioId || !user) { setAddingImovel(false); return; }
     const dbData = toDB({ ...newProp, avaliacoes: newProp.avaliacoes||[] });
     const { data, error } = await supabase.from("imoveis").insert(dbData).select().single();
-    if (error) { console.error("Erro ao adicionar imóvel:", error); setAddingImovel(false); return; }
+    if (error) { console.error("Erro ao adicionar imóvel:", error); alert("Erro ao salvar: " + error.message); setAddingImovel(false); return; }
     if (data) {
       const withId = recalcProp({ ...newProp, id: data.id }, BENCHMARKS);
       setPropsRaw(prev => [...prev, withId]);
