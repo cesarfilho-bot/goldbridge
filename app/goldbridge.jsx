@@ -722,7 +722,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
     const vacancyCost = Math.round((form.rent / 30) * form.vacancyDays);
     const descontoAnual = Number(form.descontoAluguel) * 12;
     const totalIncome = annualRent - vacancyCost - descontoAnual;
-    const condoAnnual = form.hasCondominio ? ((form.condoPagoPor==="proprietario" ? Number(form.condoFee) : 0) + Number(form.fundoReserva) + Number(form.chamadaExtra)) * 12 : 0;
+    const condoAnnual = form.hasCondominio ? ((Number(form.fundoReserva)||0) + (Number(form.chamadaExtra)||0)) * 12 : 0;
     const totalExpenses = form.iptu + form.maintMonthly * 12 + form.insurance + form.admin * 12 + condoAnnual;
     const noi = totalIncome - totalExpenses;
     const noiPct = noi / (totalIncome || 1);
@@ -832,13 +832,8 @@ function EditModal({ prop, onSave, onClose, userId }) {
             </div>
             {form.hasCondominio && (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <div>
-                  <label style={S.label}>QUEM PAGA O CONDOMÍNIO MENSAL?</label>
-                  <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
-                    {[["proprietario","Proprietário"],["inquilino","Inquilino"]].map(([val, label]) => (
-                      <button key={val} style={{ flex: 1, padding: "9px", borderRadius: 8, border: `1px solid ${form.condoPagoPor === val ? T.gold : T.border}`, background: form.condoPagoPor === val ? T.goldGlow : T.s2, color: form.condoPagoPor === val ? T.gold : T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 13, fontWeight: form.condoPagoPor === val ? 700 : 400 }} onClick={() => set("condoPagoPor", val)}>{label}</button>
-                    ))}
-                  </div>
+                <div style={{ color:T.green, fontSize:11, padding:"8px 10px", background:T.green+"11", borderRadius:6 }}>
+                  ✓ Condomínio mensal pago pelo inquilino — não entra nas suas despesas.
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div><label style={S.label}>COND. MENSAL (R$)</label><input type="number" style={S.input} value={form.condoFee} onChange={e=>set("condoFee",e.target.value)} /></div>
@@ -853,7 +848,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
                     <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Sempre do proprietário</div>
                   </div>
                 </div>
-                {form.condoPagoPor === "inquilino" && <div style={{ color: T.green, fontSize: 11, padding:"8px 10px", background:T.green+"11", borderRadius:6 }}>✓ Condomínio mensal pago pelo inquilino. Fundo de reserva e chamada extra continuam como despesa do proprietário.</div>}
+
               </div>
             )}
           </div>
@@ -1962,8 +1957,7 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
             {sorted.map((p) => {
               const obrasCount = (p.obras || []).length, obrasAtivas = (p.obras || []).filter(o => o.status === "Em andamento").length;
               const isExpanded = expandedId === p.id;
-              const condoPagoProprietario = p.hasCondominio && (p.condoPagoPor || "proprietario") === "proprietario";
-              const condoAnnual = condoPagoProprietario ? ((p.condoFee||0)+(p.fundoReserva||0)+(p.chamadaExtra||0))*12 : 0;
+              const condoAnnual = p.hasCondominio ? ((p.fundoReserva||0)+(p.chamadaExtra||0))*12 : 0;
               return (
                 <>
                   <tr key={p.id} style={{ cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.background = T.s2} onMouseLeave={e => e.currentTarget.style.background = isExpanded ? T.s2 : "transparent"}>
@@ -2930,10 +2924,12 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
         const hoje3 = new Date();
         const getStatus = (p) => {
           if (!p.iptuVencimento) return "sem_data";
-          const ano = parseInt(p.iptuVencimento);
+          const anoIPTU = parseInt(p.iptuVencimento);
           const anoAtualLocal = hoje3.getFullYear();
-          if (ano < anoAtualLocal) return "vencido";
-          if (ano === anoAtualLocal) return "urgente";
+          const mesAtualLocal = hoje3.getMonth(); // 0-11
+          if (anoIPTU < anoAtualLocal) return "vencido";
+          if (anoIPTU === anoAtualLocal && mesAtualLocal >= 10) return "urgente"; // nov-dez
+          if (anoIPTU === anoAtualLocal) return "ok";
           return "ok";
         };
         const COR = { vencido:T.red, urgente:T.amber, ok:T.green, sem_data:T.muted };
@@ -2959,7 +2955,7 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
                   const cor = COR[st];
                   const diasAte = null; // competência por ano, sem contagem de dias
                   const vencFmt = p.iptuVencimento
-                    ? `Competência ${p.iptuVencimento}`
+                    ? `Competência ${p.iptuVencimento} — vence dezembro/${p.iptuVencimento}`
                     : "Não cadastrado";
                   return (
                     <tr key={p.id} style={{ background:i%2===0?T.s0:T.s1, borderBottom:`1px solid ${T.border}40` }}>
@@ -3155,26 +3151,24 @@ function PageFluxoCaixa({ PROPS }) {
         else if (pag?.status === "atrasado") { inadimplentes += p.rent - (p.descontoAluguel||0); }
         else if (dataRef < hoje) inadimplentes += p.rent - (p.descontoAluguel||0);
       }
-      // IPTU: pago à vista no mês 0 (Janeiro) e restituído parcelado pelo inquilino
+      // IPTU: competência = ano inteiro (jan-dez), vence em dezembro (mês 11)
+      // Proprietário paga à vista em dezembro; inquilino restitui parcelado ao longo do ano
       const iptu = p.iptu || 0;
       const parcelas = p.iptuParcelas || 10;
       const competencia = p.iptuVencimento ? parseInt(p.iptuVencimento) : null;
       if (iptu > 0 && competencia === ano) {
-        // Proprietário paga à vista em Janeiro (mês 0)
-        if (i === 0) saidas += iptu;
-        // Restituição parcelada pelo inquilino (se ocupado) — entra nos meses 0 a parcelas-1
+        // Proprietário paga tudo em dezembro
+        if (i === 11) saidas += iptu;
+        // Inquilino restitui parcelado de janeiro a (parcelas-1)
         if (p.status === "Ocupado" && i < parcelas) entradas += Math.round(iptu / parcelas);
       } else if (iptu > 0 && !competencia) {
-        // Sem competência cadastrada: distribui mensalmente como antes
+        // Sem competência: distribui mensalmente
         saidas += Math.round(iptu / 12);
         if (p.status === "Ocupado") entradas += Math.round(iptu / 12);
       }
       // Manutenção e seguro mensais
       const despMensal = Math.round((p.maintMonthly||0) + (p.insurance||0)/12 + (p.admin||0));
-      const condoMensal = p.hasCondominio ? (
-        ((p.condoPagoPor||"proprietario")==="proprietario" ? (p.condoFee||0) : 0) +
-        (p.fundoReserva||0) + (p.chamadaExtra||0)
-      ) : 0;
+      const condoMensal = p.hasCondominio ? ((p.fundoReserva||0) + (p.chamadaExtra||0)) : 0;
       saidas += despMensal + condoMensal;
     });
     const saldo = entradas - saidas;
@@ -3285,7 +3279,7 @@ function PageFluxoCaixa({ PROPS }) {
             ["Manutenção", PROPS.reduce((s,p) => s+(p.maintMonthly||0),0), T.blue],
             ["Seguros", PROPS.reduce((s,p) => s+(p.insurance||0),0)/12, T.teal],
             ["Administração", PROPS.reduce((s,p) => s+(p.admin||0),0), T.gold],
-            ["Condomínio", PROPS.filter(p=>p.hasCondominio&&(p.condoPagoPor||"proprietario")==="proprietario").reduce((s,p)=>s+(p.condoFee||0)+(p.fundoReserva||0)+(p.chamadaExtra||0),0), T.muted],
+            ["Condomínio", PROPS.filter(p=>p.hasCondominio).reduce((s,p)=>s+(p.fundoReserva||0)+(p.chamadaExtra||0),0), T.muted],
           ].map(([label, val, color]) => (
             <div key={label} style={{ flex: 1, minWidth: 120, background: T.s2, padding: "12px 16px", borderRadius: 10 }}>
               <div style={{ color: T.dim, fontSize: 11, marginBottom: 4 }}>{label}</div>
@@ -3589,7 +3583,7 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
     const vacancyCost = Math.round((rent / 30) * vacancyDays);
     const annualRent = rent * 12;
     const descontoAnual = descontoAluguel * 12;
-    const condoAnnual = form.hasCondominio ? ((form.condoPagoPor==="proprietario" ? parseFloat(form.condoFee)||0 : 0) + (parseFloat(form.fundoReserva)||0) + (parseFloat(form.chamadaExtra)||0)) * 12 : 0;
+    const condoAnnual = form.hasCondominio ? ((parseFloat(form.fundoReserva)||0) + (parseFloat(form.chamadaExtra)||0)) * 12 : 0;
     const totalIncome = annualRent - vacancyCost - descontoAnual;
     const totalExpenses = iptu + maintMonthly * 12 + insurance + admin * 12 + condoAnnual;
     const noi = totalIncome - totalExpenses;
@@ -3842,16 +3836,26 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
                   <span style={{ color: T.muted, fontSize: 13, cursor: "pointer" }}>Este imóvel tem condomínio</span>
                 </div>
                 {form.hasCondominio && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <div><label style={S.label}>COND. MENSAL (R$)</label><input type="number" style={S.input} value={form.condoFee} onChange={e=>set("condoFee",e.target.value)} /></div>
-                    <div><label style={S.label}>FUNDO DE RESERVA (R$/mês)</label><input type="number" style={S.input} value={form.fundoReserva} onChange={e=>set("fundoReserva",e.target.value)} /></div>
-                    <div>
-                      <label style={S.label}>QUEM PAGA?</label>
-                      <div style={{ display:"flex", gap:8, marginTop:6 }}>
-                        {[["proprietario","Proprietário"],["inquilino","Inquilino"]].map(([val,label]) => (
-                          <button key={val} style={{ flex:1, padding:"8px", borderRadius:8, border:`1px solid ${form.condoPagoPor===val?T.gold:T.border}`, background:form.condoPagoPor===val?T.goldGlow:T.s1, color:form.condoPagoPor===val?T.gold:T.muted, cursor:"pointer", fontFamily:"inherit", fontSize:12, fontWeight:form.condoPagoPor===val?700:400 }} onClick={()=>set("condoPagoPor",val)}>{label}</button>
-                        ))}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div>
+                        <label style={S.label}>COND. MENSAL (R$)</label>
+                        <input type="number" style={S.input} value={form.condoFee} onChange={e=>set("condoFee",e.target.value)} />
+                        <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Pago pelo inquilino</div>
                       </div>
+                      <div>
+                        <label style={S.label}>FUNDO DE RESERVA (R$/mês)</label>
+                        <input type="number" style={S.input} value={form.fundoReserva} onChange={e=>set("fundoReserva",e.target.value)} />
+                        <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Sempre do proprietário</div>
+                      </div>
+                      <div>
+                        <label style={S.label}>CHAMADA EXTRA (R$/mês)</label>
+                        <input type="number" style={S.input} value={form.chamadaExtra} onChange={e=>set("chamadaExtra",e.target.value)} />
+                        <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Sempre do proprietário</div>
+                      </div>
+                    </div>
+                    <div style={{ color:T.green, fontSize:11, padding:"8px 10px", background:T.green+"11", borderRadius:6 }}>
+                      ✓ Condomínio mensal pago pelo inquilino — não entra nas suas despesas. Fundo de reserva e chamada extra são sempre do proprietário.
                     </div>
                   </div>
                 )}
@@ -4129,7 +4133,7 @@ function recalcProp(prop, BENCHMARKS) {
   const totalIncome = annualRent - vacancyCost - descontoAnual;
   // Condomínio só entra nas despesas se pago pelo proprietário
   const condoPagoProprietario = prop.hasCondominio && (prop.condoPagoPor || "proprietario") === "proprietario";
-  const condoAnnual = prop.hasCondominio ? ((condoPagoProprietario ? (prop.condoFee||0) : 0) + (prop.fundoReserva||0) + (prop.chamadaExtra||0)) * 12 : 0;
+  const condoAnnual = prop.hasCondominio ? ((prop.fundoReserva||0) + (prop.chamadaExtra||0)) * 12 : 0;
   // Admin calculado sobre aluguel líquido (após desconto)
   const adminRecalc = prop.adminPct != null
     ? Math.round(((prop.rent||0) - (prop.descontoAluguel||0)) * (prop.adminPct / 100))
