@@ -2875,7 +2875,7 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
       ? bruto - adm - iptuM - maintM - seguroM - condoM
       : bruto;
   };
-  const totalRecebido = pagMes.filter(p => p.pag?.status === "pago").reduce((s, p) => s + (p.pag?.valor || calcAluguel(p)), 0);
+  const totalRecebido = pagMes.filter(p => p.pag?.status === "pago").reduce((s, p) => s + calcAluguel(p), 0);
   const totalEsperado = imovelOcupado.reduce((s, p) => s + calcAluguel(p), 0);
 
   // Histórico de um imóvel
