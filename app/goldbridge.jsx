@@ -442,8 +442,7 @@ function buildPortfolio() {
     const mainMultiplier = isProblematic ? rng() * 0.8 + 1.4 : rng() * 0.5 + 0.7;
     const maintMonthly = Math.round((bm.maintenance_annual_m2 * size / 12) * mainMultiplier);
     const insurance = Math.round(rent * 0.025 * 12);
-    const descontoBase = prop.descontoAluguel || 0;
-  const admin = Math.round((rent - descontoBase) * 0.08);
+    const admin = Math.round(rent * 0.08);
     const vacancyDays = isProblematic ? ri(45, 140) : ri(0, bm.vacancy_days);
     const status = vacancyDays > 60 ? "Vago" : (rng() > 0.12 ? "Ocupado" : "Vago");
     const annualRent = rent * 12;
