@@ -2863,10 +2863,17 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
   const naoPagos = pagMes.filter(p => p.pag?.status === "nao_pago").length;
   const pendentes = pagMes.filter(p => !p.pag).length;
   const calcAluguel = (p) => {
-    // KPI Esperado: com imob = líquido (bruto-desconto-admin); sem imob = aluguel bruto (sem desconto)
     const bruto = p.rent - (p.descontoAluguel||0);
     const adm = p.adminRecalc || Math.round(bruto * ((p.adminPct||8)/100));
-    return p.viaImobiliaria ? bruto - adm : p.rent;
+    const iptuM = Math.round((p.iptu||0) / (p.iptuParcelas||10));
+    const maintM = p.maintMonthly || 0;
+    const seguroM = Math.round((p.insurance||0)/12);
+    const condoM = p.hasCondominio ? ((p.fundoReserva||0)+(p.chamadaExtra||0)) : 0;
+    // Com imobiliária: no bolso = bruto - todas as despesas
+    // Sem imobiliária: o que entra = bruto - desconto (despesas tratadas no fluxo)
+    return p.viaImobiliaria
+      ? bruto - adm - iptuM - maintM - seguroM - condoM
+      : bruto;
   };
   const totalRecebido = pagMes.filter(p => p.pag?.status === "pago").reduce((s, p) => s + (p.pag?.valor || calcAluguel(p)), 0);
   const totalEsperado = imovelOcupado.reduce((s, p) => s + calcAluguel(p), 0);
