@@ -698,6 +698,8 @@ function EditModal({ prop, onSave, onClose, userId }) {
     condoFee: prop.condoFee ?? 0,
     fundoReserva: prop.fundoReserva ?? 0,
     chamadaExtra: prop.chamadaExtra ?? 0,
+    chamadaExtraParcelas: prop.chamadaExtraParcelas ?? 0,
+    chamadaExtraParcelaAtual: prop.chamadaExtraParcelaAtual ?? 0,
     condoPagoPor: prop.condoPagoPor || "proprietario",
     descontoAluguel: prop.descontoAluguel ?? 0,
     contratoAnos: prop.contratoAnos ?? 12,
@@ -739,7 +741,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
     leakage = Math.min(98, Math.max(2, Math.round(leakage)));
     const proximoReajuste = form.contratoInicio ? (() => { const d = new Date(form.contratoInicio); const now = new Date(); let y = now.getFullYear(); if (new Date(y, d.getMonth(), d.getDate()) <= now) y++; return new Date(y, d.getMonth(), d.getDate()).toLocaleDateString("pt-BR"); })() : "";
     const adminFromPct = Math.round((Number(form.rent) - (Number(form.descontoAluguel)||0)) * (Number(form.adminPct)||0) / 100);
-    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: adminFromPct, adminPct: Number(form.adminPct), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, iptuParcelas: Number(form.iptuParcelas)||10, iptuParcelas: Number(form.iptuParcelas)||10, viaImobiliaria: form.viaImobiliaria, locatarioNome: form.viaImobiliaria ? "" : form.locatarioNome, locatarioCPF: form.viaImobiliaria ? "" : form.locatarioCPF, locatarioTelefone: form.viaImobiliaria ? "" : form.locatarioTelefone, locatarioEmail: form.viaImobiliaria ? "" : form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
+    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: adminFromPct, adminPct: Number(form.adminPct), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), chamadaExtraParcelas: Number(form.chamadaExtraParcelas)||0, chamadaExtraParcelaAtual: Number(form.chamadaExtraParcelaAtual)||0, condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, iptuParcelas: Number(form.iptuParcelas)||10, iptuParcelas: Number(form.iptuParcelas)||10, viaImobiliaria: form.viaImobiliaria, locatarioNome: form.viaImobiliaria ? "" : form.locatarioNome, locatarioCPF: form.viaImobiliaria ? "" : form.locatarioCPF, locatarioTelefone: form.viaImobiliaria ? "" : form.locatarioTelefone, locatarioEmail: form.viaImobiliaria ? "" : form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
   };
 
   return (
@@ -842,10 +844,27 @@ function EditModal({ prop, onSave, onClose, userId }) {
                     <input type="number" style={S.input} value={form.fundoReserva} onChange={e=>set("fundoReserva",e.target.value)} />
                     <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Sempre do proprietário</div>
                   </div>
-                  <div>
+                  <div style={{ gridColumn: "1 / -1" }}>
                     <label style={S.label}>CHAMADA EXTRA (R$/mês)</label>
                     <input type="number" style={S.input} value={form.chamadaExtra} onChange={e=>set("chamadaExtra",e.target.value)} />
                     <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Sempre do proprietário</div>
+                    {Number(form.chamadaExtra) > 0 && (
+                      <div style={{ display:"flex", gap:8, marginTop:8 }}>
+                        <div style={{ flex:1 }}>
+                          <label style={S.label}>TOTAL DE PARCELAS</label>
+                          <input type="number" style={S.input} value={form.chamadaExtraParcelas||""} placeholder="Ex: 24" min="0" onChange={e=>set("chamadaExtraParcelas",e.target.value)} />
+                        </div>
+                        <div style={{ flex:1 }}>
+                          <label style={S.label}>PARCELA ATUAL</label>
+                          <input type="number" style={S.input} value={form.chamadaExtraParcelaAtual||""} placeholder="Ex: 10" min="0" onChange={e=>set("chamadaExtraParcelaAtual",e.target.value)} />
+                        </div>
+                      </div>
+                    )}
+                    {Number(form.chamadaExtraParcelas) > 0 && Number(form.chamadaExtraParcelaAtual) > 0 && (
+                      <div style={{ color:T.amber, fontSize:11, marginTop:6 }}>
+                        Parcela {form.chamadaExtraParcelaAtual}/{form.chamadaExtraParcelas} · restam {Number(form.chamadaExtraParcelas) - Number(form.chamadaExtraParcelaAtual)} meses · total restante: {new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format((Number(form.chamadaExtraParcelas) - Number(form.chamadaExtraParcelaAtual)) * (Number(form.chamadaExtra)||0))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2176,6 +2195,54 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
         <KPI label="Lucro Líquido 12m" value={fmt.brlK(prop.lucroLiquido||prop.noi)} sub={`Margem líq.: ${fmt.pct(prop.lucroLiquidoPct||prop.noiPct)}`} color={(prop.lucroLiquido||prop.noi) > 0 ? T.green : T.red} size="md" />
         <KPI label="Vacância" value={`${prop.vacancyDays}d`} sub={`Benchmark: ${prop.vacancyBenchmark}d`} color={prop.vacancyDays > prop.vacancyBenchmark ? T.amber : T.muted} size="md" warn={prop.vacancyDays > prop.vacancyBenchmark} />
       </div>
+      {prop.hasCondominio && (prop.chamadaExtra > 0 || prop.fundoReserva > 0) && (
+        <div style={{ ...S.card, border: `1px solid ${T.amber}30` }}>
+          <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>🏢 CONDOMÍNIO</div>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {prop.condoFee > 0 && (
+              <div style={{ background: T.s2, borderRadius: 8, padding: "10px 16px" }}>
+                <div style={{ color: T.dim, fontSize: 10, letterSpacing: 1, marginBottom: 4 }}>COND. MENSAL</div>
+                <div style={{ color: T.muted, fontSize: 16, fontWeight: 700, ...S.mono }}>{fmt.brl(prop.condoFee)}/mês</div>
+                <div style={{ color: T.dim, fontSize: 10, marginTop: 2 }}>Pago pelo inquilino</div>
+              </div>
+            )}
+            {prop.fundoReserva > 0 && (
+              <div style={{ background: T.s2, borderRadius: 8, padding: "10px 16px" }}>
+                <div style={{ color: T.dim, fontSize: 10, letterSpacing: 1, marginBottom: 4 }}>FUNDO DE RESERVA</div>
+                <div style={{ color: T.amber, fontSize: 16, fontWeight: 700, ...S.mono }}>{fmt.brl(prop.fundoReserva)}/mês</div>
+                <div style={{ color: T.dim, fontSize: 10, marginTop: 2 }}>Despesa do proprietário</div>
+              </div>
+            )}
+            {prop.chamadaExtra > 0 && (
+              <div style={{ background: T.s2, borderRadius: 8, padding: "10px 16px", flex: 1, minWidth: 200 }}>
+                <div style={{ color: T.dim, fontSize: 10, letterSpacing: 1, marginBottom: 4 }}>CHAMADA EXTRA</div>
+                <div style={{ color: T.amber, fontSize: 16, fontWeight: 700, ...S.mono }}>{fmt.brl(prop.chamadaExtra)}/mês</div>
+                {prop.chamadaExtraParcelas > 0 && prop.chamadaExtraParcelaAtual > 0 ? (() => {
+                  const restam = prop.chamadaExtraParcelas - prop.chamadaExtraParcelaAtual;
+                  const pct = Math.round((prop.chamadaExtraParcelaAtual / prop.chamadaExtraParcelas) * 100);
+                  return (
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <span style={{ color: T.muted, fontSize: 11 }}>Parcela {prop.chamadaExtraParcelaAtual}/{prop.chamadaExtraParcelas}</span>
+                        <span style={{ color: restam <= 3 ? T.green : T.amber, fontSize: 11, fontWeight: 700 }}>{restam} restante{restam !== 1 ? "s" : ""}</span>
+                      </div>
+                      <div style={{ height: 6, background: T.s3, borderRadius: 3, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${pct}%`, background: restam <= 3 ? T.green : T.amber, borderRadius: 3 }} />
+                      </div>
+                      <div style={{ color: T.dim, fontSize: 10, marginTop: 4 }}>
+                        Total restante: {fmt.brl(restam * prop.chamadaExtra)} · termina em {restam} {restam === 1 ? "mês" : "meses"}
+                      </div>
+                    </div>
+                  );
+                })() : (
+                  <div style={{ color: T.dim, fontSize: 10, marginTop: 2 }}>Despesa do proprietário</div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {obrasCount > 0 && (
         <div style={{ ...S.card, border: `1px solid ${T.amber}40` }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}><div style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>🔨 Obras & Reformas</div><button style={{ ...S.btnGhost, padding: "6px 14px", fontSize: 12 }} onClick={() => onObras(prop)}>Gerenciar →</button></div>
@@ -2741,6 +2808,12 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
     return ano === hoje.getFullYear();
   }).map(p => ({ ...p, diasIPTU: 0, vencIPTU: `Competência ${p.iptuVencimento}` }));
 
+  // Alertas de chamada extra quase terminando (últimas 3 parcelas)
+  const alertasChamadaExtra = PROPS.filter(p =>
+    p.hasCondominio && p.chamadaExtra > 0 && p.chamadaExtraParcelas > 0 && p.chamadaExtraParcelaAtual > 0 &&
+    (p.chamadaExtraParcelas - p.chamadaExtraParcelaAtual) <= 3
+  );
+
   // Alertas de reajuste (próximos 60 dias)
   const alertasReajuste = PROPS.filter(p => {
     if (!p.contratoInicio) return false;
@@ -2839,8 +2912,24 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
       <div><div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>GESTÃO FINANCEIRA</div><h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Pagamentos</h1></div>
 
       {/* Alertas de contrato, reajuste e IPTU */}
-      {(alertasContrato.length > 0 || alertasReajuste.length > 0 || alertasIPTU.length > 0) && (
+      {(alertasContrato.length > 0 || alertasReajuste.length > 0 || alertasIPTU.length > 0 || alertasChamadaExtra.length > 0) && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {alertasChamadaExtra.map(p => {
+            const restam = p.chamadaExtraParcelas - p.chamadaExtraParcelaAtual;
+            return (
+              <div key={`chamada-${p.id}`} style={{ padding: "14px 18px", background: restam === 0 ? T.green+"22" : T.amber+"22", border: `1px solid ${restam === 0 ? T.green : T.amber}44`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ fontSize: 22 }}>{restam === 0 ? "🎉" : "⚠️"}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>
+                    {p.name} — Chamada extra {restam === 0 ? "termina este mês!" : `termina em ${restam} mês${restam > 1 ? "es" : ""}`}
+                  </div>
+                  <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
+                    Parcela {p.chamadaExtraParcelaAtual}/{p.chamadaExtraParcelas} · {fmt.brl(p.chamadaExtra)}/mês · economia futura: {fmt.brl(p.chamadaExtra)}/mês
+                  </div>
+                </div>
+              </div>
+            );
+          })}
           {alertasIPTU.map(p => (
             <div key={`iptu-${p.id}`} style={{ padding: "14px 18px", background: T.blue + "22", border: `1px solid ${T.blue}44`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ fontSize: 22 }}>🏛️</div>
@@ -3559,7 +3648,7 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
     // Aluguel (só se ocupado)
     rent: "", adminPct: "8", descontoAluguel: "0", contratoAnos: "12",
     contratoInicio: "", indiceReajuste: "IGPM",
-    hasCondominio: false, condoFee: "0", fundoReserva: "0", chamadaExtra: "0", condoPagoPor: "proprietario",
+    hasCondominio: false, condoFee: "0", fundoReserva: "0", chamadaExtra: "0", chamadaExtraParcelas: "0", chamadaExtraParcelaAtual: "0", condoPagoPor: "proprietario",
     regimeFiscal: "PF",
     // Locatário
     locatarioNome: "", locatarioCPF: "", locatarioTelefone: "", locatarioEmail: "", locatarioGarantia: "Fiador", viaImobiliaria: false,
@@ -3616,7 +3705,7 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
       descontoAluguel, contratoAnos: parseFloat(form.contratoAnos)||1,
       contratoInicio: form.contratoInicio, hasCondominio: form.hasCondominio,
       condoFee: parseFloat(form.condoFee)||0, fundoReserva: parseFloat(form.fundoReserva)||0,
-      chamadaExtra: parseFloat(form.chamadaExtra)||0, condoPagoPor: form.condoPagoPor,
+      chamadaExtra: parseFloat(form.chamadaExtra)||0, chamadaExtraParcelas: parseFloat(form.chamadaExtraParcelas)||0, chamadaExtraParcelaAtual: parseFloat(form.chamadaExtraParcelaAtual)||0, condoPagoPor: form.condoPagoPor,
       regimeFiscal: form.regimeFiscal,
       viaImobiliaria: form.viaImobiliaria, locatarioNome: form.viaImobiliaria ? "" : form.locatarioNome, locatarioCPF: form.viaImobiliaria ? "" : form.locatarioCPF,
       locatarioTelefone: form.viaImobiliaria ? "" : form.locatarioTelefone, locatarioEmail: form.viaImobiliaria ? "" : form.locatarioEmail,
@@ -3848,10 +3937,27 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
                         <input type="number" style={S.input} value={form.fundoReserva} onChange={e=>set("fundoReserva",e.target.value)} />
                         <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Sempre do proprietário</div>
                       </div>
-                      <div>
+                      <div style={{ gridColumn: "1 / -1" }}>
                         <label style={S.label}>CHAMADA EXTRA (R$/mês)</label>
                         <input type="number" style={S.input} value={form.chamadaExtra} onChange={e=>set("chamadaExtra",e.target.value)} />
                         <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Sempre do proprietário</div>
+                        {Number(form.chamadaExtra) > 0 && (
+                          <div style={{ display:"flex", gap:8, marginTop:8 }}>
+                            <div style={{ flex:1 }}>
+                              <label style={S.label}>TOTAL DE PARCELAS</label>
+                              <input type="number" style={S.input} value={form.chamadaExtraParcelas||""} placeholder="Ex: 24" min="0" onChange={e=>set("chamadaExtraParcelas",e.target.value)} />
+                            </div>
+                            <div style={{ flex:1 }}>
+                              <label style={S.label}>PARCELA ATUAL</label>
+                              <input type="number" style={S.input} value={form.chamadaExtraParcelaAtual||""} placeholder="Ex: 10" min="0" onChange={e=>set("chamadaExtraParcelaAtual",e.target.value)} />
+                            </div>
+                          </div>
+                        )}
+                        {Number(form.chamadaExtraParcelas) > 0 && Number(form.chamadaExtraParcelaAtual) > 0 && (
+                          <div style={{ color:T.amber, fontSize:11, marginTop:6 }}>
+                            Parcela {form.chamadaExtraParcelas}/{form.chamadaExtraParcelas} · restam {Number(form.chamadaExtraParcelas) - Number(form.chamadaExtraParcelaAtual)} meses · total restante: {new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format((Number(form.chamadaExtraParcelas) - Number(form.chamadaExtraParcelaAtual)) * (Number(form.chamadaExtra)||0))}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div style={{ color:T.green, fontSize:11, padding:"8px 10px", background:T.green+"11", borderRadius:6 }}>
@@ -4217,7 +4323,7 @@ export default function App() {
           size: r.size||0, rent: r.rent||0, iptu: r.iptu||0, maintMonthly: r.maint_monthly||0,
           insurance: r.insurance||0, admin: r.admin||0, vacancyDays: r.vacancy_days||0,
           hasCondominio: r.has_condominio||false, condoFee: r.condo_fee||0,
-          fundoReserva: r.fundo_reserva||0, chamadaExtra: r.chamada_extra||0,
+          fundoReserva: r.fundo_reserva||0, chamadaExtra: r.chamada_extra||0, chamadaExtraParcelas: r.chamada_extra_parcelas||0, chamadaExtraParcelaAtual: r.chamada_extra_parcela_atual||0,
           descontoAluguel: r.desconto_aluguel||0, contratoAnos: r.contrato_anos||1,
           contratoInicio: r.contrato_inicio||"", marketValueManual: r.market_value_manual||0,
           valorMercado: r.valor_mercado||0, valorCompra: r.valor_compra||0, anoCompra: r.ano_compra||null,
@@ -4243,7 +4349,7 @@ export default function App() {
     rent: prop.rent, iptu: prop.iptu, maint_monthly: prop.maintMonthly,
     insurance: prop.insurance, admin: prop.admin, vacancy_days: prop.vacancyDays,
     has_condominio: prop.hasCondominio||false, condo_fee: prop.condoFee||0,
-    fundo_reserva: prop.fundoReserva||0, chamada_extra: prop.chamadaExtra||0,
+    fundo_reserva: prop.fundoReserva||0, chamada_extra: prop.chamadaExtra||0, chamada_extra_parcelas: prop.chamadaExtraParcelas||0, chamada_extra_parcela_atual: prop.chamadaExtraParcelaAtual||0,
     desconto_aluguel: prop.descontoAluguel||0, contrato_anos: prop.contratoAnos||1,
     contrato_inicio: prop.contratoInicio||null, market_value_manual: prop.marketValueManual||0,
     valor_mercado: prop.valorMercado||0, valor_compra: prop.valorCompra||0, ano_compra: prop.anoCompra||null,
