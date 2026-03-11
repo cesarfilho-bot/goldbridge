@@ -3586,7 +3586,6 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
     const iptu = form.iptu !== "" ? (parseFloat(form.iptu) || 0) : Math.round(bm.iptu_m2 * size);
     const maintMonthly = form.maintMonthly !== "" ? (parseFloat(form.maintMonthly) || 0) : Math.round(bm.maintenance_annual_m2 * size / 12);
     const insurance = form.insurance !== "" ? (parseFloat(form.insurance) || 0) : Math.round(rent * 0.025 * 12);
-    const descontoAluguel = parseFloat(form.descontoAluguel) || 0;
     const vacancyDays = alugado ? 0 : 30;
     const vacancyCost = Math.round((rent / 30) * vacancyDays);
     const annualRent = rent * 12;
