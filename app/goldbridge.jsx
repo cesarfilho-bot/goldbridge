@@ -20,18 +20,18 @@ const DARK_T = {
   blueDim: "#1E3D7A", teal: "#2EC4B6",
 };
 const LIGHT_T = {
-  bg: "#F4F5F7", s0: "#FFFFFF", s1: "#FFFFFF", s2: "#F0F1F5", s3: "#E4E6ED",
-  border: "#D8DAE5", borderMid: "#C4C8D8", gold: "#9A7A28", goldBright: "#B8930A",
-  goldDim: "#D4B96A", goldGlow: "#C8A84B22", text: "#0E1018", muted: "#5A6282",
-  dim: "#9AA0BA", green: "#1A9E72", greenDim: "#C8F0E4", red: "#C03045",
-  redDim: "#FAD0D5", amber: "#C07010", amberDim: "#FDE8C0", blue: "#2060D0",
+  bg: "#F7F8FB", s0: "#FFFFFF", s1: "#FFFFFF", s2: "#EFF3FA", s3: "#E2EAF5",
+  border: "#CCDAEE", borderMid: "#B5CADF", gold: "#1B3A6B", goldBright: "#4A90D9",
+  goldDim: "#C5D9F5", goldGlow: "#1B3A6B18", text: "#0D1B35", muted: "#4A5873",
+  dim: "#8B9AB5", green: "#1A9E72", greenDim: "#C8F0E4", red: "#C03045",
+  redDim: "#FAD0D5", amber: "#B06A00", amberDim: "#FDE8C0", blue: "#2060D0",
   blueDim: "#D0E0FF", teal: "#1A9990",
 };
-let T = { ...DARK_T };
+let T = { ...LIGHT_T };
 // Initialize theme from localStorage immediately (before first render)
 if (typeof window !== "undefined") {
   const saved = localStorage.getItem("gb_theme");
-  if (saved === "light") Object.assign(T, LIGHT_T);
+  if (saved === "dark") Object.assign(T, DARK_T);
 }
 
 function applyTheme(theme) {
@@ -563,18 +563,18 @@ function buildInsights(PROPS) {
 }
 
 const S = {
-  card: { background: T.s1, border: `1px solid ${T.border}`, borderRadius: 14, padding: 24 },
-  cardGold: { background: `linear-gradient(135deg, ${T.s1} 0%, #1A1608 100%)`, border: `1px solid ${T.goldDim}`, borderRadius: 14, padding: 24 },
-  badge: (c) => ({ background: c + "20", color: c, border: `1px solid ${c}40`, borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 700, letterSpacing: 0.6, display: "inline-flex", alignItems: "center", gap: 4 }),
-  btn: { background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: "#0A0800", border: "none", borderRadius: 9, padding: "11px 22px", fontWeight: 800, cursor: "pointer", fontSize: 14, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: 0.3 },
-  btnGhost: { background: "transparent", color: T.gold, border: `1px solid ${T.goldDim}`, borderRadius: 9, padding: "10px 20px", fontWeight: 600, cursor: "pointer", fontSize: 14, fontFamily: "'Bricolage Grotesque', sans-serif" },
-  btnDanger: { background: "transparent", color: T.red, border: `1px solid ${T.redDim}`, borderRadius: 9, padding: "10px 20px", fontWeight: 600, cursor: "pointer", fontSize: 14, fontFamily: "'Bricolage Grotesque', sans-serif" },
-  input: { background: T.s2, border: `1px solid ${T.border}`, borderRadius: 9, padding: "11px 14px", color: T.text, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box", fontFamily: "'Bricolage Grotesque', sans-serif" },
-  sel: { background: T.s2, border: `1px solid ${T.border}`, borderRadius: 9, padding: "10px 14px", color: T.text, fontSize: 13, outline: "none", cursor: "pointer", fontFamily: "'Bricolage Grotesque', sans-serif" },
-  th: { textAlign: "left", padding: "10px 14px", color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, borderBottom: `1px solid ${T.border}`, whiteSpace: "nowrap" },
-  td: { padding: "11px 14px", fontSize: 13, borderBottom: `1px solid ${T.border}40`, color: T.text },
-  mono: { fontFamily: "'DM Mono', monospace" },
-  label: { color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6, display: "block" },
+  card: { background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, padding: 28 },
+  cardGold: { background: T.s2, border: `1px solid ${T.goldDim}`, borderRadius: 12, padding: 28 },
+  badge: (c) => ({ background: c + "18", color: c, border: `1px solid ${c}40`, borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 700, letterSpacing: 0.4, display: "inline-flex", alignItems: "center", gap: 4 }),
+  btn: { background: T.gold, color: "#FFFFFF", border: "none", borderRadius: 8, padding: "13px 24px", fontWeight: 700, cursor: "pointer", fontSize: 15, fontFamily: "var(--font-sans), 'Source Sans 3', sans-serif", letterSpacing: 0.2, minHeight: 44 },
+  btnGhost: { background: "transparent", color: T.gold, border: `1px solid ${T.gold}`, borderRadius: 8, padding: "12px 22px", fontWeight: 600, cursor: "pointer", fontSize: 15, fontFamily: "var(--font-sans), 'Source Sans 3', sans-serif", minHeight: 44 },
+  btnDanger: { background: "transparent", color: T.red, border: `1px solid ${T.red}`, borderRadius: 8, padding: "12px 22px", fontWeight: 600, cursor: "pointer", fontSize: 15, fontFamily: "var(--font-sans), 'Source Sans 3', sans-serif", minHeight: 44 },
+  input: { background: T.s0, border: `1px solid ${T.border}`, borderRadius: 8, padding: "13px 16px", color: T.text, fontSize: 15, outline: "none", width: "100%", boxSizing: "border-box", fontFamily: "var(--font-sans), 'Source Sans 3', sans-serif", minHeight: 44 },
+  sel: { background: T.s0, border: `1px solid ${T.border}`, borderRadius: 8, padding: "12px 14px", color: T.text, fontSize: 14, outline: "none", cursor: "pointer", fontFamily: "var(--font-sans), 'Source Sans 3', sans-serif", minHeight: 44 },
+  th: { textAlign: "left", padding: "11px 14px", color: T.muted, fontSize: 12, fontWeight: 700, letterSpacing: 0.8, borderBottom: `1px solid ${T.border}`, whiteSpace: "nowrap" },
+  td: { padding: "13px 14px", fontSize: 14, borderBottom: `1px solid ${T.border}`, color: T.text },
+  mono: { fontFamily: "var(--font-mono), 'Source Code Pro', monospace" },
+  label: { color: T.muted, fontSize: 13, fontWeight: 600, letterSpacing: 0.4, marginBottom: 6, display: "block" },
 };
 
 const Tip = ({ active, payload, label }) => {
@@ -588,13 +588,13 @@ const Tip = ({ active, payload, label }) => {
 };
 
 function KPI({ label, value, sub, color = T.gold, size = "lg", delta, warn }) {
-  const fs = size === "lg" ? 28 : size === "md" ? 22 : 18;
+  const fs = size === "lg" ? 32 : size === "md" ? 26 : 20;
   return (
     <div style={{ ...S.card, flex: 1, minWidth: 150, position: "relative", overflow: "hidden" }}>
       {warn && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${T.red}, ${T.amber})` }} />}
-      <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>{label}</div>
+      <div style={{ color: T.muted, fontSize: 12, fontWeight: 600, letterSpacing: 0.8, marginBottom: 10, textTransform: "uppercase" }}>{label}</div>
       <div style={{ color, fontSize: fs, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ color: T.dim, fontSize: 12, marginTop: 6 }}>{sub}</div>}
+      {sub && <div style={{ color: T.dim, fontSize: 13, marginTop: 6 }}>{sub}</div>}
       {delta != null && <div style={{ color: delta >= 0 ? T.green : T.red, fontSize: 12, marginTop: 6, fontWeight: 600 }}>{delta >= 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(1)}% vs período anterior</div>}
     </div>
   );
@@ -4401,8 +4401,8 @@ export default function App() {
   const [deletingProp, setDeletingProp] = useState(null);
   const [cancelandoProp, setCancelandoProp] = useState(null);
   const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== "undefined") return localStorage.getItem("gb_theme") !== "light";
-    return true;
+    if (typeof window !== "undefined") return localStorage.getItem("gb_theme") === "dark";
+    return false;
   });
   const [themeKey, setThemeKey] = useState(0);
   // Apply theme globally on every render
@@ -4617,9 +4617,9 @@ export default function App() {
   return (
     <React.Fragment key={themeKey}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap');
         *{box-sizing:border-box}
-        body{margin:0;font-family:'Bricolage Grotesque',sans-serif;background:${T.bg};color:${T.text}}
+        body{margin:0;font-family:'Source Sans 3',sans-serif;background:${T.bg};color:${T.text}}
         ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:${T.bg}}::-webkit-scrollbar-thumb{background:${T.border};border-radius:3px}
         select option{background:${T.s2}}
         input::placeholder{color:${T.dim}}
