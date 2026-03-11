@@ -3008,6 +3008,11 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
         <div style={{ ...S.card, border: `1px solid ${naoPagos > 0 ? T.red + "60" : T.border}` }}><div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>NÃO PAGOS</div><div style={{ color: naoPagos > 0 ? T.red : T.green, fontSize: 22, fontWeight: 900 }}>{naoPagos}</div></div>
         <div style={S.card}><div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>PENDENTES</div><div style={{ color: pendentes > 0 ? T.muted : T.green, fontSize: 22, fontWeight: 900 }}>{pendentes}</div></div>
       </div>
+      {imovelOcupado.map(p => (
+        <div key={p.id} style={{ background: "#ff000022", border: "1px solid red", borderRadius: 8, padding: "8px 12px", fontSize: 11, color: T.text, fontFamily: "monospace" }}>
+          DEBUG {p.name} | viaImob={String(p.viaImobiliaria)} | rent={p.rent} | desc={p.descontoAluguel} | adminPct={p.adminPct} | adminRecalc={p.adminRecalc} | condoM={(p.hasCondominio ? (p.fundoReserva||0)+(p.chamadaExtra||0) : 0)} | calcAluguel={calcAluguel(p)}
+        </div>
+      ))}
 
       {/* Lista de imóveis com controle de pagamento */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
