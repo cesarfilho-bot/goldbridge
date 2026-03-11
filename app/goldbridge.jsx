@@ -4427,8 +4427,9 @@ export default function App() {
     loadedRef.current = true;
     (async () => {
       setDbLoading(true);
-      // Get or create portfolio
-      let { data: port } = await supabase.from("portfolios").select("id").eq("user_id", user.id).maybeSingle();
+      // Get or create portfolio — always use the oldest one
+      let { data: ports } = await supabase.from("portfolios").select("id").eq("user_id", user.id).order("created_at").limit(1);
+      let port = ports?.[0] || null;
       if (!port) {
         const { data: newPort, error: createErr } = await supabase.from("portfolios").insert({ user_id: user.id, name: "Meu Portfólio" }).select("id").maybeSingle();
         if (createErr) { console.error("Erro ao criar portfólio:", createErr); setDbLoading(false); return; }
