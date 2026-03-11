@@ -1994,8 +1994,8 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
                             ["Manutenção", fmt.brl((p.maintMonthly||0)*12), "anual"],
                             ["Seguro", fmt.brl(p.insurance||0), "anual"],
                             ["Adm.", fmt.brl((p.admin||0)*12), "anual"],
-                            ...(condoPagoProprietario ? [["Condomínio", fmt.brl(condoAnnual), "anual"]] : []),
-                            ...(p.hasCondominio && !condoPagoProprietario ? [["Cond. (inquilino)", "—", ""]] : []),
+                            ...(condoAnnual > 0 ? [["Fundo/Chamada", fmt.brl(condoAnnual), "anual"]] : []),
+                            ...(p.hasCondominio ? [["Cond. (inquilino)", "—", ""]] : []),
                           ].map(([label, value, sub]) => (
                             <div key={label} style={{ background: T.s2, padding: "8px 14px", borderRadius: 8 }}>
                               <div style={{ color: T.dim, fontSize: 10, marginBottom: 2 }}>{label}</div>
