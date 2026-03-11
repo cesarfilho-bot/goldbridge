@@ -12,26 +12,27 @@ import {
 } from "recharts";
 
 const DARK_T = {
-  bg: "#08090D", s0: "#0E1018", s1: "#141720", s2: "#1C2030", s3: "#232840",
-  border: "#1E2235", borderMid: "#2A3050", gold: "#C8A84B", goldBright: "#E5C96A",
-  goldDim: "#6B5A28", goldGlow: "#C8A84B33", text: "#EDF0F8", muted: "#7A82A0",
-  dim: "#404868", green: "#2ECC9A", greenDim: "#1A7A5C", red: "#E85565",
-  redDim: "#7A2230", amber: "#F5A623", amberDim: "#7A5212", blue: "#4A8CF5",
+  bg: "#09112B", s0: "#0D1835", s1: "#111F40", s2: "#162650", s3: "#1C2E60",
+  border: "#243558", borderMid: "#2D4570", gold: "#4A80C8", goldBright: "#6A9FE0",
+  goldDim: "#1B3060", goldGlow: "#4A80C833", text: "#E8EEF6", muted: "#7A98C0",
+  dim: "#3A5070", green: "#2ECC9A", greenDim: "#1A7A5C", red: "#E85565",
+  redDim: "#7A2230", amber: "#F5A623", amberDim: "#7A5212", blue: "#5A9FFF",
   blueDim: "#1E3D7A", teal: "#2EC4B6",
 };
 const LIGHT_T = {
-  bg: "#F4F5F7", s0: "#FFFFFF", s1: "#FFFFFF", s2: "#F0F1F5", s3: "#E4E6ED",
-  border: "#D8DAE5", borderMid: "#C4C8D8", gold: "#9A7A28", goldBright: "#B8930A",
-  goldDim: "#D4B96A", goldGlow: "#C8A84B22", text: "#0E1018", muted: "#5A6282",
-  dim: "#9AA0BA", green: "#1A9E72", greenDim: "#C8F0E4", red: "#C03045",
-  redDim: "#FAD0D5", amber: "#C07010", amberDim: "#FDE8C0", blue: "#2060D0",
-  blueDim: "#D0E0FF", teal: "#1A9990",
+  bg: "#F2F6FB", s0: "#FFFFFF", s1: "#FFFFFF", s2: "#EBF1F9", s3: "#DDE7F3",
+  border: "#C8D6E8", borderMid: "#A3B8CF", gold: "#1B3A6B", goldBright: "#0F2548",
+  goldDim: "#C2D5ED", goldGlow: "#1B3A6B1A", text: "#1E2D45", muted: "#5C7A9A",
+  dim: "#A0B4C8", green: "#0E7A5A", greenDim: "#D0EEE5", red: "#C0283C",
+  redDim: "#FAD5DA", amber: "#B06810", amberDim: "#FCECD4", blue: "#2B6CB0",
+  blueDim: "#C5DCF5", teal: "#1A7A8A",
 };
-let T = { ...DARK_T };
+let T = { ...LIGHT_T };
 // Initialize theme from localStorage immediately (before first render)
 if (typeof window !== "undefined") {
   const saved = localStorage.getItem("gb_theme");
-  if (saved === "light") Object.assign(T, LIGHT_T);
+  if (saved === "dark") Object.assign(T, DARK_T);
+  else Object.assign(T, LIGHT_T);
 }
 
 function applyTheme(theme) {
@@ -40,7 +41,7 @@ function applyTheme(theme) {
   Object.entries(theme).forEach(([k, v]) => {
     root.style.setProperty(`--t-${k}`, v);
   });
-  root.setAttribute("data-theme", theme === LIGHT_T ? "light" : "dark");
+  root.setAttribute("data-theme", theme.bg === LIGHT_T.bg ? "light" : "dark");
   // Inject global CSS if not already present
   if (!document.getElementById("gb-theme-style")) {
     const style = document.createElement("style");
@@ -4393,8 +4394,8 @@ export default function App() {
   const [deletingProp, setDeletingProp] = useState(null);
   const [cancelandoProp, setCancelandoProp] = useState(null);
   const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== "undefined") return localStorage.getItem("gb_theme") !== "light";
-    return true;
+    if (typeof window !== "undefined") return localStorage.getItem("gb_theme") === "dark";
+    return false;
   });
   const [themeKey, setThemeKey] = useState(0);
   // Apply theme globally on every render

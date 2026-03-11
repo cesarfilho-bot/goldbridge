@@ -1,12 +1,12 @@
 :root {
-  --background: #F7F8FB;
-  --foreground: #0D1B35;
+  --background: #F2F6FB;
+  --foreground: #1E2D45;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #F7F8FB;
-    --foreground: #0D1B35;
+    --background: #09112B;
+    --foreground: #E8EEF6;
   }
 }
 
