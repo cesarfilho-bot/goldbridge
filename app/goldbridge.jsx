@@ -2863,9 +2863,10 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
   const naoPagos = pagMes.filter(p => p.pag?.status === "nao_pago").length;
   const pendentes = pagMes.filter(p => !p.pag).length;
   const calcAluguel = (p) => {
+    // KPI Esperado: com imob = líquido (bruto-desconto-admin); sem imob = aluguel bruto (sem desconto)
     const bruto = p.rent - (p.descontoAluguel||0);
     const adm = p.adminRecalc || Math.round(bruto * ((p.adminPct||8)/100));
-    return p.viaImobiliaria ? bruto - adm : bruto;
+    return p.viaImobiliaria ? bruto - adm : p.rent;
   };
   const totalRecebido = pagMes.filter(p => p.pag?.status === "pago").reduce((s, p) => s + (p.pag?.valor || calcAluguel(p)), 0);
   const totalEsperado = imovelOcupado.reduce((s, p) => s + calcAluguel(p), 0);
@@ -3007,18 +3008,16 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
         {imovelOcupado.length === 0 && <div style={{ ...S.card, textAlign: "center", color: T.muted, padding: 40 }}>Nenhum imóvel ocupado cadastrado.</div>}
         {pagMes.map(p => {
           const status = p.pag?.status;
-          const aluguelBruto = p.rent - (p.descontoAluguel || 0);
+          const aluguelBruto = p.rent - (p.descontoAluguel || 0); // rent - desconto
           const adminMensal = p.adminRecalc || Math.round(aluguelBruto * ((p.adminPct||8)/100));
-          // Com imobiliária: proprietário recebe aluguel já líquido (bruto - admin)
-          // Sem imobiliária: recebe aluguel bruto - desconto; despesas são separadas no fluxo
-          const aluguelRecebido = p.viaImobiliaria ? aluguelBruto - adminMensal : aluguelBruto;
-          // Despesas mensais apenas para imóveis sem imobiliária
           const iptuMensal = Math.round((p.iptu||0) / (p.iptuParcelas||10));
           const maintM = p.maintMonthly || 0;
           const seguroM = Math.round((p.insurance||0)/12);
           const condoM = p.hasCondominio ? ((p.fundoReserva||0)+(p.chamadaExtra||0)) : 0;
-          const despMensalTotal = !p.viaImobiliaria ? Math.round(iptuMensal + maintM + seguroM + condoM) : 0;
-          const saldoMensal = aluguelRecebido - despMensalTotal;
+          // Com imobiliária: o que cai no bolso = aluguel bruto - todas as despesas (admin já inclusa pela imob.)
+          // Sem imobiliária: mostra apenas aluguel - desconto; fluxo cuida do resto
+          const todasDespesas = adminMensal + iptuMensal + maintM + seguroM + condoM;
+          const bolsoBruto = p.viaImobiliaria ? aluguelBruto - todasDespesas : aluguelBruto;
           const borderC = status === "pago" ? T.green + "40" : status === "atrasado" ? T.amber + "40" : status === "nao_pago" ? T.red + "40" : T.border;
           return (
             <div key={p.id} style={{ background: T.s1, border: `1px solid ${borderC}`, borderRadius: 14, padding: "16px 20px" }}>
@@ -3027,17 +3026,11 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
                   <div style={{ color: T.goldBright, fontWeight: 700, fontSize: 14 }}>{p.name}</div>
                   <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
                     {p.neighborhood} ·{" "}
-                    {p.viaImobiliaria ? (
-                      <span>
-                        <span style={{ color: T.green, fontWeight: 700, ...S.mono }}>{fmt.brl(aluguelRecebido)}</span>
-                        <span style={{ color: T.dim, fontSize: 10, marginLeft: 6 }}>líquido · bruto {fmt.brl(aluguelBruto)} − adm. {fmt.brl(adminMensal)}</span>
-                      </span>
-                    ) : (
-                      <span>
-                        <span style={{ color: T.text, fontWeight: 700, ...S.mono }}>{fmt.brl(aluguelRecebido)}</span>
-                        {(p.descontoAluguel||0) > 0 && <span style={{ color: T.dim, fontSize: 10, marginLeft: 6 }}>bruto {fmt.brl(p.rent)} − desc. {fmt.brl(p.descontoAluguel)}</span>}
-                      </span>
-                    )}
+                    <span style={{ color: p.viaImobiliaria ? T.green : T.text, fontWeight: 700, ...S.mono }}>{fmt.brl(bolsoBruto)}/mês</span>
+                    {p.viaImobiliaria
+                      ? <span style={{ color: T.dim, fontSize: 10, marginLeft: 6 }}>no bolso · bruto {fmt.brl(aluguelBruto)}</span>
+                      : (p.descontoAluguel||0) > 0 && <span style={{ color: T.dim, fontSize: 10, marginLeft: 6 }}>bruto {fmt.brl(p.rent)} − desc. {fmt.brl(p.descontoAluguel)}</span>
+                    }
                   </div>
                   {p.proximoReajuste && <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>Próximo reajuste: {p.proximoReajuste}</div>}
                 </div>
@@ -3049,17 +3042,18 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
                   <button style={{ background: "transparent", border: `1px solid ${T.border}`, color: T.muted, borderRadius: 8, padding: "7px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }} onClick={() => setDetalheProp(p)}>Histórico →</button>
                 </div>
               </div>
-              {/* Sem imobiliária: mostra despesas mensais e saldo líquido */}
-              {!p.viaImobiliaria && despMensalTotal > 0 && (
+              {/* Com imobiliária: breakdown de todas as despesas */}
+              {p.viaImobiliaria && (
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.border}`, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                  <div style={{ color: T.dim, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginRight: 4 }}>DESPESAS:</div>
-                  {iptuMensal > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>IPTU </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl(iptuMensal)}</span><span style={{ color: T.green, fontSize: 10 }}> ↩</span></div>}
+                  <div style={{ color: T.dim, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginRight: 4 }}>DEDUÇÕES:</div>
+                  <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>Adm. </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl(adminMensal)}</span></div>
+                  {iptuMensal > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>IPTU </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl(iptuMensal)}</span></div>}
                   {maintM > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>Manutenção </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl(maintM)}</span></div>}
                   {seguroM > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>Seguro </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl(seguroM)}</span></div>}
-                  {condoM > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>Fundo/Chamada </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl(condoM)}</span></div>}
-                  <div style={{ marginLeft: "auto", background: saldoMensal >= 0 ? T.green+"22" : T.red+"22", borderRadius: 6, padding: "4px 12px", border: `1px solid ${saldoMensal >= 0 ? T.green : T.red}40` }}>
-                    <span style={{ color: T.dim, fontSize: 10 }}>Saldo líq. </span>
-                    <span style={{ color: saldoMensal >= 0 ? T.green : T.red, fontSize: 13, fontWeight: 800, ...S.mono }}>{fmt.brl(saldoMensal)}</span>
+                  {condoM > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>Fundo/Cond. </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl(condoM)}</span></div>}
+                  <div style={{ marginLeft: "auto", background: bolsoBruto >= 0 ? T.green+"22" : T.red+"22", borderRadius: 6, padding: "4px 12px", border: `1px solid ${bolsoBruto >= 0 ? T.green : T.red}40` }}>
+                    <span style={{ color: T.dim, fontSize: 10 }}>No bolso </span>
+                    <span style={{ color: bolsoBruto >= 0 ? T.green : T.red, fontSize: 13, fontWeight: 800, ...S.mono }}>{fmt.brl(bolsoBruto)}</span>
                   </div>
                 </div>
               )}
@@ -3285,49 +3279,58 @@ function PageFluxoCaixa({ PROPS }) {
   const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
   const MESES_FULL = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
-  // Fluxo de caixa: IPTU pode ser pago à vista pelo proprietário e restituído pelo inquilino parcelado
-  // iptuCompetencia = ano de competência (string). Se == ano selecionado:
-  //   Mês 0 (Janeiro): saída = iptu total (à vista) ou parcela × número de parcelas do mês
-  //   Meses seguintes: entrada de restituição parcelada pelo inquilino (se inquilino paga IPTU)
-  // Se proprietário arca com IPTU: sai no mês 0 e parcela ao longo do ano como despesa
-  // Simplificação atual: IPTU dividido por iptuParcelas distribuído uniformemente nos meses
+  // Fluxo de caixa:
+  // - Aluguel bruto (rent - desconto) entra como receita; admin sai como despesa separada
+  // - IPTU competência cadastrada: pago em Janeiro se 1 parcela, ou distribuído nos primeiros N meses
+  //   Restituição pelo inquilino: mesma distribuição
+  // - IPTU sem competência: distribui mensalmente
   const fluxo = MESES.map((mes, i) => {
     const dataRef = new Date(ano, i, 1);
     const chave = `${ano}_${i}`;
-    let entradaAluguel = 0, entradaIPTU = 0, saidaIPTU = 0, saidaMaint = 0, saidaAdmin = 0, saidaCondo = 0, inadimplentes = 0;
+    let entradaAluguel = 0, entradaIPTU = 0, saidaIPTU = 0, saidaMaint = 0, saidaSeguro = 0, saidaAdmin = 0, saidaCondo = 0, inadimplentes = 0;
     PROPS.forEach(p => {
-      const aluguelBruto = p.rent - (p.descontoAluguel||0);
+      const aluguelBruto = p.rent - (p.descontoAluguel||0); // o que entra antes das despesas
       const adminMensal = p.adminRecalc || Math.round(aluguelBruto * ((p.adminPct||8)/100));
-      const aluguelLiq = p.viaImobiliaria ? aluguelBruto - adminMensal : aluguelBruto;
 
       if (p.status === "Ocupado") {
         const pag = p.pagamentos?.[chave];
-        if (pag?.status === "pago") entradaAluguel += pag.valor || aluguelLiq;
-        else if (pag?.status === "atrasado") inadimplentes += aluguelLiq;
-        else if (dataRef < hoje) inadimplentes += aluguelLiq;
+        // Entrada = aluguel bruto (sem deduzir nada — admin vai na coluna saidaAdmin)
+        if (pag?.status === "pago") entradaAluguel += aluguelBruto;
+        else if (pag?.status === "atrasado") inadimplentes += aluguelBruto;
+        else if (dataRef < hoje) inadimplentes += aluguelBruto;
       }
 
-      // IPTU: proprietário paga em dezembro; inquilino restitui parcelado
+      // IPTU: proprietário paga em Janeiro (1 parcela) ou distribuído nos primeiros N meses
+      // Restituição pelo inquilino: mesma distribuição
       const iptu = p.iptu || 0;
       const parcelas = p.iptuParcelas || 10;
       const competencia = p.iptuVencimento ? parseInt(p.iptuVencimento) : null;
       if (iptu > 0 && competencia === ano) {
-        if (i === 11) saidaIPTU += iptu;
-        if (p.status === "Ocupado" && i < parcelas) entradaIPTU += Math.round(iptu / parcelas);
+        if (parcelas === 1) {
+          // Paga tudo em Janeiro
+          if (i === 0) saidaIPTU += iptu;
+          if (p.status === "Ocupado" && i === 0) entradaIPTU += iptu;
+        } else {
+          // Distribuído nos primeiros N meses a partir de Janeiro
+          if (i < parcelas) saidaIPTU += Math.round(iptu / parcelas);
+          if (p.status === "Ocupado" && i < parcelas) entradaIPTU += Math.round(iptu / parcelas);
+        }
       } else if (iptu > 0 && !competencia) {
         saidaIPTU += Math.round(iptu / 12);
         if (p.status === "Ocupado") entradaIPTU += Math.round(iptu / 12);
       }
 
-      // Outras despesas mensais
-      saidaMaint += Math.round((p.maintMonthly||0) + (p.insurance||0)/12);
-      saidaAdmin += p.viaImobiliaria ? 0 : adminMensal; // já descontado no aluguel se via imob.
+      // Admin: sempre despesa do proprietário (coluna separada)
+      saidaAdmin += adminMensal;
+      // Manutenção e seguro separados
+      saidaMaint += p.maintMonthly || 0;
+      saidaSeguro += Math.round((p.insurance||0)/12);
       saidaCondo += p.hasCondominio ? ((p.fundoReserva||0) + (p.chamadaExtra||0)) : 0;
     });
     const entradas = entradaAluguel + entradaIPTU;
-    const saidas = saidaIPTU + saidaMaint + saidaAdmin + saidaCondo;
+    const saidas = saidaIPTU + saidaMaint + saidaSeguro + saidaAdmin + saidaCondo;
     const saldo = entradas - saidas;
-    return { mes, mesNum: i, entradas, saidas, saldo, inadimplentes, entradaAluguel, entradaIPTU, saidaIPTU, saidaMaint, saidaAdmin, saidaCondo };
+    return { mes, mesNum: i, entradas, saidas, saldo, inadimplentes, entradaAluguel, entradaIPTU, saidaIPTU, saidaMaint, saidaSeguro, saidaAdmin, saidaCondo };
   });
 
   const totalEntradas = fluxo.reduce((s, m) => s + m.entradas, 0);
@@ -3421,7 +3424,6 @@ function PageFluxoCaixa({ PROPS }) {
           <tbody>
             {fluxo.map((m, i) => {
               const isFuture = new Date(ano, m.mesNum, 1) > hoje;
-              const seguroM = Math.round(PROPS.reduce((s,p) => s+(p.insurance||0)/12, 0));
               return (
                 <tr key={m.mes} style={{ opacity: isFuture ? 0.5 : 1, fontSize: 11 }} onMouseEnter={e => e.currentTarget.style.background = T.s2} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                   <td style={{ ...S.td, fontWeight: 700, fontSize: 12 }}>{MESES_FULL[i].slice(0,3)}{isFuture && <span style={{ color: T.dim, fontSize: 9, marginLeft: 4 }}>prev.</span>}</td>
@@ -3429,7 +3431,7 @@ function PageFluxoCaixa({ PROPS }) {
                   <td style={{ ...S.td, ...S.mono, color: T.teal, fontSize: 11 }}>{m.entradaIPTU > 0 ? <span title="IPTU restituído pelo inquilino">+{fmt.brl(m.entradaIPTU)}</span> : <span style={{color:T.dim}}>—</span>}</td>
                   <td style={{ ...S.td, ...S.mono, color: T.green, fontWeight: 700 }}>{fmt.brl(m.entradas)}</td>
                   <td style={{ ...S.td, ...S.mono, color: T.amber, fontSize: 11 }}>{m.saidaMaint > 0 ? fmt.brl(m.saidaMaint) : <span style={{color:T.dim}}>—</span>}</td>
-                  <td style={{ ...S.td, ...S.mono, color: T.amber, fontSize: 11 }}>{seguroM > 0 ? fmt.brl(seguroM) : <span style={{color:T.dim}}>—</span>}</td>
+                  <td style={{ ...S.td, ...S.mono, color: T.amber, fontSize: 11 }}>{m.saidaSeguro > 0 ? fmt.brl(m.saidaSeguro) : <span style={{color:T.dim}}>—</span>}</td>
                   <td style={{ ...S.td, ...S.mono, color: T.amber, fontSize: 11 }}>{m.saidaAdmin > 0 ? fmt.brl(m.saidaAdmin) : <span style={{color:T.dim}}>—</span>}</td>
                   <td style={{ ...S.td, ...S.mono, color: m.saidaIPTU > 0 ? T.red : T.dim, fontWeight: m.saidaIPTU > 0 ? 700 : 400, fontSize: 11 }}>{m.saidaIPTU > 0 ? fmt.brl(m.saidaIPTU) : "—"}</td>
                   <td style={{ ...S.td, ...S.mono, color: T.amber, fontSize: 11 }}>{m.saidaCondo > 0 ? fmt.brl(m.saidaCondo) : <span style={{color:T.dim}}>—</span>}</td>
@@ -3447,7 +3449,7 @@ function PageFluxoCaixa({ PROPS }) {
               <td style={{ ...S.td, ...S.mono, color: T.teal, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.entradaIPTU,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.green, fontWeight: 800 }}>{fmt.brl(totalEntradas)}</td>
               <td style={{ ...S.td, ...S.mono, color: T.amber, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.saidaMaint,0))}</td>
-              <td style={{ ...S.td, ...S.mono, color: T.amber, fontWeight: 800 }}>{fmt.brl(Math.round(PROPS.reduce((s,p)=>s+(p.insurance||0),0)))}</td>
+              <td style={{ ...S.td, ...S.mono, color: T.amber, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.saidaSeguro,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.amber, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.saidaAdmin,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.red, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.saidaIPTU,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.amber, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.saidaCondo,0))}</td>
