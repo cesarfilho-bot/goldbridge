@@ -442,7 +442,8 @@ function buildPortfolio() {
     const mainMultiplier = isProblematic ? rng() * 0.8 + 1.4 : rng() * 0.5 + 0.7;
     const maintMonthly = Math.round((bm.maintenance_annual_m2 * size / 12) * mainMultiplier);
     const insurance = Math.round(rent * 0.025 * 12);
-    const admin = Math.round(rent * 0.08);
+    const descontoBase = prop.descontoAluguel || 0;
+  const admin = Math.round((rent - descontoBase) * 0.08);
     const vacancyDays = isProblematic ? ri(45, 140) : ri(0, bm.vacancy_days);
     const status = vacancyDays > 60 ? "Vago" : (rng() > 0.12 ? "Ocupado" : "Vago");
     const annualRent = rent * 12;
@@ -738,7 +739,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
     if (noiPct < 0.5) leakage += 20;
     leakage = Math.min(98, Math.max(2, Math.round(leakage)));
     const proximoReajuste = form.contratoInicio ? (() => { const d = new Date(form.contratoInicio); const now = new Date(); let y = now.getFullYear(); if (new Date(y, d.getMonth(), d.getDate()) <= now) y++; return new Date(y, d.getMonth(), d.getDate()).toLocaleDateString("pt-BR"); })() : "";
-    const adminFromPct = Math.round(Number(form.rent) * (Number(form.adminPct)||0) / 100);
+    const adminFromPct = Math.round((Number(form.rent) - (Number(form.descontoAluguel)||0)) * (Number(form.adminPct)||0) / 100);
     onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: adminFromPct, adminPct: Number(form.adminPct), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, iptuParcelas: Number(form.iptuParcelas)||10, iptuParcelas: Number(form.iptuParcelas)||10, viaImobiliaria: form.viaImobiliaria, locatarioNome: form.viaImobiliaria ? "" : form.locatarioNome, locatarioCPF: form.viaImobiliaria ? "" : form.locatarioCPF, locatarioTelefone: form.viaImobiliaria ? "" : form.locatarioTelefone, locatarioEmail: form.viaImobiliaria ? "" : form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
   };
 
@@ -3580,7 +3581,8 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
     const size = parseFloat(form.size) || 0;
     const rent = alugado ? (parseFloat(form.rent) || 0) : 0;
     const adminPct = form.adminPct !== "" ? (parseFloat(form.adminPct) || 0) : 8;
-    const admin = Math.round(rent * adminPct / 100);
+    const descontoAluguel = parseFloat(form.descontoAluguel) || 0;
+    const admin = Math.round((rent - descontoAluguel) * adminPct / 100);
     const iptu = form.iptu !== "" ? (parseFloat(form.iptu) || 0) : Math.round(bm.iptu_m2 * size);
     const maintMonthly = form.maintMonthly !== "" ? (parseFloat(form.maintMonthly) || 0) : Math.round(bm.maintenance_annual_m2 * size / 12);
     const insurance = form.insurance !== "" ? (parseFloat(form.insurance) || 0) : Math.round(rent * 0.025 * 12);
@@ -4130,11 +4132,15 @@ function recalcProp(prop, BENCHMARKS) {
   // Condomínio só entra nas despesas se pago pelo proprietário
   const condoPagoProprietario = prop.hasCondominio && (prop.condoPagoPor || "proprietario") === "proprietario";
   const condoAnnual = prop.hasCondominio ? ((condoPagoProprietario ? (prop.condoFee||0) : 0) + (prop.fundoReserva||0) + (prop.chamadaExtra||0)) * 12 : 0;
-  const totalExpenses = (prop.iptu||0) + (prop.maintMonthly||0)*12 + (prop.insurance||0) + (prop.admin||0)*12 + condoAnnual;
+  // Admin calculado sobre aluguel líquido (após desconto)
+  const adminRecalc = prop.adminPct != null
+    ? Math.round(((prop.rent||0) - (prop.descontoAluguel||0)) * (prop.adminPct / 100))
+    : (prop.admin || 0);
+  const totalExpenses = (prop.iptu||0) + (prop.maintMonthly||0)*12 + (prop.insurance||0) + adminRecalc*12 + condoAnnual;
   const noi = totalIncome - totalExpenses;
   const noiPct = noi / (totalIncome || 1);
   // IR: deduções PF = admin + IPTU + condomínio pago pelo proprietário
-  const deducoesPF = (prop.admin||0)*12 + (prop.iptu||0) + condoAnnual;
+  const deducoesPF = adminRecalc*12 + (prop.iptu||0) + condoAnnual;
   const ir = calcIR(totalIncome, totalExpenses, prop.regimeFiscal || "PF", deducoesPF);
   const lucroLiquido = noi - ir;
   const lucroLiquidoPct = lucroLiquido / (totalIncome || 1);
