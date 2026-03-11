@@ -4492,10 +4492,11 @@ export default function App() {
   }, []);
 
   const handleAddImovel = async (newProp) => {
-    if (!portfolioId || !user) { setAddingImovel(false); return; }
+    if (!portfolioId || !user) { alert("portfolioId=" + portfolioId + " user=" + (user?.id||"null")); setAddingImovel(false); return; }
     const dbData = toDB({ ...newProp, avaliacoes: newProp.avaliacoes||[] });
+    console.log("Inserting with portfolio_id:", dbData.portfolio_id, "user_id:", dbData.user_id);
     const { data, error } = await supabase.from("imoveis").insert(dbData).select().single();
-    if (error) { console.error("Erro ao adicionar imóvel:", error); alert("Erro ao salvar: " + error.message); setAddingImovel(false); return; }
+    if (error) { console.error("Erro ao adicionar imóvel:", error); alert("Erro ao salvar: " + error.message + " | portfolio_id=" + dbData.portfolio_id); setAddingImovel(false); return; }
     if (data) {
       const withId = recalcProp({ ...newProp, id: data.id }, BENCHMARKS);
       setPropsRaw(prev => [...prev, withId]);
