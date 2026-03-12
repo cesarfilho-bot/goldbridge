@@ -1918,13 +1918,22 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
           <ResponsiveContainer width="100%" height={160}>
             <PieChart><Pie data={costBreakdown} cx="50%" cy="50%" innerRadius={44} outerRadius={70} dataKey="value" paddingAngle={4}>{costBreakdown.map((e, i) => <Cell key={i} fill={e.color} />)}</Pie><Tooltip formatter={v => fmt.brl(v)} /></PieChart>
           </ResponsiveContainer>
-          <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 8 }}>
-            {costBreakdown.map(c => (
-              <div key={c.name} style={{ display: "flex", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}><div style={{ width: 7, height: 7, borderRadius: 2, background: c.color }} /><span style={{ color: T.muted, fontSize: 11 }}>{c.name}</span></div>
-                <span style={{ color: T.text, fontSize: 11, ...S.mono }}>{fmt.brlK(c.value)}</span>
-              </div>
-            ))}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+            {costBreakdown.filter(c => c.value > 0).map(c => {
+              const mensal = Math.round(c.value / 12);
+              return (
+                <div key={c.name} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 7, height: 7, borderRadius: 2, background: c.color }} />
+                    <span style={{ color: T.muted, fontSize: 11 }}>{c.name}</span>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ color: T.text, fontSize: 12, fontWeight: 700, ...S.mono }}>{fmt.brl(mensal)}/mês</div>
+                    <div style={{ color: T.dim, fontSize: 10, ...S.mono }}>{fmt.brlK(c.value)}/ano</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -3529,10 +3538,12 @@ function PageFluxoCaixa({ PROPS }) {
 
 // ─── NAV ──────────────────────────────────────────────────────────────────────
 const NAV = [
-  { id: "dashboard",  label: "Visão Geral",   icon: "◈" },
-  { id: "noi",        label: "Imóveis",        icon: "⊞" },
-  { id: "pagamentos", label: "Pagamentos",      icon: "" },
-  { id: "fluxo",      label: "Fluxo de Caixa", icon: "" },
+  { id: "dashboard",  label: "Visão Geral",      icon: "◈" },
+  { id: "noi",        label: "Imóveis",           icon: "⊞" },
+  { id: "pagamentos", label: "Pagamentos",         icon: "" },
+  { id: "fluxo",      label: "Fluxo de Caixa",    icon: "" },
+  { id: "mercado",    label: "Valor da Carteira",  icon: "🏦" },
+  { id: "leakage",    label: "Alertas",            icon: "◎" },
 ];
 
 // ─── PAGE HISTÓRICO DO IMÓVEL ─────────────────────────────────────────────────
