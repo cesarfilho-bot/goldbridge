@@ -3165,11 +3165,12 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
           const iptuMensal = Math.round((p.iptu||0) / (p.iptuParcelas||10));
           const maintM = p.maintMonthly || 0;
           const seguroM = Math.round((p.insurance||0)/12);
-          const condoM = p.hasCondominio ? ((p.fundoReserva||0)+(p.chamadaExtra||0)) : 0;
-          // Com imobiliária: o que cai no bolso = aluguel bruto - todas as despesas (admin já inclusa pela imob.)
-          // Sem imobiliária: mostra apenas aluguel - desconto; fluxo cuida do resto
-          const todasDespesas = adminMensal + iptuMensal + maintM + seguroM + condoM;
-          const bolsoBruto = p.viaImobiliaria ? aluguelBruto - todasDespesas : aluguelBruto;
+          const condoM = (p.fundoReserva||0) + (p.chamadaExtra||0);
+          // Com imobiliária: bolso = bruto - adm - fundo/chamada + iptu (inquilino paga, imob. repassa)
+          // Sem imobiliária: apenas aluguel - desconto
+          const bolsoBruto = p.viaImobiliaria
+            ? aluguelBruto - adminMensal - condoM + iptuMensal
+            : aluguelBruto;
           const borderC = status === "pago" ? T.green + "40" : status === "atrasado" ? T.amber + "40" : status === "nao_pago" ? T.red + "40" : T.border;
           return (
             <div key={p.id} style={{ background: T.s1, border: `1px solid ${borderC}`, borderRadius: 14, padding: "16px 20px" }}>
