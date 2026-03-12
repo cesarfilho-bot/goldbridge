@@ -655,6 +655,7 @@ function BenchmarkBar({ label, value, benchmark, unit = "", delta }) {
 // ─── EDIT MODAL ──────────────────────────────────────────────────────────────
 function EditModal({ prop, onSave, onClose, userId }) {
   const [editTab, setEditTab] = useState("dados"); // "dados" | "documentos"
+  const [showValorSection, setShowValorSection] = useState(!!(prop.marketValueManual));
   const [docs, setDocs] = useState(prop.documentos || []);
   const [docUploading, setDocUploading] = useState(false);
   const [docMsg, setDocMsg] = useState("");
@@ -691,7 +692,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
   };
   const [form, setForm] = useState({
     name: prop.name || "", address: prop.address || "", neighborhood: prop.neighborhood || "",
-    city: prop.city || "Americana", type: prop.type || "Residencial", status: prop.status || "Ocupado", size: prop.size ?? 0,
+    city: prop.city || "Americana", type: prop.type || "Apartamento", status: prop.status || "Ocupado", size: prop.size ?? 0,
     rent: prop.rent ?? 0, iptu: prop.iptu ?? 0, maintMonthly: prop.maintMonthly ?? 0,
     insurance: prop.insurance ?? 0, admin: prop.admin ?? 0, vacancyDays: prop.vacancyDays ?? 0,
     adminPct: prop.adminPct != null ? prop.adminPct : 8,
@@ -798,8 +799,8 @@ function EditModal({ prop, onSave, onClose, userId }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div style={{ gridColumn: "1/-1" }}><div><label style={S.label}>NOME</label><input style={S.input} value={form.name} onChange={e=>set("name",e.target.value)} /></div></div>
               <div style={{ gridColumn: "1/-1" }}><div><label style={S.label}>ENDEREÇO</label><input style={S.input} value={form.address} onChange={e=>set("address",e.target.value)} /></div></div>
-              <div><label style={S.label}>BAIRRO</label><NeighborhoodSearch city={form.city} value={form.neighborhood} onChange={v=>set("neighborhood",v)} /></div>
               <div><label style={S.label}>CIDADE</label><select style={S.sel} value={form.city} onChange={e=>set("city",e.target.value)}>{["São Paulo","Campinas","Santo André","Americana"].map(o=><option key={o}>{o}</option>)}</select></div>
+              <div><label style={S.label}>BAIRRO</label><NeighborhoodSearch city={form.city} value={form.neighborhood} onChange={v=>set("neighborhood",v)} /></div>
               <div><label style={S.label}>TIPO</label><select style={S.sel} value={form.type} onChange={e=>set("type",e.target.value)}>{["Apartamento","Casa","Terreno","Comercial","Sala Comercial","Galpão/Industrial","Studio/Kitnet"].map(o=><option key={o}>{o}</option>)}</select></div>
               <div><label style={S.label}>STATUS</label><select style={S.sel} value={form.status} onChange={e=>set("status",e.target.value)}>{["Ocupado","Em desocupação","Vago"].map(o=><option key={o}>{o}</option>)}</select></div>
               <div><label style={S.label}>ÁREA (m²)</label><input type="number" style={S.input} value={form.size} onChange={e=>set("size",e.target.value)} /></div>
@@ -822,7 +823,6 @@ function EditModal({ prop, onSave, onClose, userId }) {
                 {form.rent && <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>= {new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Math.round((parseFloat(form.rent)||0)*(parseFloat(form.adminPct)||0)/100))}/mês</div>}
               </div>
               <div><label style={S.label}>DIAS DE VACÂNCIA/ANO</label><input type="number" style={S.input} value={form.vacancyDays} onChange={e=>set("vacancyDays",e.target.value)} /></div>
-              <div><label style={S.label}>VALOR DE MERCADO MANUAL (R$)</label><input type="number" style={S.input} value={form.marketValueManual} onChange={e=>set("marketValueManual",e.target.value)} /></div>
             </div>
           </div>
           <div>
@@ -867,6 +867,18 @@ function EditModal({ prop, onSave, onClose, userId }) {
                   </div>
                 </div>
 
+              </div>
+            )}
+          </div>
+          <div>
+            <button style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: `1px solid ${T.border}`, borderRadius: 8, padding: "10px 14px", cursor: "pointer", color: T.muted, fontSize: 12, fontFamily: "inherit", width: "100%" }} onClick={() => setShowValorSection(v => !v)}>
+              <span style={{ color: T.gold, fontWeight: 700 }}>Informações de valor</span>
+              <span style={{ color: T.dim, fontWeight: 400 }}>(opcional)</span>
+              <span style={{ marginLeft: "auto" }}>{showValorSection ? "▲" : "▼"}</span>
+            </button>
+            {showValorSection && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                <div><label style={S.label}>VALOR DE MERCADO (R$)</label><input type="number" style={S.input} value={form.marketValueManual} placeholder="Ex: 650.000" onChange={e=>set("marketValueManual",e.target.value)} /></div>
               </div>
             )}
           </div>
@@ -1838,9 +1850,39 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
       </div>
 
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-        <KPI label="Receita Bruta" value={fmt.brlK(PORT.receita)} sub="últimos 12 meses" />
-        <KPI label="Lucro Líquido" value={fmt.brlK(PORT.lucroLiquido||PORT.noi)} sub={`Margem: ${fmt.pct(PORT.lucroLiquidoPct||PORT.noiPct)}`} color={T.green} delta={3.2} />
-        <KPI label="Custo Vacância" value={fmt.brlK(PORT.vacancyCost)} color={T.amber} sub={`${PROPS.filter(p => p.status === "Vago").length} imóveis vagos · /mês`} warn />
+        {(() => {
+          const receitaAnual = PROPS.filter(p => p.status === "Ocupado").reduce((s, p) => s + (p.rent - (p.descontoAluguel||0)) * 12, 0);
+          const receitaMensal = Math.round(receitaAnual / 12);
+          return (
+            <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
+              <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Receita Bruta</div>
+              <div style={{ color: T.gold, fontSize: 26, fontWeight: 800, ...S.mono, lineHeight: 1 }}>{fmt.brl(receitaMensal)}<span style={{ fontSize: 13, fontWeight: 500, marginLeft: 4 }}>/mês</span></div>
+              <div style={{ color: T.dim, fontSize: 12, marginTop: 6 }}>{fmt.brlK(receitaAnual)}/ano</div>
+            </div>
+          );
+        })()}
+        {(() => {
+          const lucroMensal = PROPS.reduce((s, p) => s + (p.aluguelLiquido || 0), 0);
+          const lucroAnual = lucroMensal * 12;
+          return (
+            <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
+              <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Lucro Líquido</div>
+              <div style={{ color: lucroMensal >= 0 ? T.green : T.red, fontSize: 26, fontWeight: 800, ...S.mono, lineHeight: 1 }}>{fmt.brl(lucroMensal)}<span style={{ fontSize: 13, fontWeight: 500, marginLeft: 4 }}>/mês</span></div>
+              <div style={{ color: T.dim, fontSize: 12, marginTop: 6 }}>{fmt.brlK(lucroAnual)}/ano · margem {fmt.pct(PORT.lucroLiquidoPct||PORT.noiPct)}</div>
+            </div>
+          );
+        })()}
+        {(() => {
+          const vagos = PROPS.filter(p => p.status === "Vago").length;
+          return (
+            <div style={{ ...S.card, flex: 1, minWidth: 150, position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${T.red}, ${T.amber})` }} />
+              <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Custo Vacância</div>
+              <div style={{ color: T.amber, fontSize: 26, fontWeight: 800, ...S.mono, lineHeight: 1 }}>{fmt.brl(PORT.vacancyCost)}<span style={{ fontSize: 13, fontWeight: 500, marginLeft: 4 }}>/mês</span></div>
+              <div style={{ color: T.dim, fontSize: 12, marginTop: 6 }}>{fmt.brlK(PORT.vacancyCost * 12)}/ano · {vagos} imóvel(is) vago(s)</div>
+            </div>
+          );
+        })()}
         {(() => {
           const comVM = PROPS.filter(p => (p.valorMercado||0) > 0);
           const totalVM = comVM.reduce((s,p) => s+(p.valorMercado||0), 0);
@@ -3633,6 +3675,7 @@ function PageHistorico({ PROPS, onUpdateProps }) {
 function AddImovelModal({ onSave, onClose, nextId, userId }) {
   const NEIGHBORHOODS = Object.keys(FIPEZAP_M2).filter(k => !k.startsWith("_default")).sort((a,b) => a.localeCompare(b, "pt-BR"));
   const [tab, setTab] = useState("manual"); // "manual" | "pdf"
+  const [showValorSection, setShowValorSection] = useState(false);
   const [pdfFile, setPdfFile] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfMsg, setPdfMsg] = useState("");
@@ -3847,14 +3890,14 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
                 <input style={S.input} value={form.address} placeholder="Ex: Rua Oscar Freire, 1200" onChange={e=>set("address",e.target.value)} />
               </div>
               <div>
-                <label style={S.label}>BAIRRO</label>
-                <NeighborhoodSearch city={form.city} value={form.neighborhood} onChange={v=>set("neighborhood",v)} />
-              </div>
-              <div>
                 <label style={S.label}>CIDADE</label>
                 <select style={S.sel} value={form.city} onChange={e=>set("city",e.target.value)}>
                   {["São Paulo","Campinas","Santo André","Americana"].map(o=><option key={o}>{o}</option>)}
                 </select>
+              </div>
+              <div>
+                <label style={S.label}>BAIRRO</label>
+                <NeighborhoodSearch city={form.city} value={form.neighborhood} onChange={v=>set("neighborhood",v)} />
               </div>
               <div>
                 <label style={S.label}>TIPO</label>
@@ -3865,14 +3908,6 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
               <div>
                 <label style={S.label}>ÁREA (m²)</label>
                 <input type="number" style={S.input} value={form.size} placeholder="Ex: 85" onChange={e=>set("size",e.target.value)} />
-              </div>
-              <div>
-                <label style={S.label}>VALOR DE COMPRA (R$)</label>
-                <input type="number" style={S.input} value={form.valorCompra} placeholder="Ex: 500.000" onChange={e=>set("valorCompra",e.target.value)} />
-              </div>
-              <div>
-                <label style={S.label}>VALOR DE MERCADO ATUAL (R$)</label>
-                <input type="number" style={S.input} value={form.valorMercado} placeholder="Ex: 650.000" onChange={e=>set("valorMercado",e.target.value)} />
               </div>
               <div>
                 <label style={S.label}>IPTU ANUAL (R$)</label>
@@ -3893,6 +3928,26 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
                 <label style={S.label}>SEGURO ANUAL (R$)</label>
                 <input type="number" style={S.input} value={form.insurance} placeholder="Automático" onChange={e=>set("insurance",e.target.value)} />
               </div>
+            </div>
+            {/* Collapsible: valor de compra e mercado */}
+            <div style={{ marginTop: 12 }}>
+              <button style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: `1px solid ${T.border}`, borderRadius: 8, padding: "10px 14px", cursor: "pointer", color: T.muted, fontSize: 12, fontFamily: "inherit", width: "100%" }} onClick={() => setShowValorSection(v => !v)}>
+                <span style={{ color: T.gold, fontWeight: 700 }}>Informações de valor</span>
+                <span style={{ color: T.dim, fontWeight: 400 }}>(opcional)</span>
+                <span style={{ marginLeft: "auto" }}>{showValorSection ? "▲" : "▼"}</span>
+              </button>
+              {showValorSection && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                  <div>
+                    <label style={S.label}>VALOR DE COMPRA (R$)</label>
+                    <input type="number" style={S.input} value={form.valorCompra} placeholder="Ex: 500.000" onChange={e=>set("valorCompra",e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={S.label}>VALOR DE MERCADO ATUAL (R$)</label>
+                    <input type="number" style={S.input} value={form.valorMercado} placeholder="Ex: 650.000" onChange={e=>set("valorMercado",e.target.value)} />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
