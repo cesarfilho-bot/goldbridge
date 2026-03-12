@@ -1951,8 +1951,8 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
           <thead>
             <tr style={{ background: T.s2 }}>
               <Th col="id" label="#" /><th style={S.th}>Imóvel / Endereço</th><th style={S.th}>Tipo</th><th style={S.th}>Status</th>
-              <Th col="rent" label="Aluguel bruto" /><Th col="aluguelLiquido" label="Aluguel líquido" /><Th col="totalExpenses" label="Despesas/ano" /><Th col="ir" label="IR/ano" /><Th col="lucroLiquido" label="Lucro Líquido 12m" /><Th col="noiPct" label="Margem" />
-              <Th col="vacancyDays" label="Vacância" /><Th col="leakage" label="Risco" /><th style={S.th}>Obras</th><th style={S.th}>Ações</th>
+              <Th col="rent" label="Aluguel bruto" /><Th col="totalExpenses" label="Despesas/ano" /><Th col="ir" label="IR/ano" /><Th col="aluguelLiquido" label="Aluguel líquido" /><Th col="lucroLiquido" label="Lucro Líquido 12m" /><Th col="noiPct" label="Margem" />
+              <Th col="vacancyDays" label="Vacância" /><th style={S.th}>Obras</th><th style={S.th}>Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -1971,19 +1971,18 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
                       {fmt.brl(p.rent)}
                       {(p.descontoAluguel||0) > 0 && <div style={{ color:T.dim, fontSize:10 }}>desc. {fmt.brl(p.descontoAluguel)}</div>}
                     </td>
-                    <td style={{ ...S.td, ...S.mono, color: T.green }} onClick={() => { onProp(p); onNav("detail"); }}>
-                      {fmt.brl(p.aluguelLiquido || (p.rent-(p.descontoAluguel||0)))}
-                      {p.viaImobiliaria && <div style={{ color:T.dim, fontSize:10 }}>via imob.</div>}
-                    </td>
                     <td style={{ ...S.td, ...S.mono, cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : p.id)}>
                       <span style={{ color: T.amber, fontWeight: 600 }}>{fmt.brl(p.totalExpenses)}</span>
                       <div style={{ color: T.dim, fontSize: 10 }}>{fmt.brl(Math.round(p.totalExpenses/12))}/mês {isExpanded ? "▲" : "▼"}</div>
                     </td>
                     <td style={{ ...S.td, ...S.mono, color: T.red }} onClick={() => { onProp(p); onNav("detail"); }}>{p.ir > 0 ? fmt.brl(p.ir) : <span style={{ color: T.dim }}>—</span>}</td>
+                    <td style={{ ...S.td, ...S.mono, color: T.green }} onClick={() => { onProp(p); onNav("detail"); }}>
+                      {fmt.brl(p.aluguelLiquido || (p.rent-(p.descontoAluguel||0)))}
+                      {p.viaImobiliaria && <div style={{ color:T.dim, fontSize:10 }}>via imob.</div>}
+                    </td>
                     <td style={{ ...S.td, ...S.mono, color: (p.lucroLiquido||p.noi) > 0 ? T.green : T.red, fontWeight: 700 }} onClick={() => { onProp(p); onNav("detail"); }}>{fmt.brl(p.lucroLiquido||p.noi)}</td>
                     <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={{ color: (p.lucroLiquidoPct||p.noiPct) > 0.45 ? T.green : (p.lucroLiquidoPct||p.noiPct) > 0.3 ? T.amber : T.red, fontSize: 12, fontWeight: 700, ...S.mono }}>{fmt.pct(p.lucroLiquidoPct||p.noiPct)}</span></td>
                     <td style={{ ...S.td, color: p.vacancyDays > p.vacancyBenchmark ? T.amber : T.muted }} onClick={() => { onProp(p); onNav("detail"); }}>{p.vacancyDays}d</td>
-                    <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={{ color: p.leakage > 60 ? T.red : p.leakage > 30 ? T.amber : T.green, fontSize: 13, fontWeight: 800, ...S.mono }}>{p.leakage}</span></td>
                     <td style={S.td}>{obrasCount > 0 ? <span style={S.badge(obrasAtivas > 0 ? T.amber : T.muted)}>🔨 {obrasCount}{obrasAtivas > 0 ? ` (${obrasAtivas} ativ.)` : ""}</span> : <span style={{ color: T.dim, fontSize: 11 }}>—</span>}</td>
                     <td style={S.td}>
                       <div style={{ display: "flex", gap: 6 }}>
@@ -3725,7 +3724,7 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
 
   const [form, setForm] = useState({
     name: "", address: "", neighborhood: "Itaim Bibi", city: "São Paulo",
-    type: "Residencial", status: "Vago", size: "",
+    type: "Apartamento", status: "Vago", size: "",
     iptu: "", maintMonthly: "", insurance: "", valorCompra: "", valorMercado: "",
     iptuVencimento: "",
     iptuParcelas: 10,
@@ -4353,15 +4352,16 @@ function recalcProp(prop, BENCHMARKS) {
   const noi = receitaBruta - totalExpenses;
   const noiPct = noi / (receitaBruta || 1);
 
-  // Receita líquida para imobiliária vs direto
-  const aluguelLiquido = prop.viaImobiliaria
-    ? (prop.rent||0) - (prop.descontoAluguel||0) - adminRecalc  // o que chega no bolso via imobiliária
-    : (prop.rent||0) - (prop.descontoAluguel||0);               // o que entra na conta direto
-
   // IR: deduções PF = admin + IPTU + condomínio pago pelo proprietário
   const deducoesPF = adminRecalc*12 + iptuSaida + condoAnnual;
   const ir = calcIR(receitaBruta, totalExpenses, prop.regimeFiscal || "PF", deducoesPF);
   const lucroLiquido = noi - ir;
+
+  // Aluguel líquido: valor mensal real no bolso após todas as deduções
+  const iptuMensal = (prop.iptu||0) / (prop.iptuParcelas||1);
+  const aluguelLiquido = prop.viaImobiliaria
+    ? (prop.rent||0) - (prop.descontoAluguel||0) - adminRecalc - iptuMensal - (prop.maintMonthly||0) - (prop.insurance||0)/12 - ((prop.fundoReserva||0) + (prop.chamadaExtra||0)) - ir/12
+    : (prop.rent||0) - (prop.descontoAluguel||0) - iptuMensal - (prop.maintMonthly||0) - (prop.insurance||0)/12 - ((prop.fundoReserva||0) + (prop.chamadaExtra||0)) - ir/12;
   const lucroLiquidoPct = lucroLiquido / (receitaBruta || 1);
   const iptuBenchmark = Math.round(bm.iptu_m2 * (prop.size||0));
   const iptuDelta = iptuBenchmark > 0 ? Math.round(((prop.iptu||0) - iptuBenchmark) / iptuBenchmark * 100) : 0;
