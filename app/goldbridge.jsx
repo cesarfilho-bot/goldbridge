@@ -2181,7 +2181,15 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
       </div>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
         <KPI label="Receita 12m" value={fmt.brlK(prop.totalIncome)} size="md" />
-        <KPI label="Despesas 12m" value={fmt.brlK(prop.totalExpenses)} color={T.red} size="md" />
+        <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Despesas 12m</div>
+          <div style={{ color: T.red, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{fmt.brlK(prop.totalExpenses)}</div>
+          {prop.ir > 0 && (
+            <div style={{ color: T.red, fontSize: 11, marginTop: 8, opacity: 0.85 }}>
+              IR ({prop.regimeFiscal || "PF"}): {fmt.brl(prop.ir)}
+            </div>
+          )}
+        </div>
         <KPI label="Lucro Líquido 12m" value={fmt.brlK(prop.lucroLiquido||prop.noi)} sub={`Margem líq.: ${fmt.pct(prop.lucroLiquidoPct||prop.noiPct)}`} color={(prop.lucroLiquido||prop.noi) > 0 ? T.green : T.red} size="md" />
         <KPI label="Vacância" value={`${prop.vacancyDays}d`} sub={`Benchmark: ${prop.vacancyBenchmark}d`} color={prop.vacancyDays > prop.vacancyBenchmark ? T.amber : T.muted} size="md" warn={prop.vacancyDays > prop.vacancyBenchmark} />
       </div>
@@ -2253,27 +2261,6 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
           </div>
         </div>
       )}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <div style={S.card}>
-          <div style={{ color: T.text, fontWeight: 700, marginBottom: 16, fontSize: 15 }}>Cashflow 2024</div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={prop.monthlyData} barGap={3}>
-              <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
-              <XAxis dataKey="month" tick={{ fill: T.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={v => `${(v/1000).toFixed(0)}k`} tick={{ fill: T.muted, fontSize: 10 }} axisLine={false} tickLine={false} width={38} />
-              <Tooltip content={<Tip />} />
-              <Bar dataKey="receita" name="Receita" fill={T.blue} radius={[3, 3, 0, 0]} />
-              <Bar dataKey="despesas" name="Despesas" fill={T.red} radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <div style={S.card}>
-          <div style={{ color: T.text, fontWeight: 700, marginBottom: 4, fontSize: 15 }}>Benchmark</div>
-          <div style={{ color: T.muted, fontSize: 12, marginBottom: 16 }}>Linha dourada = padrão de mercado</div>
-          {/* IPTU benchmark removido — varia por valor venal individual */}
-          <BenchmarkBar label="Manutenção/mês" value={prop.maintMonthly} benchmark={prop.maintBenchmark} unit="R$" delta={prop.maintDelta} />
-        </div>
-      </div>
       {opportunities.length > 0 && (
         <div style={S.cardGold}>
           <div style={{ color: T.gold, fontWeight: 800, fontSize: 15, marginBottom: 14 }}>Oportunidades Identificadas</div>
@@ -2792,12 +2779,19 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
     return { ...p, fimContrato: fim.toLocaleDateString("pt-BR"), diasRestantes };
   }).sort((a, b) => a.diasRestantes - b.diasRestantes);
 
-  // Alertas de IPTU vencendo (próximos 30 dias)
+  // Alertas de IPTU: vencido (ano anterior) ou vencendo (nov/dez do ano de competência)
   const alertasIPTU = PROPS.filter(p => {
     if (!p.iptuVencimento) return false;
-    const ano = parseInt(p.iptuVencimento);
-    return ano === hoje.getFullYear();
-  }).map(p => ({ ...p, diasIPTU: 0, vencIPTU: `Competência ${p.iptuVencimento}` }));
+    const anoIPTU = parseInt(p.iptuVencimento);
+    const mesHoje = hoje.getMonth(); // 0-11
+    if (anoIPTU < anoAtual) return true; // ano já passou — vencido
+    if (anoIPTU === anoAtual && mesHoje >= 10) return true; // nov/dez do ano de competência
+    return false;
+  }).map(p => {
+    const anoIPTU = parseInt(p.iptuVencimento);
+    const tipo = anoIPTU < anoAtual ? "vencido" : "vencendo";
+    return { ...p, tipoIPTU: tipo, vencIPTU: `Competência ${p.iptuVencimento}` };
+  });
 
   // Alertas de chamada extra quase terminando (últimas 3 parcelas)
   const alertasChamadaExtra = PROPS.filter(p =>
@@ -2934,14 +2928,18 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
               </div>
             );
           })}
-          {alertasIPTU.map(p => (
-            <div key={`iptu-${p.id}`} style={{ padding: "14px 18px", background: T.blue + "22", border: `1px solid ${T.blue}44`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{p.name} — IPTU vence {p.diasIPTU <= 0 ? "este mês" : `em ${p.diasIPTU} dias`}</div>
-                <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>{p.vencIPTU} · {fmt.brl(p.iptu)} · {p.neighborhood}</div>
+          {alertasIPTU.map(p => {
+            const isVencido = p.tipoIPTU === "vencido";
+            const bgC = isVencido ? T.red : T.amber;
+            return (
+              <div key={`iptu-${p.id}`} style={{ padding: "14px 18px", background: bgC + "22", border: `1px solid ${bgC}44`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{p.name} — {isVencido ? "Mudança no IPTU" : "IPTU vencendo"}</div>
+                  <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>{p.vencIPTU} · {fmt.brl(p.iptu)} · {p.neighborhood}</div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {alertasContrato.map(p => (
             <div key={p.id} style={{ padding: "14px 18px", background: T.redDim + "44", border: `1px solid ${T.red}44`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ flex: 1 }}>
@@ -3040,68 +3038,70 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
         })}
       </div>
 
-      {/* IPTU — imóveis sem imobiliária */}
+      {/* IPTU — Controle de Parcelas */}
       {(() => {
-        const semImob = PROPS.filter(p => !p.viaImobiliaria);
-        if (semImob.length === 0) return null;
-        const hoje3 = new Date();
-        const getStatus = (p) => {
-          if (!p.iptuVencimento) return "sem_data";
-          const anoIPTU = parseInt(p.iptuVencimento);
-          const anoAtualLocal = hoje3.getFullYear();
-          const mesAtualLocal = hoje3.getMonth(); // 0-11
-          if (anoIPTU < anoAtualLocal) return "vencido";
-          if (anoIPTU === anoAtualLocal && mesAtualLocal >= 10) return "urgente"; // nov-dez
-          if (anoIPTU === anoAtualLocal) return "ok";
-          return "ok";
-        };
-        const COR = { vencido:T.red, urgente:T.amber, ok:T.green, sem_data:T.muted };
-        const LBL = { vencido:"Vencido", urgente:"Vence em breve", ok:"Em dia", sem_data:"Sem data" };
-        const totalAnual = semImob.reduce((s,p)=>s+(p.iptu||0),0);
+        const comIPTU = PROPS.filter(p => (p.iptu || 0) > 0);
+        if (comIPTU.length === 0) return null;
+        const MESES_ABR = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+        const totalGeral = comIPTU.reduce((s, p) => s + (p.iptu || 0), 0);
         return (
-          <div style={{ ...S.card, padding:0, overflow:"hidden" }}>
-            <div style={{ padding:"16px 20px", borderBottom:`1px solid ${T.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div style={{ color:T.gold, fontSize:12, fontWeight:700, letterSpacing:1 }}>IPTU — VENCIMENTOS E PAGAMENTOS</div>
-              <div style={{ color:T.dim, fontSize:12 }}>Previsão anual: <span style={{ color:T.goldBright, fontWeight:700 }}>{fmt.brl(totalAnual)}</span></div>
-            </div>
-            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
-              <thead>
-                <tr style={{ background:T.s2 }}>
-                  {["IMÓVEL","BAIRRO","IPTU ANUAL","PARCELA/Nº","VENCIMENTO","STATUS"].map(h=>(
-                    <th key={h} style={{ ...S.th, textAlign:"left" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {semImob.map((p,i) => {
-                  const st = getStatus(p);
-                  const cor = COR[st];
-                  const diasAte = null; // competência por ano, sem contagem de dias
-                  const vencFmt = p.iptuVencimento
-                    ? `Competência ${p.iptuVencimento} — vence dezembro/${p.iptuVencimento}`
-                    : "Não cadastrado";
-                  return (
-                    <tr key={p.id} style={{ background:i%2===0?T.s0:T.s1, borderBottom:`1px solid ${T.border}40` }}>
-                      <td style={{ ...S.td, fontWeight:600, color:T.goldBright }}>{p.name}</td>
-                      <td style={{ ...S.td, color:T.muted }}>{p.neighborhood}</td>
-                      <td style={{ ...S.td, ...S.mono, fontWeight:700 }}>{fmt.brl(p.iptu||0)}</td>
-                      <td style={{ ...S.td, ...S.mono, color:T.dim }}>{fmt.brl(Math.round((p.iptu||0)/(p.iptuParcelas||10)))}<span style={{ color:T.dim, fontSize:10 }}> ×{p.iptuParcelas||10}</span></td>
-                      <td style={{ ...S.td }}>
-                        <div style={{ color:T.text }}>{vencFmt}</div>
-                        {diasAte !== null && (
-                          <div style={{ fontSize:11, color:cor, fontWeight:600, marginTop:2 }}>
-                            {diasAte < 0 ? `${Math.abs(diasAte)} dias atrás` : diasAte === 0 ? "Hoje" : `em ${diasAte} dias`}
-                          </div>
-                        )}
-                      </td>
-                      <td style={S.td}><span style={{ ...S.badge(cor), fontSize:11 }}>{LBL[st]}</span></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            <div style={{ padding:"10px 20px", borderTop:`1px solid ${T.border}`, background:T.s2 }}>
-              <span style={{ color:T.dim, fontSize:11 }}>Parcela estimada em 10x. Vencimento cadastrado no perfil do imóvel.</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>IPTU — CONTROLE DE PARCELAS</div>
+            {comIPTU.map(p => {
+              const numParcelas = p.iptuParcelas || 10;
+              const valorParcela = Math.round((p.iptu || 0) / numParcelas);
+              const pagas = p.iptuParcelasPagas || [];
+              const qtdPagas = pagas.length;
+              const totalPago = qtdPagas * valorParcela;
+              const toggleParcela = (idx) => {
+                const novas = pagas.includes(idx)
+                  ? pagas.filter(i => i !== idx)
+                  : [...pagas, idx];
+                onUpdateProps(PROPS.map(pp => pp.id === p.id ? { ...pp, iptuParcelasPagas: novas } : pp));
+              };
+              return (
+                <div key={p.id} style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 20px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: T.goldBright, fontWeight: 700, fontSize: 14 }}>{p.name}</div>
+                      <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
+                        IPTU anual: <span style={{ color: T.text, fontWeight: 700, ...S.mono }}>{fmt.brl(p.iptu)}</span>
+                        <span style={{ color: T.dim, fontSize: 11, marginLeft: 8 }}>{numParcelas}× {fmt.brl(valorParcela)}</span>
+                      </div>
+                    </div>
+                    <div style={{ color: qtdPagas === numParcelas ? T.green : qtdPagas > 0 ? T.amber : T.muted, fontSize: 12, fontWeight: 700 }}>
+                      {qtdPagas}/{numParcelas} pagas · {fmt.brl(totalPago)} de {fmt.brl(p.iptu)}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {Array.from({ length: numParcelas }, (_, i) => {
+                      const paga = pagas.includes(i);
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => toggleParcela(i)}
+                          style={{
+                            padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700,
+                            cursor: "pointer", fontFamily: "inherit", border: `1px solid ${paga ? T.green : T.border}`,
+                            background: paga ? T.green + "22" : T.s2,
+                            color: paga ? T.green : T.muted,
+                          }}
+                        >
+                          {MESES_ABR[i % 12]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {numParcelas > 0 && (
+                    <div style={{ marginTop: 10, height: 4, background: T.s3, borderRadius: 2, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${(qtdPagas / numParcelas) * 100}%`, background: qtdPagas === numParcelas ? T.green : T.amber, borderRadius: 2, transition: "width 0.2s" }} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <div style={{ color: T.dim, fontSize: 12, textAlign: "right" }}>
+              Total IPTU do portfólio: <span style={{ color: T.goldBright, fontWeight: 700 }}>{fmt.brl(totalGeral)}/ano</span>
             </div>
           </div>
         );
