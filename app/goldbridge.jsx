@@ -2382,7 +2382,7 @@ function PageDecision({ PROPS }) {
 
   const propsComVM = PROPS.filter(p => (p.marketValueManual || 0) > 0);
   const mediaRentabilidade = propsComVM.length > 0
-    ? propsComVM.reduce((s, p) => s + (p.rent / p.marketValueManual) * 100, 0) / propsComVM.length
+    ? propsComVM.reduce((s, p) => s + ((p.rent - (p.descontoAluguel||0)) / p.marketValueManual) * 100, 0) / propsComVM.length
     : null;
   const mediaVacancia = PROPS.length > 0
     ? PROPS.reduce((s, p) => s + (p.vacancyDays || 0), 0) / PROPS.length
