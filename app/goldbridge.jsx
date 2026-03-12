@@ -2072,7 +2072,7 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
                               const adminAnual = (p.adminRecalc || p.admin || 0) * 12;
                               const condoA = p.condoAnnual || condoAnnual;
                               const itens = [
-                                { label: "IPTU", anual: p.iptu||0, mensal: Math.round((p.iptu||0)/12), note: p.status==="Ocupado" ? "restituído pelo inquilino" : "sem inquilino", noteColor: p.status==="Ocupado" ? T.green : T.dim },
+                                ...(p.status !== "Ocupado" ? [{ label: "IPTU", anual: p.iptu||0, mensal: Math.round((p.iptu||0)/12), note: "sem inquilino", noteColor: T.dim }] : []),
                                 { label: "Manutenção", anual: (p.maintMonthly||0)*12, mensal: p.maintMonthly||0 },
                                 { label: "Seguro", anual: p.insurance||0, mensal: Math.round((p.insurance||0)/12) },
                                 { label: "Administração", anual: adminAnual, mensal: Math.round(adminAnual/12) },
@@ -2390,7 +2390,7 @@ function PageDecision({ PROPS }) {
 
   const analise = PROPS.map(p => {
     const temVM = (p.marketValueManual || 0) > 0;
-    const rentBrutaMensal = temVM ? (p.rent / p.marketValueManual) * 100 : null;
+    const rentBrutaMensal = temVM ? ((p.rent - (p.descontoAluguel||0)) / p.marketValueManual) * 100 : null;
     const isCom = TIPOS_COM.includes(p.type);
     const bmMin = isCom ? 0.6 : 0.4;
     const bmMax = isCom ? 0.8 : 0.5;
@@ -3199,9 +3199,6 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.border}`, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                   <div style={{ color: T.dim, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginRight: 4 }}>DEDUÇÕES:</div>
                   <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>Adm. </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl(adminMensal)}</span></div>
-                  {iptuMensal > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>IPTU </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl(iptuMensal)}</span></div>}
-                  {maintM > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>Manutenção </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl(maintM)}</span></div>}
-                  {seguroM > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>Seguro </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl(seguroM)}</span></div>}
                   {condoM > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>Fundo/Cond. </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl(condoM)}</span></div>}
                   <div style={{ marginLeft: "auto", background: bolsoBruto >= 0 ? T.green+"22" : T.red+"22", borderRadius: 6, padding: "4px 12px", border: `1px solid ${bolsoBruto >= 0 ? T.green : T.red}40` }}>
                     <span style={{ color: T.dim, fontSize: 10 }}>No bolso </span>
