@@ -2376,44 +2376,139 @@ function ScoreRing({ score, color, size=56 }) {
   return <svg width={size} height={size}><circle cx={size/2} cy={size/2} r={r} fill="none" stroke={T.s3} strokeWidth={5} /><circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={5} strokeDasharray={`${filled} ${circ}`} strokeLinecap="round" transform={`rotate(-90 ${size/2} ${size/2})`} /><text x={size/2} y={size/2+5} textAnchor="middle" fill={color} fontSize={size===56?14:11} fontWeight={800} fontFamily="'DM Mono', monospace">{score}</text></svg>;
 }
 
-function PageDecision({ PROPS, onProp, onNav }) {
-  const DECISIONS=PROPS.map(p=>({...p,decision:buildDecision(p)}));
-  const [selected,setSelected]=useState(null), [filterRec,setFilterRec]=useState(""), [filterType,setFilterType]=useState("");
-  const filtered=useMemo(()=>{ let list=DECISIONS; if(filterRec) list=list.filter(p=>p.decision.recommendation===filterRec); if(filterType) list=list.filter(p=>p.type===filterType); return list.sort((a,b)=>b.leakage-a.leakage); },[filterRec,filterType,DECISIONS]);
-  const counts={ keep:DECISIONS.filter(p=>p.decision.recommendation==="keep").length, sell:DECISIONS.filter(p=>p.decision.recommendation==="sell").length, retrofit:DECISIONS.filter(p=>p.decision.recommendation==="retrofit").length, reposition:DECISIONS.filter(p=>p.decision.recommendation==="reposition").length };
-  if (selected) return <PageDecisionDetail prop={selected} onBack={()=>setSelected(null)} />;
+function PageDecision({ PROPS }) {
+  const TIPOS_COM = ["Comercial", "Sala Comercial", "Galpão/Industrial"];
+  const [filterRec, setFilterRec] = useState("");
+
+  const propsComVM = PROPS.filter(p => (p.marketValueManual || 0) > 0);
+  const mediaRentabilidade = propsComVM.length > 0
+    ? propsComVM.reduce((s, p) => s + (p.rent / p.marketValueManual) * 100, 0) / propsComVM.length
+    : null;
+  const mediaVacancia = PROPS.length > 0
+    ? PROPS.reduce((s, p) => s + (p.vacancyDays || 0), 0) / PROPS.length
+    : 0;
+
+  const analise = PROPS.map(p => {
+    const temVM = (p.marketValueManual || 0) > 0;
+    const rentBrutaMensal = temVM ? (p.rent / p.marketValueManual) * 100 : null;
+    const isCom = TIPOS_COM.includes(p.type);
+    const bmMin = isCom ? 0.6 : 0.4;
+    const bmMax = isCom ? 0.8 : 0.5;
+    const rentAbaixoBm = rentBrutaMensal !== null ? rentBrutaMensal < bmMin : null;
+    const vacAcimaMed = (p.vacancyDays || 0) > mediaVacancia;
+    let recomendacao;
+    if (rentAbaixoBm === null) {
+      recomendacao = vacAcimaMed ? "atencao" : "manter";
+    } else if (!rentAbaixoBm && !vacAcimaMed) {
+      recomendacao = "manter";
+    } else if (rentAbaixoBm && vacAcimaMed) {
+      recomendacao = "revisar";
+    } else {
+      recomendacao = "atencao";
+    }
+    return { ...p, rentBrutaMensal, bmMin, bmMax, isCom, rentAbaixoBm, vacAcimaMed, recomendacao, temVM };
+  });
+
+  const REC_META = {
+    manter:  { label: "Manter",  cor: T.green, icone: "🟢" },
+    atencao: { label: "Atenção", cor: T.amber, icone: "🟡" },
+    revisar: { label: "Revisar", cor: T.red,   icone: "🔴" },
+  };
+
+  const filtered = filterRec ? analise.filter(p => p.recomendacao === filterRec) : analise;
+  const counts = { manter: analise.filter(p=>p.recomendacao==="manter").length, atencao: analise.filter(p=>p.recomendacao==="atencao").length, revisar: analise.filter(p=>p.recomendacao==="revisar").length };
+
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
-      <div><div style={{ color:T.muted, fontSize:11, letterSpacing:2, fontWeight:700, marginBottom:6 }}>MOTOR DE DECISÃO</div><h1 style={{ color:T.text, fontSize:26, fontWeight:800, margin:0 }}>O Que Fazer com Cada Imóvel?</h1></div>
-      <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
-        {Object.entries(DECISION_META).map(([id,meta])=>(
-          <div key={id} onClick={()=>setFilterRec(filterRec===id?"":id)} style={{ ...S.card, flex:1, minWidth:130, cursor:"pointer", border:`1px solid ${filterRec===id?meta.color+"80":T.border}`, background:filterRec===id?meta.color+"12":T.s1 }}>
-            <div style={{ color:meta.color, fontSize:28, fontWeight:900, ...S.mono, lineHeight:1 }}>{counts[id]}</div><div style={{ color:T.text, fontSize:13, fontWeight:700, marginTop:4 }}>{meta.label}</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <div>
+        <div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>ANÁLISE DE PORTFÓLIO</div>
+        <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Decisão por Imóvel</h1>
+      </div>
+
+      {/* Nota metodológica */}
+      <div style={{ padding: "14px 18px", background: T.goldGlow, border: `1px solid ${T.gold}40`, borderRadius: 12 }}>
+        <div style={{ color: T.gold, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Como funciona esta análise</div>
+        <div style={{ color: T.muted, fontSize: 12, lineHeight: 1.6 }}>
+          A comparação de portfólio é feita entre os imóveis da sua própria carteira.
+          O benchmark de rentabilidade (<strong>0,4%–0,5%/mês residencial · 0,6%–0,8%/mês comercial</strong>) é uma referência geral do mercado brasileiro.
+          {mediaVacancia > 0 && <span> Vacância média da carteira: <strong>{mediaVacancia.toFixed(0)} dias</strong>.</span>}
+          {mediaRentabilidade !== null && <span> Rentabilidade bruta média da carteira: <strong>{mediaRentabilidade.toFixed(2)}%/mês</strong>.</span>}
+        </div>
+      </div>
+
+      {/* Filtros por recomendação */}
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        {Object.entries(REC_META).map(([id, meta]) => (
+          <div key={id} onClick={() => setFilterRec(filterRec === id ? "" : id)} style={{ ...S.card, flex: 1, minWidth: 130, cursor: "pointer", border: `1px solid ${filterRec === id ? meta.cor+"80" : T.border}`, background: filterRec === id ? meta.cor+"12" : T.s1 }}>
+            <div style={{ color: meta.cor, fontSize: 28, fontWeight: 900, ...S.mono, lineHeight: 1 }}>{counts[id]}</div>
+            <div style={{ color: T.text, fontSize: 13, fontWeight: 700, marginTop: 4 }}>{meta.icone} {meta.label}</div>
           </div>
         ))}
+        {filterRec && <button style={{ ...S.btnGhost, alignSelf: "center", padding: "8px 14px", fontSize: 12 }} onClick={() => setFilterRec("")}>✕ Limpar</button>}
       </div>
-      <div style={{ display:"flex", gap:12, alignItems:"center" }}>
-        <select style={S.sel} value={filterType} onChange={e=>setFilterType(e.target.value)}><option value="">Todos os tipos</option><option>Apartamento</option><option>Casa</option><option>Terreno</option><option>Comercial</option><option>Sala Comercial</option><option>Galpão/Industrial</option><option>Studio/Kitnet</option></select>
-        {filterRec&&<button style={{ ...S.btnGhost, padding:"8px 14px", fontSize:12 }} onClick={()=>setFilterRec("")}>✕ Limpar</button>}
-        <span style={{ color:T.muted, fontSize:12 }}>{filtered.length} imóveis</span>
-      </div>
-      <div style={{ ...S.card, padding:0, overflow:"auto" }}>
-        <table style={{ width:"100%", borderCollapse:"collapse" }}>
-          <thead><tr style={{ background:T.s2 }}>{["Imóvel","Tipo","Lucro Líquido 12m","Manter","Vender","Retrofit","Reposicionar","RECOMENDAÇÃO"].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
-          <tbody>
-            {filtered.map(p=>{ const d=p.decision, rec=DECISION_META[d.recommendation]; return (
-              <tr key={p.id} style={{ cursor:"pointer" }} onMouseEnter={e=>e.currentTarget.style.background=T.s2} onMouseLeave={e=>e.currentTarget.style.background="transparent"} onClick={()=>setSelected(p)}>
-                <td style={S.td}><div style={{ color:T.goldBright, fontWeight:600, fontSize:13 }}>{p.name}</div><div style={{ color:T.dim, fontSize:11 }}>{p.neighborhood}</div></td>
-                <td style={S.td}><span style={S.badge(p.type==="Comercial"?T.blue:T.teal)}>{p.type}</span></td>
-                <td style={{ ...S.td, ...S.mono, color:(p.lucroLiquido||p.noi)>0?T.green:T.red, fontWeight:700 }}>{fmt.brlK(p.lucroLiquido||p.noi)}</td>
-                {[{ score:d.keepScore,color:T.green },{ score:d.sellScore,color:T.red },{ score:d.retroScore,color:T.amber },{ score:d.reposScore,color:T.blue }].map(({score,color},i)=>(
-                  <td key={i} style={{ ...S.td, textAlign:"center" }}><ScoreRing score={score} color={color} size={44} /></td>
-                ))}
-                <td style={S.td}><span style={{ ...S.badge(rec.color), fontSize:12 }}>{rec.short}</span></td>
-              </tr>
-            ); })}
-          </tbody>
-        </table>
+
+      {/* Lista de imóveis */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {filtered.map(p => {
+          const meta = REC_META[p.recomendacao];
+          return (
+            <div key={p.id} style={{ background: T.s1, border: `1px solid ${meta.cor}30`, borderRadius: 14, padding: "16px 20px" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
+                {/* Info imóvel */}
+                <div style={{ flex: 2, minWidth: 180 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 16 }}>{meta.icone}</span>
+                    <span style={{ color: T.goldBright, fontWeight: 700, fontSize: 14 }}>{p.name}</span>
+                    <span style={S.badge(p.type && TIPOS_COM.includes(p.type) ? T.blue : T.teal)}>{p.type}</span>
+                  </div>
+                  <div style={{ color: T.muted, fontSize: 12 }}>{p.neighborhood} · Aluguel: {fmt.brl(p.rent)}/mês · Vacância: {p.vacancyDays}d</div>
+                </div>
+
+                {/* Rentabilidade */}
+                <div style={{ flex: 1, minWidth: 140 }}>
+                  <div style={{ color: T.dim, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>RENT. BRUTA MENSAL</div>
+                  {p.temVM ? (
+                    <>
+                      <div style={{ color: p.rentAbaixoBm ? T.amber : T.green, fontSize: 18, fontWeight: 800, ...S.mono }}>
+                        {p.rentBrutaMensal.toFixed(2)}%
+                      </div>
+                      <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>
+                        Benchmark: {p.bmMin}%–{p.bmMax}%/mês
+                        {p.rentAbaixoBm
+                          ? <span style={{ color: T.amber }}> · abaixo</span>
+                          : <span style={{ color: T.green }}> · dentro/acima</span>}
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <div style={{ color: T.dim, fontSize: 13 }}>—</div>
+                      <div style={{ color: T.dim, fontSize: 10, marginTop: 2 }}>Cadastre o valor de mercado para ver o benchmark</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Vacância vs média */}
+                <div style={{ flex: 1, minWidth: 140 }}>
+                  <div style={{ color: T.dim, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>VACÂNCIA VS MÉDIA</div>
+                  <div style={{ color: p.vacAcimaMed ? T.amber : T.green, fontSize: 18, fontWeight: 800, ...S.mono }}>
+                    {p.vacancyDays}d
+                  </div>
+                  <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>
+                    Média carteira: {mediaVacancia.toFixed(0)}d
+                    {p.vacAcimaMed
+                      ? <span style={{ color: T.amber }}> · acima</span>
+                      : <span style={{ color: T.green }}> · abaixo/igual</span>}
+                  </div>
+                </div>
+
+                {/* Recomendação */}
+                <div style={{ alignSelf: "center" }}>
+                  <span style={{ ...S.badge(meta.cor), fontSize: 12, padding: "6px 14px" }}>{meta.label}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -2825,11 +2920,19 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
   };
 
   const handleMarcar = (prop, status) => {
+    const bruto = prop.rent - (prop.descontoAluguel||0);
+    let valor;
+    if (prop.viaImobiliaria) {
+      const adm = prop.adminRecalc || Math.round(bruto * ((prop.adminPct||8)/100));
+      const iptuM = Math.round((prop.iptu||0) / (prop.iptuParcelas||10));
+      const condoM = (prop.fundoReserva||0) + (prop.chamadaExtra||0);
+      valor = bruto - adm - condoM + iptuM;
+    } else {
+      valor = bruto;
+    }
     const updated = setPag(prop, anoSel, mesSel, {
-      status, // "pago" | "atrasado" | "nao_pago"
-      valor: prop.viaImobiliaria
-        ? (prop.rent - (prop.descontoAluguel||0)) - (prop.adminRecalc || Math.round((prop.rent-(prop.descontoAluguel||0))*((prop.adminPct||8)/100)))
-        : prop.rent - (prop.descontoAluguel||0),
+      status,
+      valor,
       data: status === "pago" ? new Date().toLocaleDateString("pt-BR") : null,
       vencimento: prop.diaVencimento || 10,
     });
@@ -2907,16 +3010,14 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
   const pendentes = pagMes.filter(p => !p.pag).length;
   const calcAluguel = (p) => {
     const bruto = p.rent - (p.descontoAluguel||0);
-    const adm = p.adminRecalc || Math.round(bruto * ((p.adminPct||8)/100));
-    const iptuM = Math.round((p.iptu||0) / (p.iptuParcelas||10));
-    const maintM = p.maintMonthly || 0;
-    const seguroM = Math.round((p.insurance||0)/12);
-    const condoM = p.hasCondominio ? ((p.fundoReserva||0)+(p.chamadaExtra||0)) : 0;
-    // Com imobiliária: no bolso = bruto - todas as despesas
-    // Sem imobiliária: o que entra = bruto - desconto (despesas tratadas no fluxo)
-    return p.viaImobiliaria
-      ? bruto - adm - iptuM - maintM - seguroM - condoM
-      : bruto;
+    if (p.viaImobiliaria) {
+      const adm = p.adminRecalc || Math.round(bruto * ((p.adminPct||8)/100));
+      const iptuM = Math.round((p.iptu||0) / (p.iptuParcelas||10));
+      const condoM = (p.fundoReserva||0) + (p.chamadaExtra||0);
+      // IPTU entra como receita (inquilino paga e imob. repassa); fundo/chamada são descontados pela imob.
+      return bruto - adm - condoM + iptuM;
+    }
+    return bruto;
   };
   const totalRecebido = pagMes.filter(p => p.pag?.status === "pago").reduce((s, p) => s + calcAluguel(p), 0);
   const totalEsperado = imovelOcupado.reduce((s, p) => s + calcAluguel(p), 0);
@@ -3568,6 +3669,7 @@ const NAV = [
   { id: "fluxo",      label: "Fluxo de Caixa",    icon: "" },
   { id: "mercado",    label: "Valor da Carteira",  icon: "🏦" },
   { id: "leakage",    label: "Alertas",            icon: "◎" },
+  { id: "decision",   label: "Decisão por Imóvel", icon: "⟁" },
 ];
 
 // ─── PAGE HISTÓRICO DO IMÓVEL ─────────────────────────────────────────────────
