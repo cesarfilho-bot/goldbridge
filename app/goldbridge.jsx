@@ -801,7 +801,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
               <div style={{ gridColumn: "1/-1" }}><div><label style={S.label}>ENDEREÇO</label><input style={S.input} value={form.address} onChange={e=>set("address",e.target.value)} /></div></div>
               <div><label style={S.label}>CIDADE</label><select style={S.sel} value={form.city} onChange={e=>set("city",e.target.value)}>{["São Paulo","Campinas","Santo André","Americana"].map(o=><option key={o}>{o}</option>)}</select></div>
               <div><label style={S.label}>BAIRRO</label><NeighborhoodSearch city={form.city} value={form.neighborhood} onChange={v=>set("neighborhood",v)} /></div>
-              <div><label style={S.label}>TIPO</label><select style={S.sel} value={form.type} onChange={e=>set("type",e.target.value)}>{["Apartamento","Casa","Terreno","Comercial","Sala Comercial","Galpão/Industrial","Studio/Kitnet"].map(o=><option key={o}>{o}</option>)}</select></div>
+              <div><label style={S.label}>TIPO</label><select style={S.sel} value={form.type} onChange={e=>set("type",e.target.value)}>{["Apartamento","Casa","Casa de Condomínio","Sala Comercial","Industrial","Loja","Galpão","Salão Comercial","Terreno"].map(o=><option key={o}>{o}</option>)}</select></div>
               <div><label style={S.label}>STATUS</label><select style={S.sel} value={form.status} onChange={e=>set("status",e.target.value)}>{["Ocupado","Em desocupação","Vago"].map(o=><option key={o}>{o}</option>)}</select></div>
               <div><label style={S.label}>ÁREA (m²)</label><input type="number" style={S.input} value={form.size} onChange={e=>set("size",e.target.value)} /></div>
             </div>
@@ -1825,7 +1825,7 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", gap: 24, textAlign: "center" }}>
         <div>
-          <h1 style={{ color: T.text, fontSize: 28, fontWeight: 900, margin: "0 0 12px" }}>Bem-vindo ao Goldbridge</h1>
+          <h1 style={{ color: T.text, fontSize: 28, fontWeight: 900, margin: "0 0 12px" }}>Bem-vindo ao Rently</h1>
           <div style={{ color: T.muted, fontSize: 16, maxWidth: 400, lineHeight: 1.6 }}>Cadastre seu primeiro imóvel para começar a acompanhar seus aluguéis, despesas e rentabilidade.</div>
         </div>
         <button style={{ ...S.btn, padding: "16px 32px", fontSize: 16, borderRadius: 14 }} onClick={onAdd}>
@@ -2012,7 +2012,7 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
       </div>
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
         <input placeholder="Buscar imóvel, bairro ou endereço..." style={{ ...S.input, maxWidth: 280 }} value={search} onChange={e => setSearch(e.target.value)} />
-        <select style={S.sel} value={filterType} onChange={e => setFilterType(e.target.value)}><option value="">Todos os tipos</option><option>Apartamento</option><option>Casa</option><option>Terreno</option><option>Comercial</option><option>Sala Comercial</option><option>Galpão/Industrial</option><option>Studio/Kitnet</option></select>
+        <select style={S.sel} value={filterType} onChange={e => setFilterType(e.target.value)}><option value="">Todos os tipos</option><option>Apartamento</option><option>Casa</option><option>Casa de Condomínio</option><option>Sala Comercial</option><option>Industrial</option><option>Loja</option><option>Galpão</option><option>Salão Comercial</option><option>Terreno</option></select>
         <select style={S.sel} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}><option value="">Todos os status</option><option>Ocupado</option><option>Vago</option></select>
         <span style={{ color: T.muted, fontSize: 12 }}>{sorted.length} imóveis</span>
       </div>
@@ -2377,7 +2377,7 @@ function ScoreRing({ score, color, size=56 }) {
 }
 
 function PageDecision({ PROPS }) {
-  const TIPOS_COM = ["Comercial", "Sala Comercial", "Galpão/Industrial"];
+  const TIPOS_COM = ["Sala Comercial", "Industrial", "Loja", "Galpão", "Salão Comercial", "Terreno"];
   const [filterRec, setFilterRec] = useState("");
 
   const propsComVM = PROPS.filter(p => (p.marketValueManual || 0) > 0);
@@ -2562,12 +2562,12 @@ function PageReport({ PROPS }) {
   const totalValorMercado = PROPS.reduce((s, p) => { const bm=getFipeZAP(p.neighborhood,p.city,p.type); const m2=p.type==="Comercial"?bm.com:bm.res; return s+(p.valorMercado>0?p.valorMercado:m2*p.size); }, 0);
   const download = () => {
     const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>${name} — Relatório</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Georgia',serif;color:#1a1a1a;padding:48px;max-width:900px;margin:0 auto}.header{display:flex;justify-content:space-between;padding-bottom:24px;border-bottom:3px solid #C8A84B;margin-bottom:32px}.logo{font-size:22px;font-weight:900;color:#C8A84B}h2{font-size:14px;color:#333;margin:28px 0 12px;padding-bottom:6px;border-bottom:1px solid #e5e5e5;text-transform:uppercase;letter-spacing:1px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}.kpi{background:#f8f6f0;border:1px solid #e8e0cc;border-radius:8px;padding:14px}.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:4px}.kpi-value{font-size:18px;font-weight:700;font-family:'Courier New',monospace}.green{color:#1a8a6a}.red{color:#c0392b}.amber{color:#d4890a}table{width:100%;border-collapse:collapse;font-size:12px}th{background:#f0ede4;text-align:left;padding:8px 10px;border:1px solid #ddd;font-size:10px;text-transform:uppercase}td{padding:8px 10px;border:1px solid #eee;font-family:'Courier New',monospace}tr:nth-child(even) td{background:#fafaf8}.footer{margin-top:40px;padding-top:14px;border-top:1px solid #ddd;font-size:10px;color:#999;display:flex;justify-content:space-between}</style></head><body>
-<div class="header"><div><div class="logo">GOLDBRIDGE</div><div style="font-size:13px;font-weight:700;margin-top:6px">${name}</div></div><div style="text-align:right;font-size:12px;color:#666"><div>Jan–Dez 2024</div><div>Gerado: ${fmt.date()}</div><div>${PROPS.length} imóveis</div></div></div>
+<div class="header"><div><div class="logo">RENTLY</div><div style="font-size:13px;font-weight:700;margin-top:6px">${name}</div></div><div style="text-align:right;font-size:12px;color:#666"><div>Jan–Dez 2024</div><div>Gerado: ${fmt.date()}</div><div>${PROPS.length} imóveis</div></div></div>
 <h2>Resumo Executivo</h2><div class="kpis"><div class="kpi"><div class="kpi-label">Receita Bruta</div><div class="kpi-value">${fmt.brlK(PORT.receita)}</div></div><div class="kpi"><div class="kpi-label">Despesas</div><div class="kpi-value red">${fmt.brlK(PORT.despesas)}</div></div><div class="kpi"><div class="kpi-label">Lucro Líquido</div><div class="kpi-value green">${fmt.brlK(PORT.noi)}</div></div><div class="kpi"><div class="kpi-label">Valor da Carteira Est.</div><div class="kpi-value amber">${fmt.brlK(totalValorMercado)}</div></div></div>
 <h2>Lucro Operacional Mensal</h2><table><tr><th>Mês</th><th>Receita</th><th>Despesas</th><th>NOI</th><th>Margem</th></tr>${PORT_MONTHLY.map(m=>`<tr><td>${m.month}/2024</td><td>${fmt.brl(m.receita)}</td><td style="color:#c0392b">${fmt.brl(m.despesas)}</td><td style="color:${m.noi>=0?"#1a8a6a":"#c0392b"};font-weight:700">${fmt.brl(m.noi)}</td><td>${fmt.pct(m.noi/m.receita)}</td></tr>`).join("")}</table>
 ${totalObras>0?`<h2>Obras Cadastradas</h2><table><tr><th>Imóvel</th><th>Obra</th><th>Tipo</th><th>Status</th><th>Orçado</th><th>Executado</th></tr>${PROPS.flatMap(p=>(p.obras||[]).map(o=>`<tr><td>${p.name}</td><td>${o.descricao}</td><td>${o.tipo}</td><td>${o.status}</td><td>${fmt.brl(o.orcado)}</td><td>${fmt.brl(o.executado)}</td></tr>`)).join("")}</table>`:""}
 <h2>Alertas</h2>${INSIGHTS.map(ins=>`<div style="margin-bottom:12px;padding:12px;background:#fff9f0;border-left:4px solid #C8A84B;border-radius:6px"><strong>${ins.title}</strong><p style="font-size:12px;color:#555;margin-top:4px">${ins.description}</p><p style="font-size:12px;color:#c0392b;font-weight:700;margin-top:2px">Impacto: ${fmt.brl(ins.impactMin)}–${fmt.brl(ins.impactMax)}/ano</p></div>`).join("")}
-<div class="footer"><div>Goldbridge Brasil · ${fmt.date()}</div><div>Confidencial</div></div></body></html>`;
+<div class="footer"><div>Rently Brasil · ${fmt.date()}</div><div>Confidencial</div></div></body></html>`;
     const blob=new Blob([html],{type:"text/html"}), a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`goldbridge-relatorio-${new Date().toISOString().split("T")[0]}.html`; a.click();
   };
   return (
@@ -2592,7 +2592,7 @@ function PageIA({ PROPS }) {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: `Olá! Sou a IA do Goldbridge. Tenho acesso completo ao seu portfólio de **${0} imóveis** e posso responder perguntas sobre NOI, cap rate, vacância, leakage e muito mais.
+      content: `Olá! Sou a IA do Rently. Tenho acesso completo ao seu portfólio de **${0} imóveis** e posso responder perguntas sobre NOI, cap rate, vacância, leakage e muito mais.
 
 Exemplos do que você pode me perguntar:
 - "Qual imóvel está me dando mais prejuízo?"
@@ -2662,7 +2662,7 @@ Exemplos do que você pode me perguntar:
       ].filter(Boolean).join(NL);
     };
     return [
-      "Você é a IA do Goldbridge, sistema brasileiro de gestão de portfólio imobiliário.",
+      "Você é a IA do Rently, sistema brasileiro de gestão de portfólio imobiliário.",
       "Responda sempre em português brasileiro. Seja direto, analítico e use os dados concretos abaixo.",
       "Quando identificar problemas, aponte a causa e sugira ação específica.",
       NL+"=== PORTFÓLIO — RESUMO ===",
@@ -2763,7 +2763,7 @@ Exemplos do que você pode me perguntar:
           <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: m.role === "user" ? "flex-end" : "flex-start" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
               {m.role === "assistant" && <div style={{ width: 22, height: 22, borderRadius: "50%", background: T.goldGlow, border: `1px solid ${T.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>✦</div>}
-              <span style={{ color: T.dim, fontSize: 11 }}>{m.role === "assistant" ? "Goldbridge IA" : "Você"} · {m.ts}</span>
+              <span style={{ color: T.dim, fontSize: 11 }}>{m.role === "assistant" ? "Rently IA" : "Você"} · {m.ts}</span>
             </div>
             <div style={{
               maxWidth: "80%", padding: "14px 18px",
@@ -2863,7 +2863,7 @@ function Login({ onLogin }) {
       <div style={{ position:"absolute", inset:0, background:`radial-gradient(ellipse at 30% 50%, ${T.goldGlow} 0%, transparent 60%)` }} />
       <div style={{ width:"100%", maxWidth:420, position:"relative", zIndex:1 }}>
         <div style={{ textAlign:"center", marginBottom:40 }}>
-          <div style={{ color:T.gold, fontSize:32, fontWeight:900, letterSpacing:-1 }}>GOLDBRIDGE</div>
+          <div style={{ color:T.gold, fontSize:32, fontWeight:900, letterSpacing:-1 }}>RENTLY</div>
           <div style={{ color:T.dim, fontSize:11, letterSpacing:4, marginTop:4 }}>BRASIL · PORTFOLIO INTELLIGENCE</div>
         </div>
         <div style={{ background:T.s1, border:`1px solid ${T.borderMid}`, borderRadius:18, padding:"32px 28px" }}>
@@ -4037,7 +4037,7 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
               <div>
                 <label style={S.label}>TIPO</label>
                 <select style={S.sel} value={form.type} onChange={e=>set("type",e.target.value)}>
-                  {["Apartamento","Casa","Terreno","Comercial","Sala Comercial","Galpão/Industrial","Studio/Kitnet"].map(o=><option key={o}>{o}</option>)}
+                  {["Apartamento","Casa","Casa de Condomínio","Sala Comercial","Industrial","Loja","Galpão","Salão Comercial","Terreno"].map(o=><option key={o}>{o}</option>)}
                 </select>
               </div>
               <div>
@@ -4746,7 +4746,7 @@ export default function App() {
   // Loading state
   if (user === undefined) return (
     <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
-      <div style={{ color:T.gold, fontSize:22, fontWeight:800 }}>GOLDBRIDGE</div>
+      <div style={{ color:T.gold, fontSize:22, fontWeight:800 }}>RENTLY</div>
     </div>
   );
 
@@ -4754,7 +4754,7 @@ export default function App() {
 
   if (dbLoading) return (
     <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}>
-      <div style={{ color:T.gold, fontSize:22, fontWeight:800 }}>GOLDBRIDGE</div>
+      <div style={{ color:T.gold, fontSize:22, fontWeight:800 }}>RENTLY</div>
       <div style={{ color:T.muted, fontSize:14 }}>Carregando seu portfólio...</div>
     </div>
   );
@@ -4801,7 +4801,7 @@ export default function App() {
         {/* Sidebar */}
         <div style={{ width: 230, background: T.s0, borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 100 }}>
           <div style={{ padding: "28px 22px 20px" }}>
-            <div style={{ color: T.gold, fontSize: 17, fontWeight: 900, letterSpacing: -0.5 }}>GOLDBRIDGE</div>
+            <div style={{ color: T.gold, fontSize: 17, fontWeight: 900, letterSpacing: -0.5 }}>RENTLY</div>
             <div style={{ color: T.dim, fontSize: 9, letterSpacing: 3, marginTop: 2 }}>PORTFOLIO INTELLIGENCE</div>
           </div>
           <div style={{ margin: "0 12px 16px", padding: "10px 14px", background: T.s1, borderRadius: 10, border: `1px solid ${T.border}` }}>

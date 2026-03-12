@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Goldbridge",
+  title: "Rently",
   description: "Gestão de portfólio imobiliário",
 };
 
