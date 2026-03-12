@@ -524,12 +524,12 @@ function buildInsights(PROPS) {
   const vacProblems = PROPS.filter(p => p.vacancyDays > p.vacancyBenchmark * 1.5).sort((a, b) => b.vacancyCost - a.vacancyCost);
   if (vacProblems.length > 0) {
     const totalCost = vacProblems.reduce((s, p) => s + p.vacancyCost, 0);
-    insights.push({ id: 2, type: "vacancy", severity: "alta", icon: "🏠", title: "Vacância Crônica Acima da Média", description: `${vacProblems.length} imóveis com vacância superior a 1,5× o benchmark.`, metric: `Custo total: ${fmt.brl(totalCost)}/ano`, props: vacProblems.slice(0, 5), impactMin: Math.round(totalCost * 0.6), impactMax: totalCost, actions: ["Revisar preço de aluguel", "Contratar corretora especializada por tipo", "Verificar condições do imóvel", "Avaliar flexibilização de garantias"], benchmark: "Fonte: FipeZap, SECOVI-SP 2024" });
+    insights.push({ id: 2, type: "vacancy", severity: "alta", icon: "", title: "Vacância Crônica Acima da Média", description: `${vacProblems.length} imóveis com vacância superior a 1,5× o benchmark.`, metric: `Custo total: ${fmt.brl(totalCost)}/ano`, props: vacProblems.slice(0, 5), impactMin: Math.round(totalCost * 0.6), impactMax: totalCost, actions: ["Revisar preço de aluguel", "Contratar corretora especializada por tipo", "Verificar condições do imóvel", "Avaliar flexibilização de garantias"], benchmark: "Fonte: FipeZap, SECOVI-SP 2024" });
   }
   const maintProblems = PROPS.filter(p => p.maintDelta > 40).sort((a, b) => b.maintDelta - a.maintDelta);
   if (maintProblems.length > 0) {
     const totalWaste = maintProblems.reduce((s, p) => s + (p.maintMonthly - p.maintBenchmark) * 12, 0);
-    insights.push({ id: 3, type: "maintenance", severity: "média", icon: "🔧", title: "Manutenção com Custo Anômalo", description: `${maintProblems.length} imóveis com custo de manutenção acima de 140% do benchmark.`, metric: `Excesso anual: ${fmt.brl(totalWaste)}`, props: maintProblems.slice(0, 5), impactMin: Math.round(totalWaste * 0.5), impactMax: Math.round(totalWaste * 0.9), actions: ["Solicitar laudo técnico para imóveis com manutenção recorrente", "Comparar custo de reforma preventiva vs manutenção contínua", "Revisar contratos com prestadores", "Implantar check-list de vistoria semestral"], benchmark: "Fonte: ABNT NBR 5674 2024" });
+    insights.push({ id: 3, type: "maintenance", severity: "média", icon: "", title: "Manutenção com Custo Anômalo", description: `${maintProblems.length} imóveis com custo de manutenção acima de 140% do benchmark.`, metric: `Excesso anual: ${fmt.brl(totalWaste)}`, props: maintProblems.slice(0, 5), impactMin: Math.round(totalWaste * 0.5), impactMax: Math.round(totalWaste * 0.9), actions: ["Solicitar laudo técnico para imóveis com manutenção recorrente", "Comparar custo de reforma preventiva vs manutenção contínua", "Revisar contratos com prestadores", "Implantar check-list de vistoria semestral"], benchmark: "Fonte: ABNT NBR 5674 2024" });
   }
   // Aluguel abaixo do potencial de mercado
   const aluguelBaixo = PROPS.filter(p => {
@@ -553,12 +553,12 @@ function buildInsights(PROPS) {
       const atual = p.rent - (p.descontoAluguel || 0);
       return s + Math.max(0, esp - atual) * 12;
     }, 0);
-    insights.push({ id: 5, type: "aluguel_baixo", severity: "alta", icon: "💰", title: "Aluguel Abaixo do Potencial de Mercado", description: `${aluguelBaixo.length} imóvel(is) com aluguel defasado em relação ao valor de mercado informado.`, metric: `Receita adicional potencial: ${fmt.brlK(totalPotencial)}/ano`, props: aluguelBaixo.slice(0, 5), impactMin: Math.round(totalPotencial * 0.5), impactMax: Math.round(totalPotencial), actions: ["Revisar valor do aluguel na próxima renovação de contrato", "Verificar índice de reajuste aplicado (IGPM acumulado)", "Negociar reajuste gradual com o inquilino", "Considerar rescisão e novo contrato a valor de mercado"], benchmark: "Rentabilidade bruta: 0,5% residencial · 0,7% comercial" });
+    insights.push({ id: 5, type: "aluguel_baixo", severity: "alta", icon: "", title: "Aluguel Abaixo do Potencial de Mercado", description: `${aluguelBaixo.length} imóvel(is) com aluguel defasado em relação ao valor de mercado informado.`, metric: `Receita adicional potencial: ${fmt.brlK(totalPotencial)}/ano`, props: aluguelBaixo.slice(0, 5), impactMin: Math.round(totalPotencial * 0.5), impactMax: Math.round(totalPotencial), actions: ["Revisar valor do aluguel na próxima renovação de contrato", "Verificar índice de reajuste aplicado (IGPM acumulado)", "Negociar reajuste gradual com o inquilino", "Considerar rescisão e novo contrato a valor de mercado"], benchmark: "Rentabilidade bruta: 0,5% residencial · 0,7% comercial" });
   }
 
   const noiProblems = PROPS.filter(p => p.noiPct < 0.45 && p.totalIncome > 0).sort((a, b) => a.noiPct - b.noiPct);
   if (noiProblems.length > 0) {
-    insights.push({ id: 4, type: "noi", severity: "alta", icon: "📉", title: "Margem Baixa (abaixo de 45%)", description: `${noiProblems.length} imóveis com margem operacional insuficiente.`, metric: `NOI médio do grupo: ${fmt.pct(noiProblems.reduce((s,p) => s + p.noiPct, 0) / noiProblems.length)}`, props: noiProblems.slice(0, 5), impactMin: Math.round(noiProblems.reduce((s, p) => s + p.noi * 0.1, 0)), impactMax: Math.round(noiProblems.reduce((s, p) => s + p.noi * 0.25, 0)), actions: ["Análise detalhada por imóvel", "Revisar reajuste de aluguel pelo IGPM acumulado", "Renegociar contratos de serviço", "Avaliar desinvestimento em imóveis com NOI < 40% por 12+ meses"], benchmark: "Padrão: NOI entre 55–70% (ABRAII 2024)" });
+    insights.push({ id: 4, type: "noi", severity: "alta", icon: "", title: "Margem Baixa (abaixo de 45%)", description: `${noiProblems.length} imóveis com margem operacional insuficiente.`, metric: `NOI médio do grupo: ${fmt.pct(noiProblems.reduce((s,p) => s + p.noiPct, 0) / noiProblems.length)}`, props: noiProblems.slice(0, 5), impactMin: Math.round(noiProblems.reduce((s, p) => s + p.noi * 0.1, 0)), impactMax: Math.round(noiProblems.reduce((s, p) => s + p.noi * 0.25, 0)), actions: ["Análise detalhada por imóvel", "Revisar reajuste de aluguel pelo IGPM acumulado", "Renegociar contratos de serviço", "Avaliar desinvestimento em imóveis com NOI < 40% por 12+ meses"], benchmark: "Padrão: NOI entre 55–70% (ABRAII 2024)" });
   }
   return insights;
 }
@@ -626,7 +626,7 @@ function LeakageGauge({ score }) {
 
 function SevBadge({ s }) {
   const map = { alta: T.red, média: T.amber, baixa: T.blue };
-  return <span style={S.badge(map[s] || T.blue)}>{s === "alta" ? "🔴" : s === "média" ? "🟡" : "🔵"} {s.toUpperCase()}</span>;
+  return <span style={S.badge(map[s] || T.blue)}>{s.toUpperCase()}</span>;
 }
 
 function BenchmarkBar({ label, value, benchmark, unit = "", delta }) {
@@ -673,7 +673,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
       const newDocs = [...docs, newDoc];
       setDocs(newDocs);
       await supabase.from("imoveis").update({ documentos: newDocs }).eq("id", prop.id);
-      setDocMsg("✅ Documento salvo com sucesso!");
+      setDocMsg("Documento salvo com sucesso!");
     } catch(e) {
       setDocMsg("Erro ao enviar: " + e.message);
     }
@@ -758,7 +758,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
 
         {/* ABAS EditModal */}
         <div style={{ display: "flex", borderBottom: `1px solid ${T.border}`, padding: "0 28px" }}>
-          {[["dados","⚙️ Dados do imóvel"],["documentos",`📁 Documentos${docs.length > 0 ? " ("+docs.length+")" : ""}`]].map(([id, label]) => (
+          {[["dados","Dados do imóvel"],["documentos",`Documentos${docs.length > 0 ? " ("+docs.length+")" : ""}`]].map(([id, label]) => (
             <button key={id} onClick={() => setEditTab(id)} style={{ background: "none", border: "none", borderBottom: editTab===id ? `2px solid ${T.gold}` : "2px solid transparent", color: editTab===id ? T.gold : T.muted, fontWeight: editTab===id ? 700 : 400, fontSize: 13, padding: "12px 18px", cursor: "pointer", fontFamily: "inherit", marginBottom: -1 }}>{label}</button>
           ))}
         </div>
@@ -768,24 +768,22 @@ function EditModal({ prop, onSave, onClose, userId }) {
           <div style={{ padding: 28, display: "flex", flexDirection: "column", gap: 16 }}>
             <label style={{ border: `2px dashed ${T.border}`, borderRadius: 12, padding: "24px", textAlign: "center", cursor: "pointer", display: "block", background: T.s2 }}>
               <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style={{ display: "none" }} onChange={e => e.target.files[0] && handleDocUpload(e.target.files[0])} />
-              <div style={{ fontSize: 28, marginBottom: 8 }}>📎</div>
               <div style={{ color: T.text, fontWeight: 600 }}>{docUploading ? "Enviando..." : "Clique para anexar documento"}</div>
               <div style={{ color: T.dim, fontSize: 12, marginTop: 4 }}>PDF, imagem, Word — contratos, boletos, vistoria, escritura</div>
             </label>
-            {docMsg && <div style={{ padding: "12px 16px", background: docMsg.includes("✅") ? T.green+"22" : T.redDim+"33", borderRadius: 10, color: docMsg.includes("✅") ? T.green : T.red, fontSize: 13 }}>{docMsg}</div>}
+            {docMsg && <div style={{ padding: "12px 16px", background: docMsg.includes("sucesso") ? T.green+"22" : T.redDim+"33", borderRadius: 10, color: docMsg.includes("sucesso") ? T.green : T.red, fontSize: 13 }}>{docMsg}</div>}
             {docs.length === 0 ? (
               <div style={{ color: T.dim, fontSize: 13, textAlign: "center", padding: "20px 0" }}>Nenhum documento anexado ainda.</div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {docs.map((d, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: T.s2, borderRadius: 10, border: `1px solid ${T.border}` }}>
-                    <div style={{ fontSize: 20 }}>{d.nome?.endsWith(".pdf") ? "📄" : d.nome?.match(/\.(jpg|jpeg|png)$/i) ? "🖼️" : "📎"}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ color: T.text, fontWeight: 600, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.nome}</div>
                       <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>{d.data} · {d.size ? Math.round(d.size/1024) + " KB" : ""}</div>
                     </div>
                     <a href={d.url} target="_blank" rel="noreferrer" style={{ color: T.gold, fontSize: 12, fontWeight: 600, textDecoration: "none", padding: "6px 12px", border: `1px solid ${T.gold}40`, borderRadius: 8 }}>Abrir</a>
-                    <button onClick={() => handleDocDelete(i)} style={{ background: "none", border: `1px solid ${T.redDim}`, color: T.red, borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12 }}>🗑</button>
+                    <button onClick={() => handleDocDelete(i)} style={{ background: "none", border: `1px solid ${T.redDim}`, color: T.red, borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12 }}>✕</button>
                   </div>
                 ))}
               </div>
@@ -902,7 +900,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
             </div>
             {form.contratoInicio && (
               <div style={{ marginTop: 10, padding: "10px 14px", background: T.s3, borderRadius: 8, color: T.muted, fontSize: 12 }}>
-                📅 Próximo reajuste: <span style={{ color: T.gold, fontWeight: 700 }}>
+                Próximo reajuste: <span style={{ color: T.gold, fontWeight: 700 }}>
                   {(() => { const d = new Date(form.contratoInicio); const now = new Date(); let y = now.getFullYear(); if (new Date(y, d.getMonth(), d.getDate()) <= now) y++; return new Date(y, d.getMonth(), d.getDate()).toLocaleDateString("pt-BR"); })()}
                 </span> · Normalmente pelo IGPM acumulado
               </div>
@@ -928,7 +926,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
             )}
             {form.viaImobiliaria && (
               <div style={{ color: T.dim, fontSize: 12, padding: "10px 14px", background: T.s1, borderRadius: 8, border: `1px solid ${T.border}` }}>
-                🏢 Os dados do locatário são gerenciados pela imobiliária
+                Os dados do locatário são gerenciados pela imobiliária
               </div>
             )}
           </div>
@@ -950,14 +948,14 @@ const OBRA_TIPOS = ["Corretiva", "Preventiva", "Retrofit", "Estrutural", "Acabam
 const OBRA_STATUS_OPTS = ["Planejada", "Em andamento", "Concluída", "Pausada"];
 
 const OBRA_BM = {
-  pintura:              { label:"Pintura Simples",       emoji:"🖌️", desc:"Massa corrida + 2 demãos.",                                                  r_min:60,   r_max:100,  r_ref:80,   mat:0.35, mao:0.60, aux:0.05, dias100:7,  imp_alug:0.04, vac_reduz:15 },
-  reforma_simples:      { label:"Reforma Simples",       emoji:"🔧", desc:"Pintura + troca de piso + reparos pontuais.",                                 r_min:800,  r_max:1200, r_ref:1000, mat:0.50, mao:0.45, aux:0.05, dias100:30, imp_alug:0.08, vac_reduz:20 },
-  reforma_intermediaria:{ label:"Reforma Intermediária", emoji:"🏗️", desc:"Elétrica + hidráulica parcial + porcelanato + louças.",                      r_min:1200, r_max:2600, r_ref:1800, mat:0.52, mao:0.43, aux:0.05, dias100:60, imp_alug:0.15, vac_reduz:30 },
-  retrofit_completo:    { label:"Retrofit Completo",     emoji:"⚡", desc:"Elétrica + hidráulica completas + piso + forro + automação básica.",          r_min:2000, r_max:4200, r_ref:3000, mat:0.55, mao:0.40, aux:0.05, dias100:90, imp_alug:0.25, vac_reduz:45 },
-  estrutural:           { label:"Obra Estrutural",       emoji:"🏚️", desc:"Reforço de laje, fundações, alvenaria. Exige ART.",                          r_min:1500, r_max:3500, r_ref:2500, mat:0.45, mao:0.50, aux:0.05, dias100:90, imp_alug:0.05, vac_reduz:0  },
-  eletrica:             { label:"Instalação Elétrica",   emoji:"💡", desc:"Troca completa de fiação, disjuntores, tomadas.",                             r_min:150,  r_max:400,  r_ref:250,  mat:0.30, mao:0.65, aux:0.05, dias100:15, imp_alug:0.06, vac_reduz:10 },
-  hidraulica:           { label:"Instalação Hidráulica", emoji:"🚿", desc:"Troca de tubulações, registros, torneiras, chuveiros.",                      r_min:120,  r_max:350,  r_ref:200,  mat:0.35, mao:0.60, aux:0.05, dias100:10, imp_alug:0.04, vac_reduz:10 },
-  alto_padrao:          { label:"Alto Padrão",           emoji:"✨", desc:"Projeto completo, forro de gesso, automação, mármores, marcenaria.",          r_min:2800, r_max:5500, r_ref:3500, mat:0.57, mao:0.38, aux:0.05, dias100:120,imp_alug:0.35, vac_reduz:60 },
+  pintura:              { label:"Pintura Simples",       emoji:"", desc:"Massa corrida + 2 demãos.",                                                  r_min:60,   r_max:100,  r_ref:80,   mat:0.35, mao:0.60, aux:0.05, dias100:7,  imp_alug:0.04, vac_reduz:15 },
+  reforma_simples:      { label:"Reforma Simples",       emoji:"", desc:"Pintura + troca de piso + reparos pontuais.",                                 r_min:800,  r_max:1200, r_ref:1000, mat:0.50, mao:0.45, aux:0.05, dias100:30, imp_alug:0.08, vac_reduz:20 },
+  reforma_intermediaria:{ label:"Reforma Intermediária", emoji:"", desc:"Elétrica + hidráulica parcial + porcelanato + louças.",                      r_min:1200, r_max:2600, r_ref:1800, mat:0.52, mao:0.43, aux:0.05, dias100:60, imp_alug:0.15, vac_reduz:30 },
+  retrofit_completo:    { label:"Retrofit Completo",     emoji:"", desc:"Elétrica + hidráulica completas + piso + forro + automação básica.",          r_min:2000, r_max:4200, r_ref:3000, mat:0.55, mao:0.40, aux:0.05, dias100:90, imp_alug:0.25, vac_reduz:45 },
+  estrutural:           { label:"Obra Estrutural",       emoji:"", desc:"Reforço de laje, fundações, alvenaria. Exige ART.",                          r_min:1500, r_max:3500, r_ref:2500, mat:0.45, mao:0.50, aux:0.05, dias100:90, imp_alug:0.05, vac_reduz:0  },
+  eletrica:             { label:"Instalação Elétrica",   emoji:"", desc:"Troca completa de fiação, disjuntores, tomadas.",                             r_min:150,  r_max:400,  r_ref:250,  mat:0.30, mao:0.65, aux:0.05, dias100:15, imp_alug:0.06, vac_reduz:10 },
+  hidraulica:           { label:"Instalação Hidráulica", emoji:"", desc:"Troca de tubulações, registros, torneiras, chuveiros.",                      r_min:120,  r_max:350,  r_ref:200,  mat:0.35, mao:0.60, aux:0.05, dias100:10, imp_alug:0.04, vac_reduz:10 },
+  alto_padrao:          { label:"Alto Padrão",           emoji:"", desc:"Projeto completo, forro de gesso, automação, mármores, marcenaria.",          r_min:2800, r_max:5500, r_ref:3500, mat:0.57, mao:0.38, aux:0.05, dias100:120,imp_alug:0.35, vac_reduz:60 },
 };
 
 // ─── PAGE OBRAS ───────────────────────────────────────────────────────────────
@@ -985,7 +983,7 @@ function PageObras({ PROPS, onUpdateProps }) {
           <h1 style={{ color:T.text, fontSize:26, fontWeight:800, margin:0 }}>Obras & Reformas</h1>
           <div style={{ color:T.muted, fontSize:13, marginTop:4 }}>Orçado × Real · Material × Mão de Obra · Impacto no Resultado</div>
         </div>
-        <button style={{ ...S.btn, display:"flex", alignItems:"center", gap:8 }} onClick={() => setView("estimador")}>🧮 Estimador de Custo</button>
+        <button style={{ ...S.btn, display:"flex", alignItems:"center", gap:8 }} onClick={() => setView("estimador")}>Estimador de Custo</button>
       </div>
       <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
         {[
@@ -1129,14 +1127,14 @@ function ObrasPorImovel({ prop, onBack, onSave, bmForTipo }) {
         <div style={{ ...S.card, border:`1px solid ${varTotal>0?T.red+"40":T.border}` }}><div style={{ color:T.muted, fontSize:10, fontWeight:700, letterSpacing:1, marginBottom:6 }}>VARIAÇÃO</div><div style={{ color:varTotal>0?T.red:T.green, fontSize:22, fontWeight:800, ...S.mono }}>{varTotal>0?"+":""}{fmt.brlK(varTotal)}</div><div style={{ color:T.dim, fontSize:11, marginTop:4 }}>{totalOrc>0?`${((varTotal/totalOrc)*100).toFixed(1)}% do orçado`:"—"}</div></div>
       </div>
       <div style={{ display:"flex", gap:8, borderBottom:`1px solid ${T.border}`, paddingBottom:0 }}>
-        {[{ id:"obras", label:"🔨 Obras" }, { id:"prestadores", label:"👷 Prestadores" }].map(t => (
+        {[{ id:"obras", label:"Obras" }, { id:"prestadores", label:"Prestadores" }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{ background:"none", border:"none", borderBottom:`2px solid ${tab===t.id?T.gold:"transparent"}`, color:tab===t.id?T.gold:T.muted, fontWeight:700, fontSize:13, padding:"8px 18px", cursor:"pointer", fontFamily:"inherit", marginBottom:-1 }}>{t.label}</button>
         ))}
       </div>
       {tab === "obras" && <>
         {obras.filter(o=>(o.orcado||0)>0).length>0 && <MatMaoCard obras={obras} bmForTipo={bmForTipo} />}
         {obras.length===0&&!adding&&(
-          <div style={{ ...S.card, textAlign:"center", padding:"40px 20px" }}><div style={{ fontSize:40, marginBottom:10 }}>🔨</div><div style={{ color:T.text, fontSize:15, fontWeight:600, marginBottom:6 }}>Nenhuma obra cadastrada</div></div>
+          <div style={{ ...S.card, textAlign:"center", padding:"40px 20px" }}><div style={{ color:T.text, fontSize:15, fontWeight:600, marginBottom:6 }}>Nenhuma obra cadastrada</div></div>
         )}
         {obras.map(obra => <ObraCard key={obra.id} obra={obra} prop={prop} bmForTipo={bmForTipo} onUpd={(k,v)=>upd(obra.id,k,v)} onRem={()=>rem(obra.id)} />)}
         {adding && <NovaObraForm form={newO} setForm={setNewO} onAdd={addObra} onCancel={()=>setAdding(false)} propSize={prop.size} bmForTipo={bmForTipo} />}
@@ -1144,7 +1142,7 @@ function ObrasPorImovel({ prop, onBack, onSave, bmForTipo }) {
       </>}
       {tab === "prestadores" && <>
         {prestadores.length === 0 && !addingPrest && (
-          <div style={{ ...S.card, textAlign:"center", padding:"40px 20px" }}><div style={{ fontSize:40, marginBottom:10 }}>👷</div><div style={{ color:T.text, fontSize:15, fontWeight:600, marginBottom:6 }}>Nenhum prestador cadastrado</div><div style={{ color:T.muted, fontSize:13 }}>Adicione eletricistas, pintores, encanadores e outros prestadores de serviço.</div></div>
+          <div style={{ ...S.card, textAlign:"center", padding:"40px 20px" }}><div style={{ color:T.text, fontSize:15, fontWeight:600, marginBottom:6 }}>Nenhum prestador cadastrado</div><div style={{ color:T.muted, fontSize:13 }}>Adicione eletricistas, pintores, encanadores e outros prestadores de serviço.</div></div>
         )}
         {prestadores.map(p => (
           <div key={p.id} style={{ ...S.card, border:`1px solid ${T.borderMid}` }}>
@@ -1153,15 +1151,15 @@ function ObrasPorImovel({ prop, onBack, onSave, bmForTipo }) {
                 <div style={{ color:T.text, fontWeight:700, fontSize:15, marginBottom:4 }}>{p.nome}</div>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
                   <span style={S.badge(T.blue)}>{p.especialidade}</span>
-                  {p.avaliacao && <span style={S.badge(T.gold)}>{"⭐".repeat(Math.min(5, parseInt(p.avaliacao)||0))} {p.avaliacao}/5</span>}
+                  {p.avaliacao && <span style={S.badge(T.gold)}>{p.avaliacao}/5</span>}
                 </div>
                 <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
-                  {p.telefone && <div style={{ color:T.muted, fontSize:12 }}>📞 {p.telefone}</div>}
-                  {p.email && <div style={{ color:T.muted, fontSize:12 }}>✉️ {p.email}</div>}
+                  {p.telefone && <div style={{ color:T.muted, fontSize:12 }}>{p.telefone}</div>}
+                  {p.email && <div style={{ color:T.muted, fontSize:12 }}>{p.email}</div>}
                 </div>
                 {p.notas && <div style={{ color:T.dim, fontSize:12, marginTop:8, padding:"8px 12px", background:T.s3, borderRadius:8 }}>{p.notas}</div>}
               </div>
-              <button style={{ background:"none", border:"none", color:T.dim, cursor:"pointer", fontSize:16 }} onClick={() => remPrest(p.id)}>🗑</button>
+              <button style={{ background:"none", border:"none", color:T.dim, cursor:"pointer", fontSize:16 }} onClick={() => remPrest(p.id)}>✕</button>
             </div>
           </div>
         ))}
@@ -1206,7 +1204,7 @@ function ObraCard({ obra, prop, bmForTipo, onUpd, onRem }) {
         </div>
         <div style={{ display:"flex", gap:6 }}>
           <button style={{ background:"none", border:"none", color:T.muted, cursor:"pointer", fontSize:18 }} onClick={()=>setOpen(!open)}>{open?"▲":"▼"}</button>
-          <button style={{ background:"none", border:"none", color:T.dim, cursor:"pointer", fontSize:16 }} onClick={onRem}>🗑</button>
+          <button style={{ background:"none", border:"none", color:T.dim, cursor:"pointer", fontSize:16 }} onClick={onRem}>✕</button>
         </div>
       </div>
       {open && (
@@ -1261,7 +1259,7 @@ function ImpactoNOI({ obra, prop, bm }) {
   const payback=aumentoAnual>0?custo/aumentoAnual:null, noiAfter=prop.noi+aumentoAnual*0.85, ganhoVac=(bm.vac_reduz||0)*(prop.rent/30);
   return (
     <div style={{ padding:14, background:T.s2, borderRadius:10, border:`1px solid ${T.goldDim}40` }}>
-      <div style={{ color:T.gold, fontSize:11, fontWeight:700, letterSpacing:1, marginBottom:12 }}>💰 IMPACTO NO RESULTADO</div>
+      <div style={{ color:T.gold, fontSize:11, fontWeight:700, letterSpacing:1, marginBottom:12 }}>IMPACTO NO RESULTADO</div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(120px,1fr))", gap:10 }}>
         {[
           { lbl:"Custo da Obra", val:`-${fmt.brlK(custo)}`, color:T.red, sub:"impacto imediato" },
@@ -1290,7 +1288,7 @@ function NovaObraForm({ form, setForm, onAdd, onCancel, propSize, bmForTipo }) {
           <div><div style={S.label}>STATUS INICIAL</div><select style={S.sel} value={form.status} onChange={e=>set("status",e.target.value)}>{OBRA_STATUS_OPTS.map(s=><option key={s}>{s}</option>)}</select></div>
         </div>
         <div style={{ padding:14, background:T.s1, borderRadius:10, border:`1px solid ${T.goldDim}40` }}>
-          <div style={{ color:T.gold, fontSize:11, fontWeight:700, letterSpacing:1, marginBottom:10 }}>🧮 REFERÊNCIA DE CUSTO — SINAPI/SP 2026</div>
+          <div style={{ color:T.gold, fontSize:11, fontWeight:700, letterSpacing:1, marginBottom:10 }}>REFERÊNCIA DE CUSTO — SINAPI/SP 2026</div>
           <div><div style={S.label}>USAR COMO BASE</div><select style={S.sel} value={form.bm_ref} onChange={e=>set("bm_ref",e.target.value)}><option value="">Selecionar tipo de obra...</option>{Object.entries(OBRA_BM).map(([k,v])=><option key={k} value={k}>{v.emoji} {v.label}</option>)}</select></div>
           {form.bm_ref&&(
             <div style={{ marginTop:12 }}>
@@ -1390,7 +1388,7 @@ function ObrasModal({ prop, onSave, onClose }) {
               <div style={{ background:T.s2, borderRadius:10, padding:16 }}><div style={{ color:T.muted, fontSize:11, fontWeight:700, letterSpacing:1, marginBottom:6 }}>VARIAÇÃO</div><div style={{ color:variacao>0?T.red:T.green, fontSize:22, fontWeight:800, ...S.mono }}>{variacao>0?"+":""}{fmt.brlK(variacao)}</div></div>
             </div>
           )}
-          {obras.length===0&&!adding&&<div style={{ textAlign:"center", padding:"40px 20px", color:T.muted }}><div style={{ fontSize:40, marginBottom:12 }}>🔨</div><div style={{ fontSize:15, fontWeight:600, marginBottom:6 }}>Nenhuma obra cadastrada</div></div>}
+          {obras.length===0&&!adding&&<div style={{ textAlign:"center", padding:"40px 20px", color:T.muted }}><div style={{ fontSize:15, fontWeight:600, marginBottom:6 }}>Nenhuma obra cadastrada</div></div>}
           {obras.map((obra) => {
             const variacaoObra=(obra.executado||0)-(obra.orcado||0), varPct=obra.orcado>0?((variacaoObra/obra.orcado)*100):0;
             return (
@@ -1404,7 +1402,7 @@ function ObrasModal({ prop, onSave, onClose }) {
                       <span style={S.badge(statusColor[obra.status]||T.muted)}>{obra.status}</span>
                     </div>
                   </div>
-                  <button style={{ background:"none", border:"none", color:T.dim, cursor:"pointer", fontSize:18, padding:"0 4px" }} onClick={()=>removeObra(obra.id)}>🗑</button>
+                  <button style={{ background:"none", border:"none", color:T.dim, cursor:"pointer", fontSize:18, padding:"0 4px" }} onClick={()=>removeObra(obra.id)}>✕</button>
                 </div>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:10, marginBottom:12 }}>
                   <div><div style={{ ...S.label, fontSize:10 }}>ORÇADO (R$)</div><input type="number" style={{ ...S.input, padding:"8px 12px", fontSize:13 }} value={obra.orcado||""} onChange={e=>updateObra(obra.id,"orcado",e.target.value)} placeholder="0" /></div>
@@ -1720,7 +1718,7 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
                         <a href={`https://wa.me/5519997010594?text=${encodeURIComponent("Olá! Gostaria de solicitar um estudo de mercado para o imóvel: " + p.name + (p.neighborhood ? " - " + p.neighborhood : "") + (p.city ? ", " + p.city : "") + ".")}`}
                           target="_blank" rel="noopener noreferrer"
                           style={{ padding: "6px 10px", background: "#25D366", border: "none", borderRadius: 8, color: "#fff", fontSize: 11, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", cursor: "pointer", textAlign: "center" }}>
-                          📊 Pedir Estudo
+                          Pedir Estudo
                         </a>
                       </div>
                     )}
@@ -1741,7 +1739,7 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
         return (
           <div style={{ background: T.s1, borderRadius: 14, border: `1px solid ${T.border}`, overflow: "hidden" }}>
             <div style={{ padding: "14px 20px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>📈 HISTÓRICO DE AVALIAÇÕES</div>
+              <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>HISTÓRICO DE AVALIAÇÕES</div>
               <div style={{ color: T.dim, fontSize: 11 }}>{todasAval.length} registro{todasAval.length !== 1 ? "s" : ""} em {comAval.length} imóvel{comAval.length !== 1 ? "is" : ""}</div>
             </div>
             <div style={{ overflowX: "auto" }}>
@@ -1772,7 +1770,7 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
 
       {/* Nota metodologia */}
       <div style={{ padding: "12px 16px", background: T.s1, borderRadius: 10, border: `1px solid ${T.border}` }}>
-        <div style={{ color: T.muted, fontSize: 12, marginBottom: 4, fontWeight: 600 }}>📊 Metodologia</div>
+        <div style={{ color: T.muted, fontSize: 12, marginBottom: 4, fontWeight: 600 }}>Metodologia</div>
         <div style={{ color: T.dim, fontSize: 11, lineHeight: 1.6 }}>
           Estimativas baseadas no Índice FipeZAP dez/2025 por bairro (residencial e comercial separados).
           Média SP residencial: <strong style={{ color: T.gold }}>R$11.915/m²</strong> · Valorização 12m: <strong style={{ color: T.teal }}>+4,56%</strong>.
@@ -1790,7 +1788,6 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
   if (PROPS.length === 0) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", gap: 24, textAlign: "center" }}>
-        <div style={{ fontSize: 64 }}>🏠</div>
         <div>
           <h1 style={{ color: T.text, fontSize: 28, fontWeight: 900, margin: "0 0 12px" }}>Bem-vindo ao Goldbridge</h1>
           <div style={{ color: T.muted, fontSize: 16, maxWidth: 400, lineHeight: 1.6 }}>Cadastre seu primeiro imóvel para começar a acompanhar seus aluguéis, despesas e rentabilidade.</div>
@@ -1799,9 +1796,9 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
           + Adicionar meu primeiro imóvel
         </button>
         <div style={{ display: "flex", gap: 32, marginTop: 8 }}>
-          {[["💰","Controle de recebimentos"],["📊","Análise de rentabilidade"],["🔔","Alertas de reajuste"]].map(([icon, label]) => (
+          {["Controle de recebimentos","Análise de rentabilidade","Alertas de reajuste"].map((label) => (
             <div key={label} style={{ color: T.dim, fontSize: 13, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 24 }}>{icon}</span>{label}
+              {label}
             </div>
           ))}
         </div>
@@ -1868,7 +1865,6 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
 
       {totalObras > 0 && (
         <div style={{ padding: "12px 18px", background: T.s2, borderRadius: 10, border: `1px solid ${T.amber}40`, display: "flex", gap: 16, alignItems: "center" }}>
-          <span style={{ fontSize: 20 }}>🔨</span>
           <div><span style={{ color: T.text, fontWeight: 600 }}>{totalObras} obra{totalObras > 1 ? "s" : ""} cadastrada{totalObras > 1 ? "s" : ""}</span>{obrasEmAndamento > 0 && <span style={{ color: T.amber, marginLeft: 8 }}>· {obrasEmAndamento} em andamento</span>}</div>
           <button style={{ ...S.btnGhost, marginLeft: "auto", padding: "6px 14px", fontSize: 12 }} onClick={() => onNav("noi")}>Ver imóveis →</button>
         </div>
@@ -1906,7 +1902,6 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
           <div style={{ color: T.text, fontWeight: 700, marginBottom: 14, fontSize: 15 }}>Alertas Ativos</div>
           {INSIGHTS.slice(0, 4).map(ins => (
             <div key={ins.id} onClick={() => onNav("leakage")} style={{ display: "flex", gap: 10, padding: "10px 12px", background: T.s2, borderRadius: 8, marginBottom: 8, cursor: "pointer", border: `1px solid ${T.border}` }}>
-              <span style={{ fontSize: 16 }}>{ins.icon}</span>
               <div style={{ flex: 1 }}><div style={{ color: T.text, fontSize: 13, fontWeight: 600 }}>{ins.title}</div><div style={{ color: T.muted, fontSize: 11 }}>{fmt.brl(ins.impactMin)}–{fmt.brl(ins.impactMax)}/ano</div></div>
               <SevBadge s={ins.severity} />
             </div>
@@ -1951,7 +1946,7 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
           <thead>
             <tr style={{ background: T.s2 }}>
               <Th col="id" label="#" /><th style={S.th}>Imóvel / Endereço</th><th style={S.th}>Tipo</th><th style={S.th}>Status</th>
-              <Th col="rent" label="Aluguel bruto" /><Th col="totalExpenses" label="Despesas/ano" /><Th col="ir" label="IR/ano" /><Th col="aluguelLiquido" label="Aluguel líquido" /><Th col="lucroLiquido" label="Lucro Líquido 12m" /><Th col="noiPct" label="Margem" />
+              <Th col="rent" label="Aluguel bruto" /><Th col="totalExpenses" label="Despesas/ano" /><Th col="ir" label="IR/ano" /><Th col="aluguelLiquido" label="Aluguel líquido" /><Th col="aluguelLiquido" label="Aluguel Líquido/ano" /><Th col="noiPct" label="Margem" />
               <Th col="vacancyDays" label="Vacância" /><th style={S.th}>Obras</th><th style={S.th}>Ações</th>
             </tr>
           </thead>
@@ -1980,15 +1975,15 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
                       {fmt.brl(p.aluguelLiquido || (p.rent-(p.descontoAluguel||0)))}
                       {p.viaImobiliaria && <div style={{ color:T.dim, fontSize:10 }}>via imob.</div>}
                     </td>
-                    <td style={{ ...S.td, ...S.mono, color: (p.lucroLiquido||p.noi) > 0 ? T.green : T.red, fontWeight: 700 }} onClick={() => { onProp(p); onNav("detail"); }}>{fmt.brl(p.lucroLiquido||p.noi)}</td>
+                    <td style={{ ...S.td, ...S.mono, color: (p.aluguelLiquido || (p.rent-(p.descontoAluguel||0))) > 0 ? T.green : T.red, fontWeight: 700 }} onClick={() => { onProp(p); onNav("detail"); }}>{fmt.brl((p.aluguelLiquido || (p.rent-(p.descontoAluguel||0))) * 12)}</td>
                     <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={{ color: (p.lucroLiquidoPct||p.noiPct) > 0.45 ? T.green : (p.lucroLiquidoPct||p.noiPct) > 0.3 ? T.amber : T.red, fontSize: 12, fontWeight: 700, ...S.mono }}>{fmt.pct(p.lucroLiquidoPct||p.noiPct)}</span></td>
                     <td style={{ ...S.td, color: p.vacancyDays > p.vacancyBenchmark ? T.amber : T.muted }} onClick={() => { onProp(p); onNav("detail"); }}>{p.vacancyDays}d</td>
-                    <td style={S.td}>{obrasCount > 0 ? <span style={S.badge(obrasAtivas > 0 ? T.amber : T.muted)}>🔨 {obrasCount}{obrasAtivas > 0 ? ` (${obrasAtivas} ativ.)` : ""}</span> : <span style={{ color: T.dim, fontSize: 11 }}>—</span>}</td>
+                    <td style={S.td}>{obrasCount > 0 ? <span style={S.badge(obrasAtivas > 0 ? T.amber : T.muted)}>{obrasCount}{obrasAtivas > 0 ? ` (${obrasAtivas} ativ.)` : ""}</span> : <span style={{ color: T.dim, fontSize: 11 }}>—</span>}</td>
                     <td style={S.td}>
                       <div style={{ display: "flex", gap: 6 }}>
-                        <button title="Editar" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onEdit(p); }}>✏️</button>
-                        <button title="Obras" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onObras(p); }}>🔨</button>
-                        <button title="Remover" style={{ background: T.s3, border: `1px solid ${T.redDim}`, color: T.red, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onDelete(p); }}>🗑</button>
+                        <button title="Editar" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onEdit(p); }}>Editar</button>
+                        <button title="Obras" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onObras(p); }}>Obras</button>
+                        <button title="Remover" style={{ background: T.s3, border: `1px solid ${T.redDim}`, color: T.red, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onDelete(p); }}>Remover</button>
                       </div>
                     </td>
                   </tr>
@@ -2041,7 +2036,6 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
       </div>
       {PROPS.length === 0 && (
         <div style={{ ...S.card, textAlign: "center", padding: "60px 20px" }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🏢</div>
           <div style={{ color: T.text, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Nenhum imóvel no portfólio</div>
           <div style={{ color: T.muted, fontSize: 14, marginBottom: 24 }}>Adicione o primeiro imóvel para começar</div>
           <button style={S.btn} onClick={onAdd}>+ Adicionar Imóvel</button>
@@ -2064,7 +2058,7 @@ function PageLeakage({ PROPS }) {
 
       {emDesocupacao.length > 0 && (
         <div style={{ background: T.amber+"18", border: `1px solid ${T.amber}55`, borderRadius: 14, padding: 20 }}>
-          <div style={{ color: T.amber, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>🔑 IMÓVEIS EM DESOCUPAÇÃO ({emDesocupacao.length})</div>
+          <div style={{ color: T.amber, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>IMÓVEIS EM DESOCUPAÇÃO ({emDesocupacao.length})</div>
           {emDesocupacao.map(p => (
             <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${T.amber}22` }}>
               <div>
@@ -2088,7 +2082,6 @@ function PageLeakage({ PROPS }) {
           return (
             <div key={ins.id} style={{ background: T.s1, border: `1px solid ${open ? borderColor + "60" : T.border}`, borderRadius: 14, overflow: "hidden" }}>
               <div style={{ padding: 20, cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 16 }} onClick={() => setExpanded(open ? null : ins.id)}>
-                <div style={{ fontSize: 22 }}>{ins.icon}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}><span style={{ color: T.text, fontWeight: 800, fontSize: 15 }}>{ins.title}</span><SevBadge s={ins.severity} /></div>
                   <div style={{ color: T.muted, fontSize: 13 }}>{ins.description}</div>
@@ -2152,13 +2145,13 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
     const aluguelAtual = prop.rent - (prop.descontoAluguel || 0);
     const defasagem = aluguelEsperado - aluguelAtual;
     if (defasagem > aluguelAtual * 0.08) {
-      opportunities.push({ icon: "💰", color: T.amber, title: "Aluguel Abaixo do Potencial de Mercado", desc: `Aluguel atual: ${fmt.brl(aluguelAtual)}/mês. Com rentabilidade de ${prop.type === "Comercial" ? "0,7%" : "0,5%"} sobre ${fmt.brlK(vmRef)}, o esperado seria ${fmt.brl(Math.round(aluguelEsperado))}/mês. Potencial de reajuste: ${fmt.brl(Math.round(defasagem))}/mês (${fmt.brlK(Math.round(defasagem * 12))}/ano).` });
+      opportunities.push({ icon: "", color: T.amber, title: "Aluguel Abaixo do Potencial de Mercado", desc: `Aluguel atual: ${fmt.brl(aluguelAtual)}/mês. Com rentabilidade de ${prop.type === "Comercial" ? "0,7%" : "0,5%"} sobre ${fmt.brlK(vmRef)}, o esperado seria ${fmt.brl(Math.round(aluguelEsperado))}/mês. Potencial de reajuste: ${fmt.brl(Math.round(defasagem))}/mês (${fmt.brlK(Math.round(defasagem * 12))}/ano).` });
     }
   }
   // IPTU benchmark removido
-  if (prop.vacancyDays > prop.vacancyBenchmark) opportunities.push({ icon: "🏠", color: T.red, title: "Vacância Acima da Média", desc: `${prop.vacancyDays} dias vagos vs benchmark ${prop.vacancyBenchmark} dias.` });
-  if (prop.maintDelta > 40) opportunities.push({ icon: "🔧", color: T.amber, title: "Manutenção com Custo Anômalo", desc: `R$${prop.maintMonthly}/mês — ${prop.maintDelta}% acima do benchmark.` });
-  if (prop.noiPct < 0.5) opportunities.push({ icon: "📉", color: T.red, title: "Margem Operacional Abaixo do Padrão", desc: `NOI de ${fmt.pct(prop.noiPct)} abaixo do objetivo de 55%.` });
+  if (prop.vacancyDays > prop.vacancyBenchmark) opportunities.push({ icon: "", color: T.red, title: "Vacância Acima da Média", desc: `${prop.vacancyDays} dias vagos vs benchmark ${prop.vacancyBenchmark} dias.` });
+  if (prop.maintDelta > 40) opportunities.push({ icon: "", color: T.amber, title: "Manutenção com Custo Anômalo", desc: `R$${prop.maintMonthly}/mês — ${prop.maintDelta}% acima do benchmark.` });
+  if (prop.noiPct < 0.5) opportunities.push({ icon: "", color: T.red, title: "Margem Operacional Abaixo do Padrão", desc: `NOI de ${fmt.pct(prop.noiPct)} abaixo do objetivo de 55%.` });
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
@@ -2173,16 +2166,16 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          <button style={S.btnGhost} onClick={() => onEdit(prop)}>✏️ Editar</button>
-          <button style={S.btnGhost} onClick={() => onObras(prop)}>🔨 Obras {obrasCount > 0 ? `(${obrasCount})` : ""}</button>
+          <button style={S.btnGhost} onClick={() => onEdit(prop)}>Editar</button>
+          <button style={S.btnGhost} onClick={() => onObras(prop)}>Obras {obrasCount > 0 ? `(${obrasCount})` : ""}</button>
           <a href={"https://wa.me/5519997010594?text=" + encodeURIComponent("Olá! Gostaria de solicitar um estudo de mercado para o imóvel: " + prop.name + (prop.neighborhood ? " - " + prop.neighborhood : "") + (prop.city ? ", " + prop.city : "") + ".")}
             target="_blank" rel="noopener noreferrer"
             style={{ ...S.btnGhost, background: "#25D36618", borderColor: "#25D366", color: "#25D366", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
-            📊 Pedir Estudo de Mercado
+            Pedir Estudo de Mercado
           </a>
-          {prop.status === "Ocupado" && <button style={{ ...S.btnDanger, borderColor: T.amber, color: T.amber }} onClick={() => onCancelarContrato(prop)}>⚠️ Cancelar Contrato</button>}
-          {prop.status === "Em desocupação" && <button style={{ ...S.btnGhost, borderColor: T.green, color: T.green }} onClick={() => onCancelarContrato(prop)}>🔑 Registrar Entrega</button>}
-          <button style={S.btnDanger} onClick={() => onDelete(prop)}>🗑 Remover</button>
+          {prop.status === "Ocupado" && <button style={{ ...S.btnDanger, borderColor: T.amber, color: T.amber }} onClick={() => onCancelarContrato(prop)}>Cancelar Contrato</button>}
+          {prop.status === "Em desocupação" && <button style={{ ...S.btnGhost, borderColor: T.green, color: T.green }} onClick={() => onCancelarContrato(prop)}>Registrar Entrega</button>}
+          <button style={S.btnDanger} onClick={() => onDelete(prop)}>Remover</button>
         </div>
         <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ color: T.muted, fontSize: 11, marginBottom: 4 }}>LEAKAGE</div><div style={{ color: prop.leakage > 60 ? T.red : prop.leakage > 30 ? T.amber : T.green, fontSize: 40, fontWeight: 900, ...S.mono, lineHeight: 1 }}>{prop.leakage}</div></div>
       </div>
@@ -2194,7 +2187,7 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
       </div>
       {prop.hasCondominio && (prop.chamadaExtra > 0 || prop.fundoReserva > 0) && (
         <div style={{ ...S.card, border: `1px solid ${T.amber}30` }}>
-          <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>🏢 CONDOMÍNIO</div>
+          <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>CONDOMÍNIO</div>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             {prop.condoFee > 0 && (
               <div style={{ background: T.s2, borderRadius: 8, padding: "10px 16px" }}>
@@ -2242,7 +2235,7 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
 
       {obrasCount > 0 && (
         <div style={{ ...S.card, border: `1px solid ${T.amber}40` }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}><div style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>🔨 Obras & Reformas</div><button style={{ ...S.btnGhost, padding: "6px 14px", fontSize: 12 }} onClick={() => onObras(prop)}>Gerenciar →</button></div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}><div style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Obras & Reformas</div><button style={{ ...S.btnGhost, padding: "6px 14px", fontSize: 12 }} onClick={() => onObras(prop)}>Gerenciar →</button></div>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 14 }}>
             <div style={{ background: T.s2, borderRadius: 8, padding: "10px 16px" }}><div style={{ color: T.muted, fontSize: 10, letterSpacing: 1 }}>ORÇADO</div><div style={{ color: T.gold, fontSize: 18, fontWeight: 800, ...S.mono }}>{fmt.brlK(totalOrcado)}</div></div>
             <div style={{ background: T.s2, borderRadius: 8, padding: "10px 16px" }}><div style={{ color: T.muted, fontSize: 10, letterSpacing: 1 }}>EXECUTADO</div><div style={{ color: totalExecutado > totalOrcado ? T.red : T.green, fontSize: 18, fontWeight: 800, ...S.mono }}>{fmt.brlK(totalExecutado)}</div></div>
@@ -2283,11 +2276,10 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
       </div>
       {opportunities.length > 0 && (
         <div style={S.cardGold}>
-          <div style={{ color: T.gold, fontWeight: 800, fontSize: 15, marginBottom: 14 }}>💡 Oportunidades Identificadas</div>
+          <div style={{ color: T.gold, fontWeight: 800, fontSize: 15, marginBottom: 14 }}>Oportunidades Identificadas</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {opportunities.map((o, i) => (
               <div key={i} style={{ display: "flex", gap: 14, padding: "12px 16px", background: T.s0, borderRadius: 10, border: `1px solid ${o.color}30` }}>
-                <span style={{ fontSize: 18 }}>{o.icon}</span>
                 <div><div style={{ color: o.color, fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{o.title}</div><div style={{ color: T.muted, fontSize: 13 }}>{o.desc}</div></div>
               </div>
             ))}
@@ -2315,7 +2307,7 @@ function buildDecision(prop) {
   return { keepScore,sellScore,retroScore,reposScore,recommendation:scores[0].id,impliedValue,saleValue,saleValueOptimistic,improvedNOI,improvedValue,reinvestReturn,retroCost,retroRentIncrease,retroNewNOI,retroNewValue,retroROI,retroPayback,reposRentEstimate,reposNOI,reposValue,reposCost,otherType,marketCapRate,retro,appreciation };
 }
 
-const DECISION_META = { keep:{ label:"Manter & Otimizar", icon:"📈", color:"#2ECC9A", short:"MANTER" }, sell:{ label:"Vender Agora", icon:"💰", color:"#E85565", short:"VENDER" }, retrofit:{ label:"Retrofitar", icon:"🔨", color:"#F5A623", short:"RETROFIT" }, reposition:{ label:"Reposicionar Uso", icon:"🔄", color:"#4A8CF5", short:"REPOSICIONAR" } };
+const DECISION_META = { keep:{ label:"Manter & Otimizar", icon:"", color:"#2ECC9A", short:"MANTER" }, sell:{ label:"Vender Agora", icon:"", color:"#E85565", short:"VENDER" }, retrofit:{ label:"Retrofitar", icon:"", color:"#F5A623", short:"RETROFIT" }, reposition:{ label:"Reposicionar Uso", icon:"", color:"#4A8CF5", short:"REPOSICIONAR" } };
 
 function ScoreRing({ score, color, size=56 }) {
   const r=(size/2)-6, circ=2*Math.PI*r, filled=circ*(score/100);
@@ -2334,7 +2326,7 @@ function PageDecision({ PROPS, onProp, onNav }) {
       <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
         {Object.entries(DECISION_META).map(([id,meta])=>(
           <div key={id} onClick={()=>setFilterRec(filterRec===id?"":id)} style={{ ...S.card, flex:1, minWidth:130, cursor:"pointer", border:`1px solid ${filterRec===id?meta.color+"80":T.border}`, background:filterRec===id?meta.color+"12":T.s1 }}>
-            <div style={{ fontSize:22, marginBottom:6 }}>{meta.icon}</div><div style={{ color:meta.color, fontSize:28, fontWeight:900, ...S.mono, lineHeight:1 }}>{counts[id]}</div><div style={{ color:T.text, fontSize:13, fontWeight:700, marginTop:4 }}>{meta.label}</div>
+            <div style={{ color:meta.color, fontSize:28, fontWeight:900, ...S.mono, lineHeight:1 }}>{counts[id]}</div><div style={{ color:T.text, fontSize:13, fontWeight:700, marginTop:4 }}>{meta.label}</div>
           </div>
         ))}
       </div>
@@ -2355,7 +2347,7 @@ function PageDecision({ PROPS, onProp, onNav }) {
                 {[{ score:d.keepScore,color:T.green },{ score:d.sellScore,color:T.red },{ score:d.retroScore,color:T.amber },{ score:d.reposScore,color:T.blue }].map(({score,color},i)=>(
                   <td key={i} style={{ ...S.td, textAlign:"center" }}><ScoreRing score={score} color={color} size={44} /></td>
                 ))}
-                <td style={S.td}><span style={{ ...S.badge(rec.color), fontSize:12 }}>{rec.icon} {rec.short}</span></td>
+                <td style={S.td}><span style={{ ...S.badge(rec.color), fontSize:12 }}>{rec.short}</span></td>
               </tr>
             ); })}
           </tbody>
@@ -2378,7 +2370,7 @@ function PageDecisionDetail({ prop, onBack }) {
       <div style={{ display:"flex", alignItems:"flex-start", gap:14 }}>
         <button style={{ ...S.btnGhost, padding:"8px 16px" }} onClick={onBack}>← Voltar</button>
         <div style={{ flex:1 }}><div style={{ color:T.muted, fontSize:11, letterSpacing:2, fontWeight:700, marginBottom:4 }}>ANÁLISE DE DECISÃO</div><h1 style={{ color:T.text, fontSize:22, fontWeight:800, margin:0 }}>{prop.name}</h1><div style={{ color:T.muted, fontSize:13, marginTop:4 }}>{prop.neighborhood} · {prop.city} · {prop.size}m²</div></div>
-        <div style={{ ...S.card, background:rec.color+"18", border:`2px solid ${rec.color}60`, textAlign:"center", padding:"14px 20px" }}><div style={{ fontSize:26, marginBottom:4 }}>{rec.icon}</div><div style={{ color:rec.color, fontWeight:900, fontSize:14 }}>{rec.label}</div></div>
+        <div style={{ ...S.card, background:rec.color+"18", border:`2px solid ${rec.color}60`, textAlign:"center", padding:"14px 20px" }}><div style={{ color:rec.color, fontWeight:900, fontSize:14 }}>{rec.label}</div></div>
       </div>
       <div style={S.card}>
         <div style={{ color:T.text, fontWeight:700, marginBottom:14, fontSize:15 }}>Scores</div>
@@ -2393,7 +2385,7 @@ function PageDecisionDetail({ prop, onBack }) {
           <div key={opt.id} style={{ ...S.card, border:`1px solid ${isRec?opt.meta.color+"60":T.border}`, background:isRec?opt.meta.color+"08":T.s1 }}>
             <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
               <ScoreRing score={opt.score} color={opt.meta.color} size={48} />
-              <div><div style={{ display:"flex", gap:8, alignItems:"center" }}><span style={{ fontSize:18 }}>{opt.meta.icon}</span><span style={{ color:T.text, fontWeight:800, fontSize:15 }}>{opt.meta.label}</span>{isRec&&<span style={{ ...S.badge(opt.meta.color), fontSize:10 }}>✓ RECOMENDADO</span>}</div><div style={{ color:T.muted, fontSize:12, marginTop:2 }}>{opt.headline}</div></div>
+              <div><div style={{ display:"flex", gap:8, alignItems:"center" }}><span style={{ color:T.text, fontWeight:800, fontSize:15 }}>{opt.meta.label}</span>{isRec&&<span style={{ ...S.badge(opt.meta.color), fontSize:10 }}>✓ RECOMENDADO</span>}</div><div style={{ color:T.muted, fontSize:12, marginTop:2 }}>{opt.headline}</div></div>
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
               <div style={{ background:T.s0, borderRadius:8, padding:12 }}>{opt.numbers.map((n,i)=><div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"4px 0", borderBottom:i<opt.numbers.length-1?`1px solid ${T.border}40`:"none" }}><span style={{ color:T.muted, fontSize:11 }}>{n.label}</span><span style={{ color:n.color, fontSize:12, fontWeight:700, ...S.mono }}>{n.value}</span></div>)}</div>
@@ -2417,7 +2409,7 @@ function PageReport({ PROPS }) {
 <h2>Resumo Executivo</h2><div class="kpis"><div class="kpi"><div class="kpi-label">Receita Bruta</div><div class="kpi-value">${fmt.brlK(PORT.receita)}</div></div><div class="kpi"><div class="kpi-label">Despesas</div><div class="kpi-value red">${fmt.brlK(PORT.despesas)}</div></div><div class="kpi"><div class="kpi-label">Lucro Líquido</div><div class="kpi-value green">${fmt.brlK(PORT.noi)}</div></div><div class="kpi"><div class="kpi-label">Valor da Carteira Est.</div><div class="kpi-value amber">${fmt.brlK(totalValorMercado)}</div></div></div>
 <h2>Lucro Operacional Mensal</h2><table><tr><th>Mês</th><th>Receita</th><th>Despesas</th><th>NOI</th><th>Margem</th></tr>${PORT_MONTHLY.map(m=>`<tr><td>${m.month}/2024</td><td>${fmt.brl(m.receita)}</td><td style="color:#c0392b">${fmt.brl(m.despesas)}</td><td style="color:${m.noi>=0?"#1a8a6a":"#c0392b"};font-weight:700">${fmt.brl(m.noi)}</td><td>${fmt.pct(m.noi/m.receita)}</td></tr>`).join("")}</table>
 ${totalObras>0?`<h2>Obras Cadastradas</h2><table><tr><th>Imóvel</th><th>Obra</th><th>Tipo</th><th>Status</th><th>Orçado</th><th>Executado</th></tr>${PROPS.flatMap(p=>(p.obras||[]).map(o=>`<tr><td>${p.name}</td><td>${o.descricao}</td><td>${o.tipo}</td><td>${o.status}</td><td>${fmt.brl(o.orcado)}</td><td>${fmt.brl(o.executado)}</td></tr>`)).join("")}</table>`:""}
-<h2>Alertas</h2>${INSIGHTS.map(ins=>`<div style="margin-bottom:12px;padding:12px;background:#fff9f0;border-left:4px solid #C8A84B;border-radius:6px"><strong>${ins.icon} ${ins.title}</strong><p style="font-size:12px;color:#555;margin-top:4px">${ins.description}</p><p style="font-size:12px;color:#c0392b;font-weight:700;margin-top:2px">Impacto: ${fmt.brl(ins.impactMin)}–${fmt.brl(ins.impactMax)}/ano</p></div>`).join("")}
+<h2>Alertas</h2>${INSIGHTS.map(ins=>`<div style="margin-bottom:12px;padding:12px;background:#fff9f0;border-left:4px solid #C8A84B;border-radius:6px"><strong>${ins.title}</strong><p style="font-size:12px;color:#555;margin-top:4px">${ins.description}</p><p style="font-size:12px;color:#c0392b;font-weight:700;margin-top:2px">Impacto: ${fmt.brl(ins.impactMin)}–${fmt.brl(ins.impactMax)}/ano</p></div>`).join("")}
 <div class="footer"><div>Goldbridge Brasil · ${fmt.date()}</div><div>Confidencial</div></div></body></html>`;
     const blob=new Blob([html],{type:"text/html"}), a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`goldbridge-relatorio-${new Date().toISOString().split("T")[0]}.html`; a.click();
   };
@@ -2428,11 +2420,11 @@ ${totalObras>0?`<h2>Obras Cadastradas</h2><table><tr><th>Imóvel</th><th>Obra</t
         <div style={{ color:T.text, fontWeight:700, marginBottom:14, fontSize:15 }}>Configurar</div>
         <div style={{ display:"flex", flexDirection:"column", gap:12, maxWidth:480 }}>
           <div><div style={S.label}>NOME DO PROPRIETÁRIO</div><input style={S.input} value={name} onChange={e=>setName(e.target.value)} /></div>
-          {totalObras>0&&<div style={{ padding:12, background:T.s2, borderRadius:8, color:T.muted, fontSize:12 }}>🔨 O relatório incluirá {totalObras} obra(s) cadastrada(s).</div>}
-          <button style={{ ...S.btn, alignSelf:"flex-start", marginTop:8 }} onClick={()=>{ setDone(true); download(); }}>⬇️ Baixar Relatório HTML</button>
+          {totalObras>0&&<div style={{ padding:12, background:T.s2, borderRadius:8, color:T.muted, fontSize:12 }}>O relatório incluirá {totalObras} obra(s) cadastrada(s).</div>}
+          <button style={{ ...S.btn, alignSelf:"flex-start", marginTop:8 }} onClick={()=>{ setDone(true); download(); }}>Baixar Relatório HTML</button>
         </div>
       </div>
-      {done&&<div style={S.cardGold}><div style={{ color:T.gold, fontWeight:800, fontSize:16, marginBottom:2 }}>✅ Relatório gerado!</div><div style={{ color:T.muted, fontSize:13 }}>Verifique sua pasta de Downloads.</div></div>}
+      {done&&<div style={S.cardGold}><div style={{ color:T.gold, fontWeight:800, fontSize:16, marginBottom:2 }}>Relatório gerado!</div><div style={{ color:T.muted, fontSize:13 }}>Verifique sua pasta de Downloads.</div></div>}
     </div>
   );
 }
@@ -2930,7 +2922,7 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
             const restam = p.chamadaExtraParcelas - p.chamadaExtraParcelaAtual;
             return (
               <div key={`chamada-${p.id}`} style={{ padding: "14px 18px", background: restam === 0 ? T.green+"22" : T.amber+"22", border: `1px solid ${restam === 0 ? T.green : T.amber}44`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{ fontSize: 22 }}>{restam === 0 ? "🎉" : "⚠️"}</div>
+                <div style={{ fontSize: 22 }}>{restam === 0 ? "✓" : "!"}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>
                     {p.name} — Chamada extra {restam === 0 ? "termina este mês!" : `termina em ${restam} mês${restam > 1 ? "es" : ""}`}
@@ -2944,7 +2936,6 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
           })}
           {alertasIPTU.map(p => (
             <div key={`iptu-${p.id}`} style={{ padding: "14px 18px", background: T.blue + "22", border: `1px solid ${T.blue}44`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ fontSize: 22 }}>🏛️</div>
               <div style={{ flex: 1 }}>
                 <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{p.name} — IPTU vence {p.diasIPTU <= 0 ? "este mês" : `em ${p.diasIPTU} dias`}</div>
                 <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>{p.vencIPTU} · {fmt.brl(p.iptu)} · {p.neighborhood}</div>
@@ -2953,7 +2944,6 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
           ))}
           {alertasContrato.map(p => (
             <div key={p.id} style={{ padding: "14px 18px", background: T.redDim + "44", border: `1px solid ${T.red}44`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ fontSize: 22 }}>📋</div>
               <div style={{ flex: 1 }}>
                 <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{p.name} — Contrato vence em <span style={{ color: T.red }}>{p.diasRestantes} dias</span></div>
                 <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>Vencimento: {p.fimContrato} · {p.neighborhood}</div>
@@ -2962,7 +2952,6 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
           ))}
           {alertasReajuste.map(p => (
             <div key={p.id} style={{ padding: "14px 18px", background: T.amberDim + "44", border: `1px solid ${T.amber}44`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ fontSize: 22 }}>📈</div>
               <div style={{ flex: 1 }}>
                 <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{p.name} — Reajuste em <span style={{ color: T.amber }}>{p.diasReajuste} dias</span></div>
                 <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
@@ -3025,7 +3014,7 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   {status && <span style={{ ...S.badge(STATUS_COR[status]) }}>{STATUS_LABEL[status]}{p.pag?.data ? ` · ${p.pag.data}` : ""}</span>}
-                  <button style={{ ...S.btn, padding: "7px 14px", fontSize: 12, background: status === "pago" ? T.greenDim : T.goldGlow, border: `1px solid ${status === "pago" ? T.green : T.gold}`, color: status === "pago" ? T.green : T.gold }} onClick={() => handleMarcar(p, "pago")}>✓ Pago</button>
+                  <button style={{ ...S.btn, padding: "7px 14px", fontSize: 12, background: status === "pago" ? T.greenDim : T.goldGlow, border: `1px solid ${status === "pago" ? T.green : T.gold}`, color: status === "pago" ? T.green : T.gold }} onClick={() => handleMarcar(p, "pago")}>Pago</button>
                   <button style={{ background: "transparent", border: `1px solid ${T.amberDim}`, color: T.amber, borderRadius: 8, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }} onClick={() => handleMarcar(p, "atrasado")}>⏰ Atrasado</button>
                   <button style={{ background: "transparent", border: `1px solid ${T.redDim}`, color: T.red, borderRadius: 8, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }} onClick={() => handleMarcar(p, "nao_pago")}>✕ Não pago</button>
                   <button style={{ background: "transparent", border: `1px solid ${T.border}`, color: T.muted, borderRadius: 8, padding: "7px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }} onClick={() => setDetalheProp(p)}>Histórico →</button>
@@ -3072,7 +3061,7 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
         return (
           <div style={{ ...S.card, padding:0, overflow:"hidden" }}>
             <div style={{ padding:"16px 20px", borderBottom:`1px solid ${T.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <div style={{ color:T.gold, fontSize:12, fontWeight:700, letterSpacing:1 }}>🏛️ IPTU — VENCIMENTOS E PAGAMENTOS</div>
+              <div style={{ color:T.gold, fontSize:12, fontWeight:700, letterSpacing:1 }}>IPTU — VENCIMENTOS E PAGAMENTOS</div>
               <div style={{ color:T.dim, fontSize:12 }}>Previsão anual: <span style={{ color:T.goldBright, fontWeight:700 }}>{fmt.brl(totalAnual)}</span></div>
             </div>
             <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
@@ -3112,7 +3101,7 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
               </tbody>
             </table>
             <div style={{ padding:"10px 20px", borderTop:`1px solid ${T.border}`, background:T.s2 }}>
-              <span style={{ color:T.dim, fontSize:11 }}>💡 Parcela estimada em 10x. Vencimento cadastrado no perfil do imóvel.</span>
+              <span style={{ color:T.dim, fontSize:11 }}>Parcela estimada em 10x. Vencimento cadastrado no perfil do imóvel.</span>
             </div>
           </div>
         );
@@ -3201,8 +3190,8 @@ function PageLocatarios({ PROPS, onUpdateProps }) {
                 </div>
               </div>
               <div style={{ display:"flex", gap:8 }}>
-                <button style={{ background:T.s3, border:`1px solid ${T.border}`, color:T.muted, borderRadius:7, padding:"5px 10px", cursor:"pointer" }} onClick={() => openForm(i)}>✏️</button>
-                <button style={{ background:T.s3, border:`1px solid ${T.redDim}`, color:T.red, borderRadius:7, padding:"5px 10px", cursor:"pointer" }} onClick={() => removeLocatario(i)}>🗑</button>
+                <button style={{ background:T.s3, border:`1px solid ${T.border}`, color:T.muted, borderRadius:7, padding:"5px 10px", cursor:"pointer" }} onClick={() => openForm(i)}>Editar</button>
+                <button style={{ background:T.s3, border:`1px solid ${T.redDim}`, color:T.red, borderRadius:7, padding:"5px 10px", cursor:"pointer" }} onClick={() => removeLocatario(i)}>Remover</button>
               </div>
             </div>
           ))}
@@ -3476,7 +3465,7 @@ function PageFluxoCaixa({ PROPS }) {
         if (inadimplentes.length === 0) return null;
         return (
           <div style={{ ...S.card, border:`1px solid ${T.red}40` }}>
-            <div style={{ color: T.red, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>⚠️ Inadimplência — Mês Atual</div>
+            <div style={{ color: T.red, fontWeight: 700, fontSize: 14, marginBottom: 14 }}>Inadimplência — Mês Atual</div>
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               {inadimplentes.map(p => (
                 <div key={p.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", background:T.s2, borderRadius:8 }}>
@@ -3500,8 +3489,8 @@ function PageFluxoCaixa({ PROPS }) {
 const NAV = [
   { id: "dashboard",  label: "Visão Geral",   icon: "◈" },
   { id: "noi",        label: "Imóveis",        icon: "⊞" },
-  { id: "pagamentos", label: "Pagamentos",      icon: "💳" },
-  { id: "fluxo",      label: "Fluxo de Caixa", icon: "📊" },
+  { id: "pagamentos", label: "Pagamentos",      icon: "" },
+  { id: "fluxo",      label: "Fluxo de Caixa", icon: "" },
 ];
 
 // ─── PAGE HISTÓRICO DO IMÓVEL ─────────────────────────────────────────────────
@@ -3581,8 +3570,8 @@ function PageHistorico({ PROPS, onUpdateProps }) {
                       </div>
                       {!ev.auto && (
                         <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-                          <button style={{ background:T.s3, border:"1px solid "+T.border, color:T.muted, borderRadius:7, padding:"4px 8px", cursor:"pointer" }} onClick={() => openForm(i)}>✏️</button>
-                          <button style={{ background:T.s3, border:"1px solid "+T.redDim, color:T.red, borderRadius:7, padding:"4px 8px", cursor:"pointer" }} onClick={() => removeEvento(i)}>🗑</button>
+                          <button style={{ background:T.s3, border:"1px solid "+T.border, color:T.muted, borderRadius:7, padding:"4px 8px", cursor:"pointer" }} onClick={() => openForm(i)}>Editar</button>
+                          <button style={{ background:T.s3, border:"1px solid "+T.redDim, color:T.red, borderRadius:7, padding:"4px 8px", cursor:"pointer" }} onClick={() => removeEvento(i)}>Remover</button>
                         </div>
                       )}
                     </div>
@@ -3711,7 +3700,7 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
         });
         if (parsed.rent > 0 || parsed.locatarioNome) set("status", "Ocupado");
         setPdfExtracted(true);
-        setPdfMsg("✅ Dados extraídos! Revise os campos abaixo e salve.");
+        setPdfMsg("Dados extraídos! Revise os campos abaixo e salve.");
         setTab("manual");
         setPdfLoading(false);
       };
@@ -3813,10 +3802,10 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
 
         {/* ABAS */}
         <div style={{ display: "flex", borderBottom: `1px solid ${T.border}`, padding: "0 28px" }}>
-          {[["manual","✏️ Preencher manualmente"],["pdf","📄 Importar documento"]].map(([id, label]) => (
+          {[["manual","Preencher manualmente"],["pdf","Importar documento"]].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} style={{ background: "none", border: "none", borderBottom: tab===id ? `2px solid ${T.gold}` : "2px solid transparent", color: tab===id ? T.gold : T.muted, fontWeight: tab===id ? 700 : 400, fontSize: 13, padding: "12px 18px", cursor: "pointer", fontFamily: "inherit", marginBottom: -1 }}>{label}</button>
           ))}
-          {pdfExtracted && <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: T.green, padding: "0 8px" }}>✅ PDF importado</div>}
+          {pdfExtracted && <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: T.green, padding: "0 8px" }}>PDF importado</div>}
         </div>
 
         {/* ABA PDF */}
@@ -3827,7 +3816,6 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
             </div>
             <label style={{ border: `2px dashed ${T.border}`, borderRadius: 14, padding: "36px 24px", textAlign: "center", cursor: "pointer", display: "block", background: T.s2 }}>
               <input type="file" accept=".pdf" style={{ display: "none" }} onChange={e => e.target.files[0] && handlePdfUpload(e.target.files[0])} />
-              <div style={{ fontSize: 36, marginBottom: 12 }}>📄</div>
               <div style={{ color: T.text, fontWeight: 600, marginBottom: 4 }}>{pdfFile ? pdfFile.name : "Clique para selecionar ou arraste o PDF"}</div>
               <div style={{ color: T.dim, fontSize: 12 }}>Contratos, boletos, escrituras — qualquer documento PDF do imóvel</div>
             </label>
@@ -3912,7 +3900,7 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
           <div>
             <Section title="STATUS DO IMÓVEL" />
             <div style={{ display: "flex", gap: 10 }}>
-              {[["Vago","🔑 Vago"],["Ocupado","✅ Alugado"]].map(([val, label]) => (
+              {[["Vago","Vago"],["Ocupado","Alugado"]].map(([val, label]) => (
                 <button key={val} style={{ flex: 1, padding: "12px", borderRadius: 10, border: `1px solid ${form.status === val ? T.gold : T.border}`, background: form.status === val ? T.goldGlow : T.s2, color: form.status === val ? T.gold : T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: form.status === val ? 700 : 400 }} onClick={() => set("status", val)}>{label}</button>
               ))}
             </div>
@@ -3996,7 +3984,7 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
                 )}
                 {form.viaImobiliaria && (
                   <div style={{ color: T.dim, fontSize: 12, padding: "10px 14px", background: T.s1, borderRadius: 8, border: `1px solid ${T.border}` }}>
-                    🏢 Os dados do locatário são gerenciados pela imobiliária
+                    Os dados do locatário são gerenciados pela imobiliária
                   </div>
                 )}
               </div>
@@ -4065,7 +4053,7 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
           )}
 
           <div style={{ padding: 12, background: T.s2, borderRadius: 8 }}>
-            <div style={{ color: T.dim, fontSize: 12 }}>💡 Despesas não preenchidas são calculadas automaticamente com base nos benchmarks do bairro.</div>
+            <div style={{ color: T.dim, fontSize: 12 }}>Despesas não preenchidas são calculadas automaticamente com base nos benchmarks do bairro.</div>
           </div>
         </div>
         </div> {/* end manual tab wrapper */}
@@ -4129,7 +4117,7 @@ function CancelarContratoModal({ prop, onConfirm, onClose }) {
             <>
               {multaMeses > 0 ? (
                 <div style={{ padding:16, background:T.amber+"18", border:`1px solid ${T.amber}44`, borderRadius:12 }}>
-                  <div style={{ color:T.amber, fontWeight:700, fontSize:13, marginBottom:8 }}>⚠️ Multa por rescisão antecipada</div>
+                  <div style={{ color:T.amber, fontWeight:700, fontSize:13, marginBottom:8 }}>Multa por rescisão antecipada</div>
                   <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
                     <div><div style={{ color:T.dim, fontSize:11 }}>MESES RESTANTES</div><div style={{ color:T.text, fontWeight:700, fontSize:18 }}>{multaMeses}x</div></div>
                     <div><div style={{ color:T.dim, fontSize:11 }}>VALOR DA MULTA</div><div style={{ color:T.amber, fontWeight:800, fontSize:18, fontFamily:"'DM Mono',monospace" }}>{fmt.brl(multaValor)}</div></div>
@@ -4138,7 +4126,7 @@ function CancelarContratoModal({ prop, onConfirm, onClose }) {
                 </div>
               ) : (
                 <div style={{ padding:14, background:T.s2, borderRadius:10 }}>
-                  <div style={{ color:T.muted, fontSize:13 }}>ℹ️ Contrato no prazo — sem multa de rescisão calculada.</div>
+                  <div style={{ color:T.muted, fontSize:13 }}>Contrato no prazo — sem multa de rescisão calculada.</div>
                 </div>
               )}
               <div>
@@ -4182,7 +4170,7 @@ function CancelarContratoModal({ prop, onConfirm, onClose }) {
             onClick={() => onConfirm({ dataEntrega, vistoria, multaValor, multaMeses })}
             disabled={isDesocupando && !vistoriaCompleta}
           >
-            {isDesocupando ? "✅ Confirmar Entrega" : "⚠️ Iniciar Desocupação"}
+            {isDesocupando ? "Confirmar Entrega" : "Iniciar Desocupação"}
           </button>
         </div>
       </div>
@@ -4194,12 +4182,11 @@ function DeleteConfirmModal({ prop, onConfirm, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#00000099", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div style={{ background: T.s1, border: `1px solid ${T.red}40`, borderRadius: 18, width: "100%", maxWidth: 420, padding: 32 }}>
-        <div style={{ fontSize: 32, marginBottom: 12, textAlign: "center" }}>🗑</div>
         <div style={{ color: T.text, fontWeight: 800, fontSize: 18, textAlign: "center", marginBottom: 8 }}>Remover Imóvel?</div>
         <div style={{ color: T.muted, fontSize: 14, textAlign: "center", marginBottom: 6 }}>{prop.name}</div>
         <div style={{ color: T.dim, fontSize: 12, textAlign: "center", marginBottom: 24 }}>{prop.neighborhood} · {prop.city}</div>
         <div style={{ padding: 12, background: T.s2, borderRadius: 8, marginBottom: 24 }}>
-          <div style={{ color: T.amber, fontSize: 12, textAlign: "center" }}>⚠️ Esta ação não pode ser desfeita. Todos os dados incluindo obras serão removidos.</div>
+          <div style={{ color: T.amber, fontSize: 12, textAlign: "center" }}>Esta ação não pode ser desfeita. Todos os dados incluindo obras serão removidos.</div>
         </div>
         <div style={{ display: "flex", gap: 12 }}>
           <button style={{ ...S.btnGhost, flex: 1 }} onClick={onClose}>Cancelar</button>
@@ -4649,7 +4636,7 @@ export default function App() {
               style={{ width: "100%", marginBottom: 8, padding: "8px 12px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.s2, color: T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "space-between" }}
               onClick={() => { const next = !darkMode; const theme = next ? DARK_T : LIGHT_T; Object.assign(T, theme); applyTheme(theme); localStorage.setItem("gb_theme", next ? "dark" : "light"); setDarkMode(next); setThemeKey(k => k + 1); }}
             >
-              <span>{darkMode ? "🌙 Modo Escuro" : "☀️ Modo Claro"}</span>
+              <span>{darkMode ? "Modo Escuro" : "Modo Claro"}</span>
               <span style={{ fontSize: 10, opacity: 0.6 }}>trocar</span>
             </button>
             <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
