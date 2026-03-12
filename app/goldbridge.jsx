@@ -1459,6 +1459,7 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
 
+  const anoAtualVM = new Date().getFullYear();
   const propsComValor = PROPS.map(p => {
     const bm = getFipeZAP(p.neighborhood, p.city, p.type);
     const m2ref = p.type === "Comercial" ? bm.com : bm.res;
@@ -1467,7 +1468,14 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
     const ganhoCapital = valorCompra > 0 ? valorEstimado - valorCompra : null;
     const ganhoCapitalPct = valorCompra > 0 ? ganhoCapital / valorCompra : null;
     const capRate = valorEstimado > 0 ? (p.lucroLiquido || p.noi) / valorEstimado : 0;
-    return { ...p, m2ref, valorEstimado, valorCompra, ganhoCapital, ganhoCapitalPct, capRate, var12m: bm.var12m, valorizacaoAnual: valorEstimado * bm.var12m, fonteM2: bm.fonte, isManual: p.valorMercado > 0 };
+    // Valorização real baseada nos dados cadastrados
+    const temValTotal = valorCompra > 0 && p.valorMercado > 0;
+    const valorizacaoTotalPct = temValTotal ? ((p.valorMercado - valorCompra) / valorCompra) * 100 : null;
+    const anosDesdeCompra = (temValTotal && p.anoCompra && (anoAtualVM - Number(p.anoCompra)) > 0)
+      ? anoAtualVM - Number(p.anoCompra) : null;
+    const valorizacaoCAGR = anosDesdeCompra
+      ? (Math.pow(p.valorMercado / valorCompra, 1 / anosDesdeCompra) - 1) * 100 : null;
+    return { ...p, m2ref, valorEstimado, valorCompra, ganhoCapital, ganhoCapitalPct, capRate, fonteM2: bm.fonte, isManual: p.valorMercado > 0, valorizacaoTotalPct, valorizacaoCAGR, anosDesdeCompra };
   });
 
   const filtered = propsComValor
@@ -1483,9 +1491,14 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
 
   const totalValor     = propsComValor.reduce((s, p) => s + p.valorEstimado, 0);
   const capRateMedio   = propsComValor.reduce((s, p) => s + p.capRate, 0) / propsComValor.length;
-  const valorizacaoEst = propsComValor.reduce((s, p) => s + p.valorizacaoAnual, 0);
   const comValorCompra = propsComValor.filter(p => p.valorCompra > 0).length;
   const totalGanho     = propsComValor.filter(p => p.valorCompra > 0).reduce((s, p) => s + (p.ganhoCapital || 0), 0);
+  // Valorização real média ponderada pelo valor de mercado (só imóveis com dados completos)
+  const comValorizacaoReal = propsComValor.filter(p => p.valorizacaoTotalPct !== null);
+  const valorizacaoMediaPonderada = comValorizacaoReal.length > 0
+    ? comValorizacaoReal.reduce((s, p) => s + p.valorizacaoTotalPct * p.valorMercado, 0) /
+      comValorizacaoReal.reduce((s, p) => s + p.valorMercado, 0)
+    : null;
 
   const saveEdit = () => {
     const vm = parseFloat(editForm.valorMercado) || 0;
@@ -1539,9 +1552,9 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
       {/* KPIs */}
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
         {[
-          { label: "VALOR TOTAL EST.",      value: fmt.brlK(totalValor),      sub: `${PROPS.length} imóveis`,                    color: T.gold },
-          { label: "CAP RATE MÉDIO",        value: fmt.pct(capRateMedio),     sub: "aluguel líquido ÷ valor mercado",             color: capRateMedio > 0.06 ? T.green : T.amber },
-          { label: "VALORIZAÇÃO ANUAL EST.", value: fmt.brlK(valorizacaoEst), sub: "FipeZAP por bairro",                          color: T.teal },
+          { label: "VALOR TOTAL EST.",  value: fmt.brlK(totalValor),  sub: `${PROPS.length} imóveis`,               color: T.gold },
+          { label: "CAP RATE MÉDIO",    value: fmt.pct(capRateMedio), sub: "aluguel líquido ÷ valor mercado",        color: capRateMedio > 0.06 ? T.green : T.amber },
+          ...(valorizacaoMediaPonderada !== null ? [{ label: "VALORIZAÇÃO MÉDIA", value: `+${valorizacaoMediaPonderada.toFixed(1)}%`, sub: `${comValorizacaoReal.length} imóvel(is) com dados reais`, color: T.teal }] : []),
           ...(comValorCompra > 0 ? [{ label: "GANHO DE CAPITAL", value: fmt.brlK(totalGanho), sub: `${comValorCompra} imóveis com compra`, color: totalGanho >= 0 ? T.green : T.red }] : []),
         ].map(k => (
           <div key={k.label} style={{ ...S.card, flex: 1, minWidth: 160 }}>
@@ -1588,7 +1601,6 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
           <option value="valor_desc">↓ Maior valor</option>
           <option value="valor_asc">↑ Menor valor</option>
           <option value="caprate_desc">↓ Maior cap rate</option>
-          <option value="valorizacao">↓ Maior valorização</option>
           <option value="ganho_desc">↓ Maior ganho de capital</option>
         </select>
         <div style={{ color: T.muted, fontSize: 12, marginLeft: "auto" }}>{filtered.length} imóveis · clique em ✎ para inserir valor real</div>
@@ -1599,7 +1611,7 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
           <thead>
             <tr style={{ background: T.s2 }}>
-              {["Imóvel", "Bairro", "m²", "R$/m² ref.", "Valor Est.", "Valor Compra", "Ganho Capital", "Cap Rate", "Valor. 12m", ""].map(h => (
+              {["Imóvel", "Bairro", "m²", "R$/m² ref.", "Valor Est.", "Valor Compra", "Ganho Capital", "Cap Rate", "Valorização Real", ""].map(h => (
                 <th key={h} style={S.th}>{h}</th>
               ))}
             </tr>
@@ -1712,10 +1724,22 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
                     </div>
                   </td>
 
-                  {/* Valorização */}
+                  {/* Valorização real */}
                   <td style={{ ...S.td, ...S.mono }}>
-                    <div style={{ color: T.teal, fontWeight: 700 }}>+{fmt.pct(p.var12m)}</div>
-                    <div style={{ color: T.dim, fontSize: 10 }}>+{fmt.brlK(p.valorizacaoAnual)}</div>
+                    {p.valorizacaoTotalPct !== null ? (
+                      <div>
+                        <div style={{ color: p.valorizacaoTotalPct >= 0 ? T.teal : T.red, fontWeight: 700 }}>
+                          {p.valorizacaoTotalPct >= 0 ? "+" : ""}{p.valorizacaoTotalPct.toFixed(1)}% total
+                        </div>
+                        {p.valorizacaoCAGR !== null && (
+                          <div style={{ color: T.dim, fontSize: 10 }}>
+                            {p.valorizacaoCAGR >= 0 ? "+" : ""}{p.valorizacaoCAGR.toFixed(1)}% a.a. desde {p.anoCompra}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ color: T.dim, fontSize: 11 }}>—</div>
+                    )}
                   </td>
 
                   <td style={S.td}>
