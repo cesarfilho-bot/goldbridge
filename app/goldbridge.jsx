@@ -505,7 +505,7 @@ function computePort(props) {
     receita: props.reduce((s, p) => s + p.totalIncome, 0),
     despesas: props.reduce((s, p) => s + p.totalExpenses, 0),
     noi: props.reduce((s, p) => s + p.noi, 0),
-    vacancyCost: props.reduce((s, p) => s + p.vacancyCost, 0),
+    vacancyCost: props.reduce((s, p) => s + (p.vacancyCostMonthly || 0), 0),
     occupied: props.filter(p => p.status === "Ocupado").length,
     total: props.length,
   };
@@ -1843,7 +1843,7 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
         <KPI label="Receita Bruta" value={fmt.brlK(PORT.receita)} sub="últimos 12 meses" />
         <KPI label="Lucro Líquido" value={fmt.brlK(PORT.lucroLiquido||PORT.noi)} sub={`Margem: ${fmt.pct(PORT.lucroLiquidoPct||PORT.noiPct)}`} color={T.green} delta={3.2} />
-        <KPI label="Custo Vacância" value={fmt.brlK(PORT.vacancyCost)} color={T.amber} sub={`${PROPS.filter(p => p.status === "Vago").length} imóveis vagos`} warn />
+        <KPI label="Custo Vacância" value={fmt.brlK(PORT.vacancyCost)} color={T.amber} sub={`${PROPS.filter(p => p.status === "Vago").length} imóveis vagos · /mês`} warn />
         {(() => {
           const comVM = PROPS.filter(p => (p.valorMercado||0) > 0);
           const totalVM = comVM.reduce((s,p) => s+(p.valorMercado||0), 0);
@@ -1874,25 +1874,7 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
-        <div style={S.card}>
-          <div style={{ color: T.text, fontWeight: 700, marginBottom: 4, fontSize: 15 }}>Resultado Mensal — 2024</div>
-          <div style={{ color: T.muted, fontSize: 12, marginBottom: 16 }}>Receita vs Lucro Líquido</div>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={PORT_MONTHLY}>
-              <defs>
-                <linearGradient id="gR" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={T.blue} stopOpacity={0.15} /><stop offset="95%" stopColor={T.blue} stopOpacity={0} /></linearGradient>
-                <linearGradient id="gN" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={T.green} stopOpacity={0.2} /><stop offset="95%" stopColor={T.green} stopOpacity={0} /></linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
-              <XAxis dataKey="month" tick={{ fill: T.muted, fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={v => `${(v/1000).toFixed(0)}k`} tick={{ fill: T.muted, fontSize: 10 }} axisLine={false} tickLine={false} width={45} />
-              <Tooltip content={<Tip />} />
-              <Area type="monotone" dataKey="receita" name="Receita" stroke={T.blue} fill="url(#gR)" strokeWidth={1.5} dot={false} />
-              <Area type="monotone" dataKey="noi" name="NOI" stroke={T.green} fill="url(#gN)" strokeWidth={2} dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+      <div style={{ maxWidth: 380 }}>
         <div style={S.card}>
           <div style={{ color: T.text, fontWeight: 700, marginBottom: 16, fontSize: 15 }}>Despesas</div>
           <ResponsiveContainer width="100%" height={160}>
@@ -4340,6 +4322,19 @@ function recalcProp(prop, BENCHMARKS) {
   const vacancyCost = Math.round(((prop.rent || 0) / 30) * (prop.vacancyDays || 0));
   const totalIncome = annualRent - vacancyCost - descontoAnual; // receita bruta ajustada
 
+  // Custo mensal real de vacância: tudo que o proprietário perde/continua pagando sem receber
+  const vacancyCostMonthly = prop.status === "Vago"
+    ? Math.round(
+        (prop.rent || 0) +
+        (prop.iptu || 0) / (prop.iptuParcelas || 1) +
+        (prop.maintMonthly || 0) +
+        (prop.insurance || 0) / 12 +
+        (prop.fundoReserva || 0) +
+        (prop.chamadaExtra || 0) +
+        (prop.hasCondominio ? (prop.condoFee || 0) : 0)
+      )
+    : 0;
+
   // Condomínio: fundo + chamada sempre do proprietário; condo mensal sempre inquilino
   const condoAnnual = prop.hasCondominio ? ((prop.fundoReserva||0) + (prop.chamadaExtra||0)) * 12 : 0;
 
@@ -4378,7 +4373,7 @@ function recalcProp(prop, BENCHMARKS) {
   if (maintDelta > 30) leakage += Math.min(20, maintDelta * 0.4);
   if (noiPct < 0.5) leakage += 20;
   leakage = Math.min(98, Math.max(2, Math.round(leakage)));
-  return { ...prop, vacancyCost, totalIncome, receitaBruta, aluguelLiquido, adminRecalc, condoAnnual, totalExpenses, noi, noiPct, ir, lucroLiquido, lucroLiquidoPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage };
+  return { ...prop, vacancyCost, vacancyCostMonthly, totalIncome, receitaBruta, aluguelLiquido, adminRecalc, condoAnnual, totalExpenses, noi, noiPct, ir, lucroLiquido, lucroLiquidoPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage };
 }
 
 export default function App() {
