@@ -2135,12 +2135,36 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
 }
 
 // ─── LEAKAGE PAGE ─────────────────────────────────────────────────────────────
-function PageLeakage({ PROPS }) {
+function PageLeakage({ PROPS, onNavPagamentos }) {
   const INSIGHTS = buildInsights(PROPS);
   const TOTAL_MIN = INSIGHTS.reduce((s, i) => s + i.impactMin, 0), TOTAL_MAX = INSIGHTS.reduce((s, i) => s + i.impactMax, 0);
   const [expanded, setExpanded] = useState(1);
   const emDesocupacao = PROPS.filter(p => p.status === "Em desocupação");
   const hoje = new Date();
+
+  // Inadimplentes: ocupados com mês atual atrasado ou mês anterior sem pagamento
+  const getDiaVencLeakage = (p) => p.contratoInicio ? new Date(p.contratoInicio + "T12:00").getDate() : (p.diaVencimento || 10);
+  const isAtrasadoLeakage = (p, ano, mes) => {
+    const pag = (p.pagamentos || {})[`${ano}_${mes}`];
+    if (pag?.status === "pago") return false;
+    if (pag?.status) return false;
+    const diaVenc = getDiaVencLeakage(p);
+    const dataVenc = new Date(ano, mes, diaVenc);
+    const contratoAtivo = p.contratoInicio ? new Date(p.contratoInicio + "T12:00") <= dataVenc : true;
+    if (!contratoAtivo) return false;
+    return dataVenc < hoje;
+  };
+  const mesAtualL = hoje.getMonth(), anoAtualL = hoje.getFullYear();
+  const prevMesL = mesAtualL === 0 ? 11 : mesAtualL - 1;
+  const prevAnoL = mesAtualL === 0 ? anoAtualL - 1 : anoAtualL;
+  const inadimplentes = PROPS.filter(p =>
+    p.status === "Ocupado" && (isAtrasadoLeakage(p, anoAtualL, mesAtualL) || isAtrasadoLeakage(p, prevAnoL, prevMesL))
+  ).map(p => ({
+    ...p,
+    mesAtualAtraso: isAtrasadoLeakage(p, anoAtualL, mesAtualL),
+    mesAnteriorAtraso: isAtrasadoLeakage(p, prevAnoL, prevMesL),
+  }));
+
   const alertasVencContrato = PROPS.filter(p => {
     if (!p.contratoVencimento) return false;
     const venc = new Date(p.contratoVencimento+"T12:00");
@@ -2166,6 +2190,29 @@ function PageLeakage({ PROPS }) {
                 <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>{p.neighborhood} · Entrega prevista: {p.desocupacaoDataEntrega ? new Date(p.desocupacaoDataEntrega+"-01").toLocaleDateString("pt-BR",{month:"long",year:"numeric"}) : "a definir"}</div>
               </div>
               <span style={S.badge(T.amber)}>Em desocupação</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {inadimplentes.length > 0 && (
+        <div style={{ background: T.amber+"11", border: `1px solid ${T.amber}55`, borderRadius: 14, padding: 20 }}>
+          <div style={{ color: T.amber, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>INADIMPLÊNCIA ({inadimplentes.length})</div>
+          {inadimplentes.map(p => (
+            <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${T.amber}22` }}>
+              <div>
+                <div style={{ color: T.text, fontWeight: 600 }}>{p.name}</div>
+                <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
+                  {p.neighborhood}
+                  {p.mesAtualAtraso && <span style={{ color: T.amber, marginLeft: 8 }}>· mês atual em aberto</span>}
+                  {p.mesAnteriorAtraso && <span style={{ color: T.red, marginLeft: 8 }}>· {["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"][prevMesL]}/{prevAnoL} sem pagamento</span>}
+                </div>
+              </div>
+              {onNavPagamentos && (
+                <button
+                  style={{ background: T.amber+"22", border: `1px solid ${T.amber}55`, color: T.amber, borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}
+                  onClick={() => onNavPagamentos(p.id)}
+                >Ver em Pagamentos →</button>
+              )}
             </div>
           ))}
         </div>
@@ -2985,7 +3032,7 @@ function Login({ onLogin }) {
 }
 
 // ─── PAGE PAGAMENTOS ──────────────────────────────────────────────────────────
-function PagePagamentos({ PROPS, onUpdateProps }) {
+function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
   const hoje = new Date();
   const mesAtual = hoje.getMonth();
   const anoAtual = hoje.getFullYear();
@@ -2998,6 +3045,33 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
   const [busca, setBusca] = useState("");
   const [pagDataModal, setPagDataModal] = useState(null); // { prop }
   const [pagDataInput, setPagDataInput] = useState(new Date().toISOString().slice(0,10));
+  const [highlighted, setHighlighted] = useState(highlightPropId || null);
+
+  // Scroll + highlight when highlightPropId is passed (coming from Alertas)
+  React.useEffect(() => {
+    if (!highlightPropId) return;
+    setHighlighted(highlightPropId);
+    const el = document.getElementById(`prop-card-${highlightPropId}`);
+    if (el) { setTimeout(() => { el.scrollIntoView({ behavior: "smooth", block: "center" }); }, 100); }
+    const timer = setTimeout(() => setHighlighted(null), 3000);
+    return () => clearTimeout(timer);
+  }, [highlightPropId]);
+
+  // Helper: dia de vencimento a partir de contratoInicio
+  const getDiaVenc = (p) => p.contratoInicio ? new Date(p.contratoInicio + "T12:00").getDate() : (p.diaVencimento || 10);
+
+  // Helper: is a given month/year "atrasado" for a prop (no payment and contract was active)
+  const isAtrasadoMes = (p, ano, mes) => {
+    const pagKey = `${ano}_${mes}`;
+    const pag = p.pagamentos?.[pagKey];
+    if (pag?.status === "pago") return false;
+    if (pag?.status) return false; // atrasado/nao_pago already manually set
+    const diaVenc = getDiaVenc(p);
+    const dataVenc = new Date(ano, mes, diaVenc);
+    const contratoAtivo = p.contratoInicio ? new Date(p.contratoInicio + "T12:00") <= dataVenc : true;
+    if (!contratoAtivo) return false;
+    return dataVenc < hoje;
+  };
 
   // Helpers para ler/salvar pagamentos no prop
   const getKey = (propId, ano, mes) => `pag_${propId}_${ano}_${mes}`;
@@ -3123,11 +3197,11 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
   const pagos = pagMes.filter(p => p.pag?.status === "pago").length;
   const atrasados = pagMes.filter(p => {
     if (p.pag?.status === "atrasado") return true;
-    if (!p.pag?.status && mesSel === mesAtual && anoSel === anoAtual && hoje.getDate() > (p.diaVencimento||10)) return true;
+    if (!p.pag?.status && isAtrasadoMes(p, anoSel, mesSel)) return true;
     return false;
   }).length;
   const naoPagos = pagMes.filter(p => p.pag?.status === "nao_pago").length;
-  const pendentes = pagMes.filter(p => !p.pag && !(mesSel === mesAtual && anoSel === anoAtual && hoje.getDate() > (p.diaVencimento||10))).length;
+  const pendentes = pagMes.filter(p => !p.pag?.status && !isAtrasadoMes(p, anoSel, mesSel)).length;
   const calcAluguel = (p) => {
     const bruto = p.rent - (p.descontoAluguel||0);
     if (p.viaImobiliaria) {
@@ -3272,7 +3346,7 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
         <div
           style={{ ...S.card, border: `1px solid ${atrasados > 0 ? T.amber + "60" : T.border}`, cursor: atrasados > 0 ? "pointer" : "default" }}
           onClick={atrasados > 0 ? () => {
-            const first = pagMes.find(p => p.pag?.status === "atrasado" || (!p.pag?.status && mesSel === mesAtual && anoSel === anoAtual && hoje.getDate() > (p.diaVencimento||10)));
+            const first = pagMes.find(p => p.pag?.status === "atrasado" || (!p.pag?.status && isAtrasadoMes(p, anoSel, mesSel)));
             if (first) document.getElementById(`prop-card-${first.id}`)?.scrollIntoView({ behavior:"smooth", block:"center" });
           } : undefined}
         ><div style={{ color: T.muted, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>ATRASADOS</div><div style={{ color: atrasados > 0 ? T.amber : T.green, fontSize: 22, fontWeight: 900 }}>{atrasados}</div>{atrasados > 0 && <div style={{ color:T.dim, fontSize:10, marginTop:2 }}>clique para ver</div>}</div>
@@ -3298,7 +3372,11 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
           return (p.name||"").toLowerCase().includes(q) || (p.address||"").toLowerCase().includes(q) || (p.neighborhood||"").toLowerCase().includes(q) || (p.locatarioNome||"").toLowerCase().includes(q);
         }).map(p => {
           const pagStatus = p.pag?.status;
-          const isAutoAtrasado = !pagStatus && mesSel === mesAtual && anoSel === anoAtual && hoje.getDate() > (p.diaVencimento || 10);
+          const isAutoAtrasado = !pagStatus && isAtrasadoMes(p, anoSel, mesSel);
+          // Also check if previous month is missing (and we're in current month view)
+          const prevMes = mesSel === 0 ? 11 : mesSel - 1;
+          const prevAno = mesSel === 0 ? anoSel - 1 : anoSel;
+          const mesAnteriorAtrasado = mesSel === mesAtual && anoSel === anoAtual && isAtrasadoMes(p, prevAno, prevMes);
           const status = pagStatus || (isAutoAtrasado ? "atrasado" : null);
           const aluguelBruto = p.rent - (p.descontoAluguel || 0); // rent - desconto
           const adminMensal = p.adminRecalc || Math.round(aluguelBruto * ((p.adminPct||8)/100));
@@ -3312,8 +3390,9 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
             ? aluguelBruto - adminMensal - condoM + iptuMensal
             : aluguelBruto;
           const borderC = status === "pago" ? T.green + "40" : status === "atrasado" ? T.amber + "40" : status === "nao_pago" ? T.red + "40" : T.border;
+          const isHighlighted = highlighted === p.id;
           return (
-            <div key={p.id} id={`prop-card-${p.id}`} style={{ background: T.s1, border: `1px solid ${borderC}`, borderRadius: 14, padding: "16px 20px" }}>
+            <div key={p.id} id={`prop-card-${p.id}`} style={{ background: T.s1, border: `2px solid ${isHighlighted ? T.amber : borderC}`, borderRadius: 14, padding: "16px 20px", transition: "border-color 0.3s", boxShadow: isHighlighted ? `0 0 0 3px ${T.amber}33` : "none" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
                 <div style={{ flex: 1, minWidth: 180 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
@@ -3349,6 +3428,12 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
                   <button style={{ background: "transparent", border: `1px solid ${T.border}`, color: T.muted, borderRadius: 8, padding: "7px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }} onClick={() => setDetalheProp(p)}>Histórico →</button>
                 </div>
               </div>
+              {/* Aviso: mês anterior em aberto */}
+              {mesAnteriorAtrasado && (
+                <div style={{ marginTop: 8, padding: "6px 12px", background: T.amber+"18", borderRadius: 8, border: `1px solid ${T.amber}44`, fontSize: 11, color: T.amber, fontWeight: 600 }}>
+                  ⚠ {MESES[prevMes]}/{prevAno} sem pagamento registrado
+                </div>
+              )}
               {/* Com imobiliária: breakdown de todas as despesas */}
               {p.viaImobiliaria && (
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.border}`, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -4767,6 +4852,7 @@ export default function App() {
   const [user, setUser] = useState(undefined); // undefined = loading, null = not logged
   const [page, setPage] = useState("dashboard");
   const [selectedProp, setSelectedProp] = useState(null);
+  const [highlightPagPropId, setHighlightPagPropId] = useState(null);
   const [props, setPropsRaw] = useState([]);
   const [portfolioId, setPortfolioId] = useState(null);
   const [dbLoading, setDbLoading] = useState(false);
@@ -4969,7 +5055,7 @@ export default function App() {
     </div>
   );
 
-  const nav = (p) => { setPage(p); if (p !== "detail") setSelectedProp(null); };
+  const nav = (p) => { setPage(p); if (p !== "detail") setSelectedProp(null); if (p !== "pagamentos") setHighlightPagPropId(null); };
   const handleEdit = (prop) => setEditingProp(props.find(p => p.id === prop.id) || prop);
   const nextId = props.length > 0 ? Math.max(...props.map(p => p.id)) + 1 : 1;
 
@@ -4978,12 +5064,12 @@ export default function App() {
     noi:       <PageNOI PROPS={props} onProp={setSelectedProp} onNav={nav} onEdit={handleEdit} onObras={(prop) => setObrasProps(props.find(p => p.id === prop.id) || prop)} onDelete={handleDeleteImovel} onAdd={() => setAddingImovel(true)} />,
     obras:     <PageObras PROPS={props} onUpdateProps={handleUpdateProps} />,
     mercado:   <PageValorMercado PROPS={props} onUpdateProps={handleUpdateProps} />,
-    leakage:   <PageLeakage PROPS={props} />,
+    leakage:   <PageLeakage PROPS={props} onNavPagamentos={(propId) => { setHighlightPagPropId(propId); nav("pagamentos"); }} />,
     decision:  <PageDecision PROPS={props} onProp={setSelectedProp} onNav={nav} />,
     detail:    <PageDetail prop={selectedProp} onBack={() => nav("noi")} onEdit={handleEdit} onObras={(prop) => setObrasProps(props.find(p => p.id === prop.id) || prop)} onDelete={handleDeleteImovel} onCancelarContrato={handleCancelarContrato} />,
     report:    <PageReport PROPS={props} />,
     ia:        <PageIA PROPS={props} />,
-    pagamentos: <PagePagamentos PROPS={props} onUpdateProps={handleUpdateProps} />,
+    pagamentos: <PagePagamentos PROPS={props} onUpdateProps={handleUpdateProps} highlightPropId={highlightPagPropId} />,
     fluxo:     <PageFluxoCaixa PROPS={props} />,
     locatarios: <PageLocatarios PROPS={props} onUpdateProps={handleUpdateProps} />,
     historico:  <PageHistorico PROPS={props} onUpdateProps={handleUpdateProps} />,
