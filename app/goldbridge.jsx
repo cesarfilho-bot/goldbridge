@@ -710,11 +710,14 @@ function EditModal({ prop, onSave, onClose, userId }) {
     iptuVencimento: prop.iptuVencimento || "",
     iptuParcelas: prop.iptuParcelas || 10,
     viaImobiliaria: prop.viaImobiliaria || false,
+    imobiliariaName: prop.imobiliariaName || "",
     locatarioNome: prop.locatarioNome || "",
     locatarioCPF: prop.locatarioCPF || "",
     locatarioTelefone: prop.locatarioTelefone || "",
     locatarioEmail: prop.locatarioEmail || "",
     locatarioGarantia: prop.locatarioGarantia || "Fiador",
+    contratoVencimento: prop.contratoVencimento || "",
+    clausula12Meses: prop.clausula12Meses || false,
     marketValueManual: prop.marketValueManual ?? 0,
     regimeFiscal: prop.regimeFiscal || "PF",
   });
@@ -743,7 +746,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
     leakage = Math.min(98, Math.max(2, Math.round(leakage)));
     const proximoReajuste = form.contratoInicio ? (() => { const d = new Date(form.contratoInicio); const now = new Date(); let y = now.getFullYear(); if (new Date(y, d.getMonth(), d.getDate()) <= now) y++; return new Date(y, d.getMonth(), d.getDate()).toLocaleDateString("pt-BR"); })() : "";
     const adminFromPct = Math.round((Number(form.rent) - (Number(form.descontoAluguel)||0)) * (Number(form.adminPct)||0) / 100);
-    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: adminFromPct, adminPct: Number(form.adminPct), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), chamadaExtraParcelas: Number(form.chamadaExtraParcelas)||0, chamadaExtraParcelaAtual: Number(form.chamadaExtraParcelaAtual)||0, condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, iptuParcelas: Number(form.iptuParcelas)||10, iptuParcelas: Number(form.iptuParcelas)||10, viaImobiliaria: form.viaImobiliaria, locatarioNome: form.viaImobiliaria ? "" : form.locatarioNome, locatarioCPF: form.viaImobiliaria ? "" : form.locatarioCPF, locatarioTelefone: form.viaImobiliaria ? "" : form.locatarioTelefone, locatarioEmail: form.viaImobiliaria ? "" : form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
+    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: adminFromPct, adminPct: Number(form.adminPct), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), chamadaExtraParcelas: Number(form.chamadaExtraParcelas)||0, chamadaExtraParcelaAtual: Number(form.chamadaExtraParcelaAtual)||0, condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), contratoVencimento: form.contratoVencimento, clausula12Meses: form.clausula12Meses, vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, iptuParcelas: Number(form.iptuParcelas)||10, viaImobiliaria: form.viaImobiliaria, imobiliariaName: form.imobiliariaName, locatarioNome: form.locatarioNome, locatarioCPF: form.locatarioCPF, locatarioTelefone: form.locatarioTelefone, locatarioEmail: form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
   };
 
   return (
@@ -897,6 +900,9 @@ function EditModal({ prop, onSave, onClose, userId }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div><label style={S.label}>DURAÇÃO DO CONTRATO (meses)</label><input type="number" style={S.input} value={form.contratoAnos} onChange={e=>set("contratoAnos",e.target.value)} /></div>
               <div><label style={S.label}>DATA DE INÍCIO DO CONTRATO</label><input type="date" style={S.input} value={form.contratoInicio} onChange={e=>set("contratoInicio",e.target.value)} /></div>
+              {form.status === "Ocupado" && (
+                <div><label style={S.label}>VENCIMENTO DO CONTRATO</label><input type="date" style={S.input} value={form.contratoVencimento} onChange={e=>set("contratoVencimento",e.target.value)} /></div>
+              )}
               <div>
                 <label style={S.label}>ÍNDICE DE REAJUSTE</label>
                 <div style={{ display:"flex", gap:6, marginTop:6 }}>
@@ -909,6 +915,13 @@ function EditModal({ prop, onSave, onClose, userId }) {
                 <div style={{ flex:2 }}><label style={S.label}>COMPETÊNCIA IPTU (ano)</label><input type="number" style={S.input} value={form.iptuVencimento||""} placeholder={new Date().getFullYear().toString()} min="2000" max="2099" onChange={e=>set("iptuVencimento",e.target.value)} /><div style={{ color:T.dim, fontSize:10, marginTop:4 }}>Ano de competência do IPTU</div></div>
                 <div style={{ flex:1 }}><label style={S.label}>PARCELAS IPTU</label><select style={S.sel} value={form.iptuParcelas||10} onChange={e=>set("iptuParcelas",Number(e.target.value))}>{[1,2,3,4,5,6,7,8,9,10,11,12].map(n=><option key={n} value={n}>{n}x</option>)}</select></div>
               </div>
+              <div style={{ gridColumn:"1/-1", display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background:T.s2, borderRadius:8, border:`1px solid ${T.border}` }}>
+                <input type="checkbox" checked={form.clausula12Meses||false} onChange={e=>set("clausula12Meses",e.target.checked)} style={{ width:16, height:16, accentColor:T.gold, cursor:"pointer" }} />
+                <div>
+                  <div style={{ color:T.text, fontSize:13, fontWeight:600 }}>Contrato tem cláusula de dispensa de multa após 12 meses?</div>
+                  <div style={{ color:T.dim, fontSize:11, marginTop:2 }}>Se ativado: sem multa rescisória após 12 meses de locação</div>
+                </div>
+              </div>
             </div>
             {form.contratoInicio && (
               <div style={{ marginTop: 10, padding: "10px 14px", background: T.s3, borderRadius: 8, color: T.muted, fontSize: 12 }}>
@@ -919,28 +932,29 @@ function EditModal({ prop, onSave, onClose, userId }) {
             )}
           </div>
           <div>
-            <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>LOCATÁRIO</div>
+            <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>
+              LOCATÁRIO <span style={{ color: T.dim, fontWeight: 400, fontSize: 11, textTransform: "none", letterSpacing: 0 }}>{form.viaImobiliaria ? "(opcional)" : "(recomendado)"}</span>
+            </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, background: T.s1, borderRadius: 10, padding: "10px 14px", border: `1px solid ${T.border}` }}>
               <input type="checkbox" checked={form.viaImobiliaria} onChange={e=>set("viaImobiliaria",e.target.checked)} style={{ width:16, height:16, accentColor:T.gold, cursor:"pointer" }} />
               <div>
                 <div style={{ color: T.text, fontSize: 13, fontWeight: 600 }}>Gerenciado por imobiliária</div>
-                <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>Quando marcado, os dados do locatário não são necessários</div>
+                <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>Os dados do locatário são opcionais quando gerenciado por imobiliária</div>
               </div>
             </div>
-            {!form.viaImobiliaria && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div style={{ gridColumn: "1/-1" }}><label style={S.label}>NOME DO LOCATÁRIO</label><input style={S.input} value={form.locatarioNome} placeholder="Nome completo" onChange={e=>set("locatarioNome",e.target.value)} /></div>
-                <div><label style={S.label}>CPF / CNPJ</label><input style={S.input} value={form.locatarioCPF} placeholder="000.000.000-00" onChange={e=>set("locatarioCPF",e.target.value)} /></div>
-                <div><label style={S.label}>TELEFONE</label><input style={S.input} value={form.locatarioTelefone} placeholder="(11) 99999-9999" onChange={e=>set("locatarioTelefone",e.target.value)} /></div>
-                <div style={{ gridColumn: "1/-1" }}><label style={S.label}>EMAIL</label><input style={S.input} value={form.locatarioEmail} placeholder="email@exemplo.com" onChange={e=>set("locatarioEmail",e.target.value)} /></div>
-                <div><label style={S.label}>GARANTIA</label><select style={S.sel} value={form.locatarioGarantia} onChange={e=>set("locatarioGarantia",e.target.value)}>{["Fiador","Seguro Fiança","Caução","Título de Capitalização","Sem garantia"].map(o=><option key={o}>{o}</option>)}</select></div>
-              </div>
-            )}
             {form.viaImobiliaria && (
-              <div style={{ color: T.dim, fontSize: 12, padding: "10px 14px", background: T.s1, borderRadius: 8, border: `1px solid ${T.border}` }}>
-                Os dados do locatário são gerenciados pela imobiliária
+              <div style={{ marginBottom: 14 }}>
+                <label style={S.label}>NOME DA IMOBILIÁRIA</label>
+                <input style={S.input} value={form.imobiliariaName} placeholder="Ex: Imobiliária XYZ" onChange={e=>set("imobiliariaName",e.target.value)} />
               </div>
             )}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ gridColumn: "1/-1" }}><label style={S.label}>NOME DO LOCATÁRIO</label><input style={S.input} value={form.locatarioNome} placeholder="Nome completo" onChange={e=>set("locatarioNome",e.target.value)} /></div>
+              <div><label style={S.label}>CPF / CNPJ</label><input style={S.input} value={form.locatarioCPF} placeholder="000.000.000-00" onChange={e=>set("locatarioCPF",e.target.value)} /></div>
+              <div><label style={S.label}>TELEFONE</label><input style={S.input} value={form.locatarioTelefone} placeholder="(11) 99999-9999" onChange={e=>set("locatarioTelefone",e.target.value)} /></div>
+              <div style={{ gridColumn: "1/-1" }}><label style={S.label}>EMAIL</label><input style={S.input} value={form.locatarioEmail} placeholder="email@exemplo.com" onChange={e=>set("locatarioEmail",e.target.value)} /></div>
+              <div><label style={S.label}>GARANTIA</label><select style={S.sel} value={form.locatarioGarantia} onChange={e=>set("locatarioGarantia",e.target.value)}>{["Fiador","Seguro Fiança","Caução","Título de Capitalização","Sem garantia"].map(o=><option key={o}>{o}</option>)}</select></div>
+            </div>
           </div>
         </div>
         )} {/* end editTab === dados */}
@@ -2348,6 +2362,50 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
           </div>
         </div>
       )}
+      {prop.contratoVencimento && (() => {
+        const hoje = new Date();
+        const venc = new Date(prop.contratoVencimento+"T12:00");
+        const mesesRestantes = Math.max(0, Math.round((venc - hoje) / (1000 * 60 * 60 * 24 * 30.44)));
+        let mesesDecorridos = 0;
+        if (prop.contratoInicio) {
+          const inicio = new Date(prop.contratoInicio+"T12:00");
+          mesesDecorridos = Math.max(0, Math.round((hoje - inicio) / (1000 * 60 * 60 * 24 * 30.44)));
+        }
+        const aluguel = prop.rent - (prop.descontoAluguel || 0);
+        let multa = 0;
+        let multaDesc = "";
+        if (!prop.clausula12Meses) {
+          multa = Math.round(3 * aluguel * (mesesRestantes / 36));
+          multaDesc = "3 aluguéis × meses restantes / 36";
+        } else if (mesesDecorridos >= 12) {
+          multa = 0;
+          multaDesc = "Sem multa — cláusula de dispensa após 12 meses ativa";
+        } else {
+          multa = Math.round(3 * aluguel * (mesesRestantes / 36));
+          multaDesc = "3 aluguéis × meses restantes / 36 (locatário < 12 meses)";
+        }
+        const jaVenceu = venc < hoje;
+        return (
+          <div style={{ ...S.card, border:`1px solid ${T.amber}40` }}>
+            <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>MULTA RESCISÓRIA</div>
+            <div style={{ display:"flex", gap:16, flexWrap:"wrap", alignItems:"flex-start" }}>
+              <div>
+                <div style={{ color:T.dim, fontSize:11, letterSpacing:1, marginBottom:4 }}>VENCIMENTO DO CONTRATO</div>
+                <div style={{ color: jaVenceu ? T.red : T.text, fontWeight:700, fontSize:15 }}>{venc.toLocaleDateString("pt-BR")}{jaVenceu ? " (vencido)" : ""}</div>
+              </div>
+              {!jaVenceu && <div>
+                <div style={{ color:T.dim, fontSize:11, letterSpacing:1, marginBottom:4 }}>MESES RESTANTES</div>
+                <div style={{ color:T.text, fontWeight:700, fontSize:15 }}>{mesesRestantes}</div>
+              </div>}
+              <div>
+                <div style={{ color:T.dim, fontSize:11, letterSpacing:1, marginBottom:4 }}>MULTA ESTIMADA</div>
+                <div style={{ color: multa > 0 ? T.amber : T.green, fontWeight:800, fontSize:18, ...S.mono }}>{multa > 0 ? fmt.brl(multa) : "Sem multa"}</div>
+              </div>
+            </div>
+            <div style={{ color:T.dim, fontSize:11, marginTop:10 }}>{multaDesc}</div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -2910,6 +2968,9 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
   const [mesSel, setMesSel] = useState(mesAtual);
   const [anoSel, setAnoSel] = useState(anoAtual);
   const [detalheProp, setDetalheProp] = useState(null);
+  const [busca, setBusca] = useState("");
+  const [pagDataModal, setPagDataModal] = useState(null); // { prop }
+  const [pagDataInput, setPagDataInput] = useState(new Date().toISOString().slice(0,10));
 
   // Helpers para ler/salvar pagamentos no prop
   const getKey = (propId, ano, mes) => `pag_${propId}_${ano}_${mes}`;
@@ -2919,7 +2980,35 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
     return { ...prop, pagamentos };
   };
 
+  const confirmarPago = (prop, dataStr) => {
+    const bruto = prop.rent - (prop.descontoAluguel||0);
+    let valor;
+    if (prop.viaImobiliaria) {
+      const adm = prop.adminRecalc || Math.round(bruto * ((prop.adminPct||8)/100));
+      const iptuM = Math.round((prop.iptu||0) / (prop.iptuParcelas||10));
+      const condoM = (prop.fundoReserva||0) + (prop.chamadaExtra||0);
+      valor = bruto - adm - condoM + iptuM;
+    } else {
+      valor = bruto;
+    }
+    const dataBR = dataStr ? new Date(dataStr+"T12:00").toLocaleDateString("pt-BR") : new Date().toLocaleDateString("pt-BR");
+    const updated = setPag(prop, anoSel, mesSel, {
+      status: "pago",
+      valor,
+      data: dataBR,
+      dataPagamento: dataBR,
+      vencimento: prop.diaVencimento || 10,
+    });
+    onUpdateProps(PROPS.map(p => p.id === prop.id ? updated : p));
+    setPagDataModal(null);
+  };
+
   const handleMarcar = (prop, status) => {
+    if (status === "pago") {
+      setPagDataInput(new Date().toISOString().slice(0,10));
+      setPagDataModal({ prop });
+      return;
+    }
     const bruto = prop.rent - (prop.descontoAluguel||0);
     let valor;
     if (prop.viaImobiliaria) {
@@ -2933,7 +3022,7 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
     const updated = setPag(prop, anoSel, mesSel, {
       status,
       valor,
-      data: status === "pago" ? new Date().toLocaleDateString("pt-BR") : null,
+      data: null,
       vencimento: prop.diaVencimento || 10,
     });
     onUpdateProps(PROPS.map(p => p.id === prop.id ? updated : p));
@@ -3156,9 +3245,21 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
 
       {/* Lista de imóveis com controle de pagamento */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>IMÓVEIS OCUPADOS — {MESES_FULL[mesSel].toUpperCase()} {anoSel}</div>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>IMÓVEIS OCUPADOS — {MESES_FULL[mesSel].toUpperCase()} {anoSel}</div>
+          <input
+            style={{ ...S.input, flex:1, fontSize:13, padding:"8px 14px" }}
+            placeholder="Buscar por nome, endereço, bairro ou locatário..."
+            value={busca}
+            onChange={e=>setBusca(e.target.value)}
+          />
+        </div>
         {imovelOcupado.length === 0 && <div style={{ ...S.card, textAlign: "center", color: T.muted, padding: 40 }}>Nenhum imóvel ocupado cadastrado.</div>}
-        {pagMes.map(p => {
+        {pagMes.filter(p => {
+          if (!busca.trim()) return true;
+          const q = busca.toLowerCase();
+          return (p.name||"").toLowerCase().includes(q) || (p.address||"").toLowerCase().includes(q) || (p.neighborhood||"").toLowerCase().includes(q) || (p.locatarioNome||"").toLowerCase().includes(q);
+        }).map(p => {
           const status = p.pag?.status;
           const aluguelBruto = p.rent - (p.descontoAluguel || 0); // rent - desconto
           const adminMensal = p.adminRecalc || Math.round(aluguelBruto * ((p.adminPct||8)/100));
@@ -3176,7 +3277,16 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
             <div key={p.id} style={{ background: T.s1, border: `1px solid ${borderC}`, borderRadius: 14, padding: "16px 20px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
                 <div style={{ flex: 1, minWidth: 180 }}>
-                  <div style={{ color: T.goldBright, fontWeight: 700, fontSize: 14 }}>{p.name}</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                    <div style={{ color: T.goldBright, fontWeight: 700, fontSize: 14 }}>{p.name}</div>
+                    {p.viaImobiliaria && p.imobiliariaName && (
+                      <button
+                        title="Clique para copiar o nome da imobiliária"
+                        style={{ background:T.s2, border:`1px solid ${T.border}`, color:T.muted, borderRadius:6, padding:"2px 8px", fontSize:11, cursor:"pointer", fontFamily:"inherit" }}
+                        onClick={() => { navigator.clipboard.writeText(p.imobiliariaName); }}
+                      >{p.imobiliariaName}</button>
+                    )}
+                  </div>
                   <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
                     {p.neighborhood} ·{" "}
                     <span style={{ color: p.viaImobiliaria ? T.green : T.text, fontWeight: 700, ...S.mono }}>{fmt.brl(bolsoBruto)}/mês</span>
@@ -3185,6 +3295,7 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
                       : (p.descontoAluguel||0) > 0 && <span style={{ color: T.dim, fontSize: 10, marginLeft: 6 }}>bruto {fmt.brl(p.rent)} − desc. {fmt.brl(p.descontoAluguel)}</span>
                     }
                   </div>
+                  {p.locatarioNome && <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>Locatário: {p.locatarioNome}</div>}
                   {p.proximoReajuste && <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>Próximo reajuste: {p.proximoReajuste}</div>}
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -3280,6 +3391,21 @@ function PagePagamentos({ PROPS, onUpdateProps }) {
           </div>
         );
       })()}
+
+      {/* Modal de data de pagamento */}
+      {pagDataModal && (
+        <div style={{ position:"fixed", inset:0, background:"#00000099", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+          <div style={{ background:T.s1, border:`1px solid ${T.borderMid}`, borderRadius:16, width:"100%", maxWidth:360, padding:28 }}>
+            <div style={{ color:T.text, fontWeight:800, fontSize:16, marginBottom:6 }}>Data do Pagamento</div>
+            <div style={{ color:T.muted, fontSize:13, marginBottom:18 }}>{pagDataModal.prop.name}</div>
+            <input type="date" style={{ ...S.input, width:"100%", marginBottom:20 }} value={pagDataInput} onChange={e=>setPagDataInput(e.target.value)} />
+            <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+              <button style={S.btnGhost} onClick={() => setPagDataModal(null)}>Cancelar</button>
+              <button style={S.btn} onClick={() => confirmarPago(pagDataModal.prop, pagDataInput)}>Confirmar Pago</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3902,6 +4028,7 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
     regimeFiscal: "PF",
     // Locatário
     locatarioNome: "", locatarioCPF: "", locatarioTelefone: "", locatarioEmail: "", locatarioGarantia: "Fiador", viaImobiliaria: false,
+    imobiliariaName: "", contratoVencimento: "", clausula12Meses: false,
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const alugado = form.status === "Ocupado";
@@ -3957,9 +4084,11 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
       condoFee: parseFloat(form.condoFee)||0, fundoReserva: parseFloat(form.fundoReserva)||0,
       chamadaExtra: parseFloat(form.chamadaExtra)||0, chamadaExtraParcelas: parseFloat(form.chamadaExtraParcelas)||0, chamadaExtraParcelaAtual: parseFloat(form.chamadaExtraParcelaAtual)||0, condoPagoPor: form.condoPagoPor,
       regimeFiscal: form.regimeFiscal,
-      viaImobiliaria: form.viaImobiliaria, locatarioNome: form.viaImobiliaria ? "" : form.locatarioNome, locatarioCPF: form.viaImobiliaria ? "" : form.locatarioCPF,
-      locatarioTelefone: form.viaImobiliaria ? "" : form.locatarioTelefone, locatarioEmail: form.viaImobiliaria ? "" : form.locatarioEmail,
-      locatarioGarantia: form.locatarioGarantia, locatarios: [], historico: [], documentos: [],
+      viaImobiliaria: form.viaImobiliaria, imobiliariaName: form.imobiliariaName,
+      locatarioNome: form.locatarioNome, locatarioCPF: form.locatarioCPF,
+      locatarioTelefone: form.locatarioTelefone, locatarioEmail: form.locatarioEmail,
+      locatarioGarantia: form.locatarioGarantia, contratoVencimento: form.contratoVencimento, clausula12Meses: form.clausula12Meses,
+      locatarios: [], historico: [], documentos: [],
     });
   };
 
@@ -4126,6 +4255,10 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
                   <input type="date" style={S.input} value={form.contratoInicio} onChange={e=>set("contratoInicio",e.target.value)} />
                 </div>
                 <div>
+                  <label style={S.label}>VENCIMENTO DO CONTRATO</label>
+                  <input type="date" style={S.input} value={form.contratoVencimento} onChange={e=>set("contratoVencimento",e.target.value)} />
+                </div>
+                <div>
                   <label style={S.label}>ÍNDICE DE REAJUSTE</label>
                   <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
                     {["IGPM","IPCA","INPC","Fixo"].map(idx => (
@@ -4137,46 +4270,54 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
 
               {/* Locatário */}
               <div style={{ marginTop: 16 }}>
-                <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>LOCATÁRIO</div>
+                <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>
+                  LOCATÁRIO <span style={{ color: T.dim, fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>{form.viaImobiliaria ? "(opcional)" : "(recomendado)"}</span>
+                </div>
                 {/* Toggle imobiliária */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, background: T.s1, borderRadius: 10, padding: "10px 14px", border: `1px solid ${T.border}` }}>
                   <input type="checkbox" checked={form.viaImobiliaria} onChange={e=>set("viaImobiliaria",e.target.checked)} style={{ width:16, height:16, accentColor:T.gold, cursor:"pointer" }} />
                   <div>
                     <div style={{ color: T.text, fontSize: 13, fontWeight: 600 }}>Gerenciado por imobiliária</div>
-                    <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>Quando marcado, os dados do locatário não são necessários</div>
+                    <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>Os dados do locatário são opcionais quando gerenciado por imobiliária</div>
                   </div>
                 </div>
-                {!form.viaImobiliaria && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <div style={{ gridColumn: "1/-1" }}>
-                      <label style={S.label}>NOME COMPLETO</label>
-                      <input style={S.input} value={form.locatarioNome} placeholder="Nome do locatário" onChange={e=>set("locatarioNome",e.target.value)} />
-                    </div>
-                    <div>
-                      <label style={S.label}>CPF / CNPJ</label>
-                      <input style={S.input} value={form.locatarioCPF} placeholder="000.000.000-00" onChange={e=>set("locatarioCPF",e.target.value)} />
-                    </div>
-                    <div>
-                      <label style={S.label}>TELEFONE</label>
-                      <input style={S.input} value={form.locatarioTelefone} placeholder="(11) 99999-9999" onChange={e=>set("locatarioTelefone",e.target.value)} />
-                    </div>
-                    <div style={{ gridColumn: "1/-1" }}>
-                      <label style={S.label}>EMAIL</label>
-                      <input style={S.input} value={form.locatarioEmail} placeholder="email@exemplo.com" onChange={e=>set("locatarioEmail",e.target.value)} />
-                    </div>
-                    <div>
-                      <label style={S.label}>GARANTIA</label>
-                      <select style={S.sel} value={form.locatarioGarantia} onChange={e=>set("locatarioGarantia",e.target.value)}>
-                        {["Fiador","Seguro Fiança","Caução","Título de Capitalização","Sem garantia"].map(o=><option key={o}>{o}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                )}
                 {form.viaImobiliaria && (
-                  <div style={{ color: T.dim, fontSize: 12, padding: "10px 14px", background: T.s1, borderRadius: 8, border: `1px solid ${T.border}` }}>
-                    Os dados do locatário são gerenciados pela imobiliária
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={S.label}>NOME DA IMOBILIÁRIA</label>
+                    <input style={S.input} value={form.imobiliariaName} placeholder="Ex: Imobiliária XYZ" onChange={e=>set("imobiliariaName",e.target.value)} />
                   </div>
                 )}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={{ gridColumn: "1/-1" }}>
+                    <label style={S.label}>NOME COMPLETO</label>
+                    <input style={S.input} value={form.locatarioNome} placeholder="Nome do locatário" onChange={e=>set("locatarioNome",e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={S.label}>CPF / CNPJ</label>
+                    <input style={S.input} value={form.locatarioCPF} placeholder="000.000.000-00" onChange={e=>set("locatarioCPF",e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={S.label}>TELEFONE</label>
+                    <input style={S.input} value={form.locatarioTelefone} placeholder="(11) 99999-9999" onChange={e=>set("locatarioTelefone",e.target.value)} />
+                  </div>
+                  <div style={{ gridColumn: "1/-1" }}>
+                    <label style={S.label}>EMAIL</label>
+                    <input style={S.input} value={form.locatarioEmail} placeholder="email@exemplo.com" onChange={e=>set("locatarioEmail",e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={S.label}>GARANTIA</label>
+                    <select style={S.sel} value={form.locatarioGarantia} onChange={e=>set("locatarioGarantia",e.target.value)}>
+                      {["Fiador","Seguro Fiança","Caução","Título de Capitalização","Sem garantia"].map(o=><option key={o}>{o}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:14, padding:"10px 14px", background:T.s1, borderRadius:8, border:`1px solid ${T.border}` }}>
+                  <input type="checkbox" checked={form.clausula12Meses||false} onChange={e=>set("clausula12Meses",e.target.checked)} style={{ width:16, height:16, accentColor:T.gold, cursor:"pointer" }} />
+                  <div>
+                    <div style={{ color:T.text, fontSize:13, fontWeight:600 }}>Contrato tem cláusula de dispensa de multa após 12 meses?</div>
+                    <div style={{ color:T.dim, fontSize:11, marginTop:2 }}>Se ativado: sem multa rescisória após 12 meses de locação</div>
+                  </div>
+                </div>
               </div>
 
               {/* Condomínio */}
