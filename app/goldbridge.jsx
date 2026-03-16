@@ -2143,7 +2143,6 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
 // ─── LEAKAGE PAGE ─────────────────────────────────────────────────────────────
 function PageLeakage({ PROPS, onNavPagamentos }) {
   const INSIGHTS = buildInsights(PROPS);
-  const TOTAL_MIN = INSIGHTS.reduce((s, i) => s + i.impactMin, 0), TOTAL_MAX = INSIGHTS.reduce((s, i) => s + i.impactMax, 0);
   const [expanded, setExpanded] = useState(1);
   const emDesocupacao = PROPS.filter(p => p.status === "Em desocupação");
   const hoje = new Date();
@@ -2211,6 +2210,11 @@ function PageLeakage({ PROPS, onNavPagamentos }) {
     const aluguelIdealMax = Math.round(p.marketValueManual * benchMax / 100);
     return { ...p, rentBruta, benchMin, benchMax, aluguelIdealMin, aluguelIdealMax };
   }).sort((a, b) => a.rentBruta - b.rentBruta);
+
+  const perdaRentMin = rentabilidadeBaixa.reduce((s, p) => s + (p.aluguelIdealMin - (p.rent - (p.descontoAluguel||0))) * 12, 0);
+  const perdaRentMax = rentabilidadeBaixa.reduce((s, p) => s + (p.aluguelIdealMax - (p.rent - (p.descontoAluguel||0))) * 12, 0);
+  const TOTAL_MIN = INSIGHTS.reduce((s, i) => s + i.impactMin, 0) + perdaRentMin;
+  const TOTAL_MAX = INSIGHTS.reduce((s, i) => s + i.impactMax, 0) + perdaRentMax;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
