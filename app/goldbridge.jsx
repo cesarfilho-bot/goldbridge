@@ -2213,8 +2213,11 @@ function PageLeakage({ PROPS, onNavPagamentos }) {
 
   const perdaRentMin = rentabilidadeBaixa.reduce((s, p) => s + (p.aluguelIdealMin - (p.rent - (p.descontoAluguel||0))) * 12, 0);
   const perdaRentMax = rentabilidadeBaixa.reduce((s, p) => s + (p.aluguelIdealMax - (p.rent - (p.descontoAluguel||0))) * 12, 0);
-  const TOTAL_MIN = INSIGHTS.reduce((s, i) => s + i.impactMin, 0) + perdaRentMin;
-  const TOTAL_MAX = INSIGHTS.reduce((s, i) => s + i.impactMax, 0) + perdaRentMax;
+  const INSIGHTS_DISPLAY = rentabilidadeBaixa.length > 0
+    ? [...INSIGHTS.filter(i => i.type !== "aluguel_baixo"), { id: 5, type: "aluguel_baixo", severity: "alta", icon: "", title: "Aluguel Abaixo do Potencial de Mercado", description: `${rentabilidadeBaixa.length} imóvel(is) com rentabilidade abaixo do benchmark de mercado.`, metric: `Receita adicional potencial: ${fmt.brlK(Math.round(perdaRentMax))}/ano`, props: rentabilidadeBaixa, impactMin: Math.round(perdaRentMin), impactMax: Math.round(perdaRentMax), actions: ["Revisar valor do aluguel na próxima renovação de contrato", "Verificar índice de reajuste aplicado (IGPM acumulado)", "Negociar reajuste gradual com o inquilino", "Considerar rescisão e novo contrato a valor de mercado"], benchmark: "Rentabilidade bruta: 0,4% residencial · 0,6% comercial (mínimo)" }]
+    : INSIGHTS;
+  const TOTAL_MIN = INSIGHTS_DISPLAY.reduce((s, i) => s + i.impactMin, 0);
+  const TOTAL_MAX = INSIGHTS_DISPLAY.reduce((s, i) => s + i.impactMax, 0);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -2312,10 +2315,10 @@ function PageLeakage({ PROPS, onNavPagamentos }) {
       <div style={{ ...S.cardGold, display: "flex", gap: 32, alignItems: "center", flexWrap: "wrap" }}>
         <div><div style={{ color: T.goldDim, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>PERDA ESTIMADA ANUAL</div><div style={{ color: T.red, fontSize: 36, fontWeight: 900, ...S.mono }}>{fmt.brlK(TOTAL_MIN)}</div><div style={{ color: T.muted, fontSize: 13, marginTop: 4 }}>até {fmt.brlK(TOTAL_MAX)}</div></div>
         <div style={{ width: 1, height: 60, background: T.goldDim }} />
-        <div><div style={{ color: T.goldDim, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>INSIGHTS ATIVOS</div><div style={{ color: T.gold, fontSize: 36, fontWeight: 900, ...S.mono }}>{INSIGHTS.length}</div></div>
+        <div><div style={{ color: T.goldDim, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>INSIGHTS ATIVOS</div><div style={{ color: T.gold, fontSize: 36, fontWeight: 900, ...S.mono }}>{INSIGHTS_DISPLAY.length}</div></div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {INSIGHTS.map(ins => {
+        {INSIGHTS_DISPLAY.map(ins => {
           const open = expanded === ins.id, borderColor = ins.severity === "alta" ? T.red : ins.severity === "média" ? T.amber : T.blue;
           return (
             <div key={ins.id} style={{ background: T.s1, border: `1px solid ${open ? borderColor + "60" : T.border}`, borderRadius: 14, overflow: "hidden" }}>
@@ -2343,7 +2346,7 @@ function PageLeakage({ PROPS, onNavPagamentos }) {
                                 {ins.type === "maintenance" && <div style={{ color: T.amber, fontSize: 13, fontWeight: 700 }}>+{p.maintDelta}%</div>}
                                 {ins.type === "noi" && <div style={{ color: T.red, fontSize: 13, fontWeight: 700 }}>{fmt.pct(p.noiPct)}</div>}
                                 {ins.type === "aluguel_baixo" && <div style={{ color: T.amber, fontSize: 13, fontWeight: 700 }}>{fmt.brl(p.rent - (p.descontoAluguel||0))}/mês</div>}
-                                {ins.type === "aluguel_baixo" && <div style={{ color: T.amber, fontSize: 13, fontWeight: 700 }}>{fmt.brl(p.rent - (p.descontoAluguel||0))}/mês</div>}
+                                {ins.type === "aluguel_baixo" && <div style={{ color: T.dim, fontSize: 11 }}>{p.rentBruta?.toFixed(2)}% · mín {p.benchMin?.toFixed(1)}%</div>}
                               </div>
                             </div>
                           </div>
