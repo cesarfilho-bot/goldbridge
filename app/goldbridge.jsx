@@ -3459,75 +3459,6 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
         })}
       </div>
 
-      {/* IPTU — Controle de Parcelas */}
-      {(() => {
-        const comIPTU = PROPS.filter(p => (p.iptu || 0) > 0);
-        if (comIPTU.length === 0) return null;
-        const MESES_ABR = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-        const totalGeral = comIPTU.reduce((s, p) => s + (p.iptu || 0), 0);
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>IPTU — CONTROLE DE PARCELAS</div>
-            {comIPTU.map(p => {
-              const numParcelas = p.iptuParcelas || 10;
-              const valorParcela = Math.round((p.iptu || 0) / numParcelas);
-              const pagas = p.iptuParcelasPagas || [];
-              const qtdPagas = pagas.length;
-              const totalPago = qtdPagas * valorParcela;
-              const toggleParcela = (idx) => {
-                const novas = pagas.includes(idx)
-                  ? pagas.filter(i => i !== idx)
-                  : [...pagas, idx];
-                onUpdateProps(PROPS.map(pp => pp.id === p.id ? { ...pp, iptuParcelasPagas: novas } : pp));
-              };
-              return (
-                <div key={p.id} style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 14, padding: "16px 20px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ color: T.goldBright, fontWeight: 700, fontSize: 14 }}>{p.name}</div>
-                      <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
-                        IPTU anual: <span style={{ color: T.text, fontWeight: 700, ...S.mono }}>{fmt.brl(p.iptu)}</span>
-                        <span style={{ color: T.dim, fontSize: 11, marginLeft: 8 }}>{numParcelas}× {fmt.brl(valorParcela)}</span>
-                      </div>
-                    </div>
-                    <div style={{ color: qtdPagas === numParcelas ? T.green : qtdPagas > 0 ? T.amber : T.muted, fontSize: 12, fontWeight: 700 }}>
-                      {qtdPagas}/{numParcelas} pagas · {fmt.brl(totalPago)} de {fmt.brl(p.iptu)}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {Array.from({ length: numParcelas }, (_, i) => {
-                      const paga = pagas.includes(i);
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => toggleParcela(i)}
-                          style={{
-                            padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700,
-                            cursor: "pointer", fontFamily: "inherit", border: `1px solid ${paga ? T.green : T.border}`,
-                            background: paga ? T.green + "22" : T.s2,
-                            color: paga ? T.green : T.muted,
-                          }}
-                        >
-                          {MESES_ABR[i % 12]}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {numParcelas > 0 && (
-                    <div style={{ marginTop: 10, height: 4, background: T.s3, borderRadius: 2, overflow: "hidden" }}>
-                      <div style={{ height: "100%", width: `${(qtdPagas / numParcelas) * 100}%`, background: qtdPagas === numParcelas ? T.green : T.amber, borderRadius: 2, transition: "width 0.2s" }} />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            <div style={{ color: T.dim, fontSize: 12, textAlign: "right" }}>
-              Total IPTU do portfólio: <span style={{ color: T.goldBright, fontWeight: 700 }}>{fmt.brl(totalGeral)}/ano</span>
-            </div>
-          </div>
-        );
-      })()}
-
       {/* Modal de data de pagamento */}
       {pagDataModal && (
         <div style={{ position:"fixed", inset:0, background:"#00000099", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
@@ -3542,6 +3473,162 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── PAGE IPTU & CONDOMÍNIO ───────────────────────────────────────────────────
+function PageIPTU({ PROPS, onUpdateProps }) {
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  const mesAtual = hoje.getMonth();
+  const MESES = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+  const imoveis = PROPS.filter(p => (p.iptu||0) > 0 || (p.hasCondominio && (p.condoFee||0) > 0));
+
+  const toggleIPTUParcela = (prop, idx) => {
+    const pagas = prop.iptuParcelasPagas || [];
+    const novas = pagas.includes(idx) ? pagas.filter(i => i !== idx) : [...pagas, idx];
+    onUpdateProps(PROPS.map(p => p.id === prop.id ? { ...p, iptuParcelasPagas: novas } : p));
+  };
+
+  const toggleCondoMes = (prop, idx) => {
+    const pagos = prop.condoMesesPagos || [];
+    const novos = pagos.includes(idx) ? pagos.filter(i => i !== idx) : [...pagos, idx];
+    onUpdateProps(PROPS.map(p => p.id === prop.id ? { ...p, condoMesesPagos: novos } : p));
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div>
+        <div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>GESTÃO FINANCEIRA</div>
+        <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>IPTU & Condomínio</h1>
+      </div>
+
+      {imoveis.length === 0 && (
+        <div style={{ ...S.card, textAlign: "center", padding: "60px 20px", color: T.muted }}>
+          Nenhum imóvel com IPTU ou condomínio cadastrado.
+        </div>
+      )}
+
+      {imoveis.map(p => {
+        const parcelas = p.iptuParcelas || 10;
+        const iptuAnual = p.iptu || 0;
+        const iptuParcela = Math.round(iptuAnual / parcelas);
+        const iptuPagas = p.iptuParcelasPagas || [];
+        const iptuPagasCount = iptuPagas.length;
+        const iptuPagoTotal = iptuPagasCount * iptuParcela;
+
+        let iptuAlerta = null;
+        if (p.iptuVencimento) {
+          const anoIPTU = parseInt(p.iptuVencimento);
+          if (anoIPTU < anoAtual) iptuAlerta = "vencido";
+          else if (anoIPTU === anoAtual && mesAtual >= 10) iptuAlerta = "vencendo";
+        }
+
+        const condoFeeM = p.condoFee || 0;
+        const condoFeeAnual = condoFeeM * 12;
+        const condoPagos = p.condoMesesPagos || [];
+        const condoPagosCount = condoPagos.length;
+        const condoPagoTotal = condoPagosCount * condoFeeM;
+
+        const temIPTU = iptuAnual > 0;
+        const temCondo = p.hasCondominio && condoFeeM > 0;
+
+        return (
+          <div key={p.id} style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 14, padding: 20 }}>
+            <div style={{ color: T.goldBright, fontWeight: 700, fontSize: 16, marginBottom: 2 }}>{p.name}</div>
+            <div style={{ color: T.muted, fontSize: 12, marginBottom: 16 }}>{p.neighborhood}{p.city ? ` · ${p.city}` : ""}</div>
+
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+              {/* Card IPTU */}
+              {temIPTU && (
+                <div style={{ flex: 1, minWidth: 280, background: T.s2, borderRadius: 12, padding: 18, border: `1px solid ${iptuAlerta === "vencido" ? T.red+"55" : iptuAlerta === "vencendo" ? T.amber+"55" : T.border}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                    <div>
+                      <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>IPTU</div>
+                      <div style={{ color: T.text, fontSize: 20, fontWeight: 900, ...S.mono }}>{fmt.brl(iptuAnual)}<span style={{ color: T.dim, fontSize: 11, fontWeight: 400 }}>/ano</span></div>
+                      <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>{fmt.brl(iptuParcela)}/parcela · {parcelas}x</div>
+                    </div>
+                    {iptuAlerta && (
+                      <span style={S.badge(iptuAlerta === "vencido" ? T.red : T.amber)}>
+                        {iptuAlerta === "vencido" ? "Competência vencida" : "Vencendo"}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                    {Array.from({ length: parcelas }, (_, i) => {
+                      const pago = iptuPagas.includes(i);
+                      return (
+                        <button key={i} onClick={() => toggleIPTUParcela(p, i)} style={{
+                          display: "flex", flexDirection: "column", alignItems: "center",
+                          padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
+                          background: pago ? T.green+"22" : T.s1,
+                          border: `1px solid ${pago ? T.green+"66" : T.border}`,
+                          color: pago ? T.green : T.muted, fontSize: 11, fontWeight: pago ? 700 : 400,
+                          minWidth: 40,
+                        }}>
+                          <span>{MESES[i % 12]}</span>
+                          <span style={{ fontSize: 9, marginTop: 2 }}>{pago ? "✓" : "○"}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {parcelas > 0 && (
+                    <div style={{ marginBottom: 10, height: 4, background: T.s3, borderRadius: 2, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${(iptuPagasCount / parcelas) * 100}%`, background: iptuPagasCount === parcelas ? T.green : T.amber, borderRadius: 2, transition: "width 0.2s" }} />
+                    </div>
+                  )}
+                  <div style={{ color: T.muted, fontSize: 12 }}>
+                    <span style={{ color: iptuPagasCount === parcelas ? T.green : T.text, fontWeight: 700 }}>{iptuPagasCount}</span>
+                    {" de "}{parcelas} parcelas pagas ·{" "}
+                    <span style={{ color: T.gold, fontWeight: 700, ...S.mono }}>{fmt.brl(iptuPagoTotal)}</span>
+                    {" pago de "}<span style={{ ...S.mono }}>{fmt.brl(iptuAnual)}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Card Condomínio */}
+              {temCondo && (
+                <div style={{ flex: 1, minWidth: 280, background: T.s2, borderRadius: 12, padding: 18, border: `1px solid ${T.border}` }}>
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>CONDOMÍNIO</div>
+                    <div style={{ color: T.text, fontSize: 20, fontWeight: 900, ...S.mono }}>{fmt.brl(condoFeeM)}<span style={{ color: T.dim, fontSize: 11, fontWeight: 400 }}>/mês</span></div>
+                    <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>{fmt.brl(condoFeeAnual)}/ano</div>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                    {MESES.map((mes, i) => {
+                      const pago = condoPagos.includes(i);
+                      return (
+                        <button key={i} onClick={() => toggleCondoMes(p, i)} style={{
+                          display: "flex", flexDirection: "column", alignItems: "center",
+                          padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
+                          background: pago ? T.green+"22" : T.s1,
+                          border: `1px solid ${pago ? T.green+"66" : T.border}`,
+                          color: pago ? T.green : T.muted, fontSize: 11, fontWeight: pago ? 700 : 400,
+                          minWidth: 40,
+                        }}>
+                          <span>{mes}</span>
+                          <span style={{ fontSize: 9, marginTop: 2 }}>{pago ? "✓" : "○"}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ marginBottom: 10, height: 4, background: T.s3, borderRadius: 2, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${(condoPagosCount / 12) * 100}%`, background: condoPagosCount === 12 ? T.green : T.amber, borderRadius: 2, transition: "width 0.2s" }} />
+                  </div>
+                  <div style={{ color: T.muted, fontSize: 12 }}>
+                    <span style={{ color: condoPagosCount === 12 ? T.green : T.text, fontWeight: 700 }}>{condoPagosCount}</span>
+                    {" de 12 meses pagos · "}
+                    <span style={{ color: T.gold, fontWeight: 700, ...S.mono }}>{fmt.brl(condoPagoTotal)}</span>
+                    {" pago de "}<span style={{ ...S.mono }}>{fmt.brl(condoFeeAnual)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -3952,6 +4039,7 @@ const NAV = [
   { id: "dashboard",  label: "Visão Geral",      icon: "◈" },
   { id: "noi",        label: "Imóveis",           icon: "⊞" },
   { id: "pagamentos", label: "Pagamentos",         icon: "" },
+  { id: "iptu",       label: "IPTU & Cond.",       icon: "🏛" },
   { id: "fluxo",      label: "Fluxo de Caixa",    icon: "" },
   { id: "mercado",    label: "Valor da Carteira",  icon: "🏦" },
   { id: "leakage",    label: "Alertas",            icon: "◎" },
@@ -4927,6 +5015,7 @@ export default function App() {
           regimeFiscal: r.regime_fiscal||"PF",
           locatarios: r.locatarios||[], historico: r.historico||[],
           iptuVencimento: r.iptu_vencimento||"", iptuParcelas: r.iptu_parcelas||10, indiceReajuste: r.indice_reajuste||"IGPM", adminPct: r.admin_pct != null ? r.admin_pct : 8,
+          iptuParcelasPagas: r.iptu_parcelas_pagas||[], condoMesesPagos: r.condo_meses_pagos||[],
           avaliacoes: r.avaliacoes||[], documentos: r.documentos||[], viaImobiliaria: r.via_imobiliaria||false, locatarioNome: r.locatario_nome||"", locatarioCPF: r.locatario_cpf||"", locatarioTelefone: r.locatario_telefone||"", locatarioEmail: r.locatario_email||"", locatarioGarantia: r.locatario_garantia||"Fiador",
         }, BENCHMARKS));
         setPropsRaw(mapped);
@@ -4952,6 +5041,7 @@ export default function App() {
     indice_reajuste: prop.indiceReajuste||"IGPM", iptu_vencimento: prop.iptuVencimento||null, iptu_parcelas: prop.iptuParcelas||10,
     avaliacoes: prop.avaliacoes||[], documentos: prop.documentos||[], via_imobiliaria: prop.viaImobiliaria||false, locatario_nome: prop.locatarioNome||"", locatario_cpf: prop.locatarioCPF||"", locatario_telefone: prop.locatarioTelefone||"", locatario_email: prop.locatarioEmail||"", locatario_garantia: prop.locatarioGarantia||"Fiador",
     locatarios: prop.locatarios||[], historico: prop.historico||[],
+    iptu_parcelas_pagas: prop.iptuParcelasPagas||[], condo_meses_pagos: prop.condoMesesPagos||[],
   });
 
   const setProps = useCallback((updater) => {
@@ -5043,6 +5133,10 @@ export default function App() {
       if (JSON.stringify(old.historico) !== JSON.stringify(np.historico)) {
         await supabase.from("imoveis").update({ historico: np.historico||[] }).eq("id", np.id).eq("user_id", user.id);
       }
+      if (JSON.stringify(old.iptuParcelasPagas) !== JSON.stringify(np.iptuParcelasPagas) ||
+          JSON.stringify(old.condoMesesPagos) !== JSON.stringify(np.condoMesesPagos)) {
+        await supabase.from("imoveis").update({ iptu_parcelas_pagas: np.iptuParcelasPagas||[], condo_meses_pagos: np.condoMesesPagos||[] }).eq("id", np.id).eq("user_id", user.id);
+      }
     });
     setPropsRaw(newProps);
   };
@@ -5078,6 +5172,7 @@ export default function App() {
     report:    <PageReport PROPS={props} />,
     ia:        <PageIA PROPS={props} />,
     pagamentos: <PagePagamentos PROPS={props} onUpdateProps={handleUpdateProps} highlightPropId={highlightPagPropId} />,
+    iptu:      <PageIPTU PROPS={props} onUpdateProps={handleUpdateProps} />,
     fluxo:     <PageFluxoCaixa PROPS={props} />,
     locatarios: <PageLocatarios PROPS={props} onUpdateProps={handleUpdateProps} />,
     historico:  <PageHistorico PROPS={props} onUpdateProps={handleUpdateProps} />,
