@@ -6,6 +6,8 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
+
+const ADMIN_EMAIL = "cesar.filho@vireo.capital";
 import {
   Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, AreaChart, Area, Cell, PieChart, Pie,
@@ -4129,6 +4131,110 @@ function PageFluxoCaixa({ PROPS }) {
 }
 
 
+// ─── PAGE ADMIN ───────────────────────────────────────────────────────────────
+function PageAdmin({ user }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (!user || user.email !== ADMIN_EMAIL) return;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch("/api/admin", { headers: { Authorization: `Bearer ${token}` } });
+      const json = await res.json();
+      if (json.error) { setError(json.error); setLoading(false); return; }
+      setData(json);
+      setLoading(false);
+    })();
+  }, [user]);
+
+  if (!user || user.email !== ADMIN_EMAIL) return (
+    <div style={{ color: T.red, padding: 40, textAlign: "center", fontSize: 16, fontWeight: 700 }}>Acesso restrito.</div>
+  );
+  if (loading) return <div style={{ color: T.muted, padding: 40 }}>Carregando dados de usuários...</div>;
+  if (error) return <div style={{ color: T.red, padding: 40 }}>Erro: {error}</div>;
+
+  const { summary, users: allUsers } = data;
+  const filtered = allUsers.filter(u => u.email.toLowerCase().includes(search.toLowerCase()));
+
+  const growthPct = summary.usersPrevMonth === 0
+    ? (summary.usersThisMonth > 0 ? 100 : 0)
+    : Math.round((summary.usersThisMonth - summary.usersPrevMonth) / summary.usersPrevMonth * 100);
+  const growthLabel = (growthPct >= 0 ? "+" : "") + growthPct + "%";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div>
+        <div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>ADMINISTRAÇÃO</div>
+        <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Painel Admin</h1>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+        <div style={S.card}>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>USUÁRIOS CADASTRADOS</div>
+          <div style={{ color: T.gold, fontSize: 34, fontWeight: 900, ...S.mono }}>{summary.totalUsers}</div>
+        </div>
+        <div style={S.card}>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>ATIVOS (30 DIAS)</div>
+          <div style={{ color: T.green, fontSize: 34, fontWeight: 900, ...S.mono }}>{summary.activeUsers}</div>
+          <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>{summary.totalUsers > 0 ? Math.round(summary.activeUsers / summary.totalUsers * 100) : 0}% do total</div>
+        </div>
+        <div style={S.card}>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>IMÓVEIS NA PLATAFORMA</div>
+          <div style={{ color: T.goldBright, fontSize: 34, fontWeight: 900, ...S.mono }}>{summary.totalImoveis}</div>
+        </div>
+        <div style={S.card}>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>CRESCIMENTO MÊS</div>
+          <div style={{ color: growthPct >= 0 ? T.green : T.red, fontSize: 34, fontWeight: 900, ...S.mono }}>{growthLabel}</div>
+          <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>{summary.usersThisMonth} este mês · {summary.usersPrevMonth} mês anterior</div>
+        </div>
+      </div>
+
+      <div style={S.card}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Usuários ({filtered.length})</div>
+          <input style={{ ...S.input, width: 260 }} placeholder="Buscar por email..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={S.th}>Email</th>
+                <th style={S.th}>Cadastro</th>
+                <th style={S.th}>Último Acesso</th>
+                <th style={S.th}>Imóveis</th>
+                <th style={S.th}>Perfil</th>
+                <th style={S.th}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(u => (
+                <tr key={u.id}>
+                  <td style={S.td}>{u.email}</td>
+                  <td style={{ ...S.td, color: T.muted }}>{u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "—"}</td>
+                  <td style={{ ...S.td, color: T.muted }}>{u.last_seen ? new Date(u.last_seen).toLocaleDateString("pt-BR") : <span style={{ color: T.dim }}>Nunca</span>}</td>
+                  <td style={{ ...S.td, fontWeight: 700, color: u.imoveis_count > 0 ? T.goldBright : T.dim }}>{u.imoveis_count}</td>
+                  <td style={{ ...S.td, fontSize: 11 }}>
+                    {u.tipos.length > 0 && <div style={{ color: T.text }}>{u.tipos.join(", ")}</div>}
+                    {u.cidades.length > 0 && <div style={{ color: T.muted, marginTop: 2 }}>{u.cidades.join(", ")}</div>}
+                    {u.tipos.length === 0 && u.cidades.length === 0 && <span style={{ color: T.dim }}>—</span>}
+                  </td>
+                  <td style={S.td}>
+                    <span style={S.badge(u.isAtivo ? T.green : T.muted)}>{u.isAtivo ? "Ativo" : "Inativo"}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── NAV ──────────────────────────────────────────────────────────────────────
 const NAV = [
   { id: "dashboard",  label: "Visão Geral",      icon: "◈" },
@@ -5084,6 +5190,9 @@ export default function App() {
     if (!user || loadedRef.current) return;
     loadedRef.current = true;
     (async () => {
+      // Track last_seen for admin analytics (fire-and-forget)
+      supabase.from("user_activity").upsert({ user_id: user.id, last_seen: new Date().toISOString() }, { onConflict: "user_id" });
+
       setDbLoading(true);
       // Get or create portfolio — always use the oldest one
       let { data: ports } = await supabase.from("portfolios").select("id").eq("user_id", user.id).order("created_at").limit(1);
@@ -5277,6 +5386,7 @@ export default function App() {
     fluxo:     <PageFluxoCaixa PROPS={props} />,
     locatarios: <PageLocatarios PROPS={props} onUpdateProps={handleUpdateProps} />,
     historico:  <PageHistorico PROPS={props} onUpdateProps={handleUpdateProps} />,
+    admin:      <PageAdmin user={user} />,
   }[page] || <PageDashboard PROPS={props} onNav={nav} onProp={setSelectedProp} onAdd={() => setAddingImovel(true)} />;
 
   return (
@@ -5319,6 +5429,15 @@ export default function App() {
                 </button>
               );
             })}
+            {user?.email === ADMIN_EMAIL && (() => {
+              const active = page === "admin";
+              return (
+                <button onClick={() => nav("admin")} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 22px", background: active ? T.goldGlow : "transparent", color: active ? T.goldBright : T.dim, border: "none", borderRight: active ? `2px solid ${T.gold}` : "2px solid transparent", cursor: "pointer", fontSize: 13, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: active ? 700 : 400, textAlign: "left", marginTop: 8, borderTop: `1px solid ${T.border}` }}>
+                  <span style={{ fontSize: 14, opacity: active ? 1 : 0.6 }}>⚙</span>
+                  Admin
+                </button>
+              );
+            })()}
           </nav>
           <div style={{ padding: "14px 22px", borderTop: `1px solid ${T.border}` }}>
             <div style={{ color: T.dim, fontSize: 11, marginBottom: 6 }}>{user?.email}</div>
