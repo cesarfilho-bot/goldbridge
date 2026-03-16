@@ -3113,7 +3113,7 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
 
   const confirmarPago = (prop, dataStr) => {
     const bruto = prop.rent - (prop.descontoAluguel||0);
-    const condoFeeM = prop.hasCondominio ? Math.round((prop.condoFee||0)/12) : 0;
+    const condoFeeM = prop.hasCondominio ? (prop.condoFee||0) : 0;
     let valor;
     if (prop.viaImobiliaria) {
       const adm = prop.adminRecalc || Math.round(bruto * ((prop.adminPct||8)/100));
@@ -3142,7 +3142,7 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
       return;
     }
     const bruto = prop.rent - (prop.descontoAluguel||0);
-    const condoFeeM = prop.hasCondominio ? Math.round((prop.condoFee||0)/12) : 0;
+    const condoFeeM = prop.hasCondominio ? (prop.condoFee||0) : 0;
     let valor;
     if (prop.viaImobiliaria) {
       const adm = prop.adminRecalc || Math.round(bruto * ((prop.adminPct||8)/100));
@@ -3222,7 +3222,7 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
   const pendentes = pagMes.filter(p => !p.pag?.status && !isAtrasadoMes(p, anoSel, mesSel)).length;
   const calcAluguel = (p) => {
     const bruto = p.rent - (p.descontoAluguel||0);
-    const condoFeeM = p.hasCondominio ? Math.round((p.condoFee||0)/12) : 0;
+    const condoFeeM = p.hasCondominio ? (p.condoFee||0) : 0;
     if (p.viaImobiliaria) {
       const adm = p.adminRecalc || Math.round(bruto * ((p.adminPct||8)/100));
       const iptuM = Math.round((p.iptu||0) / (p.iptuParcelas||10));
@@ -3391,7 +3391,7 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
           const maintM = p.maintMonthly || 0;
           const seguroM = Math.round((p.insurance||0)/12);
           const condoM = (p.fundoReserva||0) + (p.chamadaExtra||0);
-          const condoFeeM = p.hasCondominio ? Math.round((p.condoFee||0)/12) : 0;
+          const condoFeeM = p.hasCondominio ? (p.condoFee||0) : 0;
           // Com imobiliária: bolso = bruto - adm - fundo/chamada + iptu + condo (inquilino paga, imob. repassa)
           // Sem imobiliária: aluguel - desconto + condo (inquilino reembolsa)
           const bolsoBruto = p.viaImobiliaria
