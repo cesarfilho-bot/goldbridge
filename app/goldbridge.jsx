@@ -1533,7 +1533,7 @@ function PageValorMercado({ PROPS, onUpdateProps }) {
         obs: editForm.obsAvaliacao || "",
       } : null;
       const newAvaliacoes = novaAvaliacao ? [...avaliacoes.filter(a => a.data !== novaAvaliacao.data), novaAvaliacao] : avaliacoes;
-      return { ...p, valorMercado: vm, valorCompra: parseFloat(editForm.valorCompra)||0, anoCompra: editForm.anoCompra||null, avaliacoes: newAvaliacoes };
+      return { ...p, valorMercado: vm, marketValueManual: vm, valorCompra: parseFloat(editForm.valorCompra)||0, anoCompra: editForm.anoCompra||null, avaliacoes: newAvaliacoes };
     });
     onUpdateProps(newProps);
     setEditingId(null);
@@ -2196,6 +2196,22 @@ function PageLeakage({ PROPS, onNavPagamentos }) {
     return { ...p, diasVencido, tempoVencido, dataVencFmt: venc.toLocaleDateString("pt-BR") };
   }).sort((a, b) => b.diasVencido - a.diasVencido);
 
+  const TIPOS_COMERCIAL = ["Sala Comercial", "Industrial", "Loja", "Galpão", "Salão Comercial", "Terreno"];
+  const rentabilidadeBaixa = PROPS.filter(p => {
+    if (p.status !== "Ocupado" || (p.marketValueManual || 0) <= 0) return false;
+    const rentBruta = (p.rent - (p.descontoAluguel || 0)) / p.marketValueManual * 100;
+    const benchMin = TIPOS_COMERCIAL.includes(p.type) ? 0.6 : 0.4;
+    return rentBruta < benchMin;
+  }).map(p => {
+    const rentBruta = (p.rent - (p.descontoAluguel || 0)) / p.marketValueManual * 100;
+    const isComercial = TIPOS_COMERCIAL.includes(p.type);
+    const benchMin = isComercial ? 0.6 : 0.4;
+    const benchMax = isComercial ? 0.8 : 0.5;
+    const aluguelIdealMin = Math.round(p.marketValueManual * benchMin / 100);
+    const aluguelIdealMax = Math.round(p.marketValueManual * benchMax / 100);
+    return { ...p, rentBruta, benchMin, benchMax, aluguelIdealMin, aluguelIdealMax };
+  }).sort((a, b) => a.rentBruta - b.rentBruta);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <div><div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>DIAGNÓSTICO</div><h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Alertas</h1></div>
@@ -2265,6 +2281,25 @@ function PageLeakage({ PROPS, onNavPagamentos }) {
                 </div>
               </div>
               <span style={S.badge(T.amber)}>Prazo indeterminado</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {rentabilidadeBaixa.length > 0 && (
+        <div style={{ background: T.amber+"11", border: `1px solid ${T.amber}55`, borderRadius: 14, padding: 20 }}>
+          <div style={{ color: T.amber, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>RENTABILIDADE ABAIXO DO MERCADO ({rentabilidadeBaixa.length})</div>
+          {rentabilidadeBaixa.map(p => (
+            <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${T.amber}22` }}>
+              <div>
+                <div style={{ color: T.text, fontWeight: 600 }}>{p.name}</div>
+                <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
+                  {p.neighborhood} · Rentabilidade atual: <span style={{ color: T.amber, fontWeight: 700 }}>{p.rentBruta.toFixed(2)}%/mês</span>
+                  {" · "}Benchmark: <span style={{ color: T.text, fontWeight: 700 }}>{p.benchMin.toFixed(1)}%–{p.benchMax.toFixed(1)}%/mês</span>
+                  {" · "}Aluguel ideal: <span style={{ color: T.green, fontWeight: 700 }}>{fmt.brl(p.aluguelIdealMin)}–{fmt.brl(p.aluguelIdealMax)}/mês</span>
+                </div>
+              </div>
+              <span style={S.badge(T.amber)}>Revisar aluguel</span>
             </div>
           ))}
         </div>
