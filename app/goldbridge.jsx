@@ -3113,14 +3113,15 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
 
   const confirmarPago = (prop, dataStr) => {
     const bruto = prop.rent - (prop.descontoAluguel||0);
+    const condoFeeM = prop.hasCondominio ? Math.round((prop.condoFee||0)/12) : 0;
     let valor;
     if (prop.viaImobiliaria) {
       const adm = prop.adminRecalc || Math.round(bruto * ((prop.adminPct||8)/100));
       const iptuM = Math.round((prop.iptu||0) / (prop.iptuParcelas||10));
       const condoM = (prop.fundoReserva||0) + (prop.chamadaExtra||0);
-      valor = bruto - adm - condoM + iptuM;
+      valor = bruto - adm - condoM + iptuM + condoFeeM;
     } else {
-      valor = bruto;
+      valor = bruto + condoFeeM;
     }
     const dataBR = dataStr ? new Date(dataStr+"T12:00").toLocaleDateString("pt-BR") : new Date().toLocaleDateString("pt-BR");
     const updated = setPag(prop, anoSel, mesSel, {
@@ -3141,14 +3142,15 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
       return;
     }
     const bruto = prop.rent - (prop.descontoAluguel||0);
+    const condoFeeM = prop.hasCondominio ? Math.round((prop.condoFee||0)/12) : 0;
     let valor;
     if (prop.viaImobiliaria) {
       const adm = prop.adminRecalc || Math.round(bruto * ((prop.adminPct||8)/100));
       const iptuM = Math.round((prop.iptu||0) / (prop.iptuParcelas||10));
       const condoM = (prop.fundoReserva||0) + (prop.chamadaExtra||0);
-      valor = bruto - adm - condoM + iptuM;
+      valor = bruto - adm - condoM + iptuM + condoFeeM;
     } else {
-      valor = bruto;
+      valor = bruto + condoFeeM;
     }
     const updated = setPag(prop, anoSel, mesSel, {
       status,
@@ -3176,20 +3178,6 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
     const diasRestantes = Math.round((fim - hoje) / (1000 * 60 * 60 * 24));
     return { ...p, fimContrato: fim.toLocaleDateString("pt-BR"), diasRestantes };
   }).sort((a, b) => a.diasRestantes - b.diasRestantes);
-
-  // Alertas de IPTU: vencido (ano anterior) ou vencendo (nov/dez do ano de competência)
-  const alertasIPTU = PROPS.filter(p => {
-    if (!p.iptuVencimento) return false;
-    const anoIPTU = parseInt(p.iptuVencimento);
-    const mesHoje = hoje.getMonth(); // 0-11
-    if (anoIPTU < anoAtual) return true; // ano já passou — vencido
-    if (anoIPTU === anoAtual && mesHoje >= 10) return true; // nov/dez do ano de competência
-    return false;
-  }).map(p => {
-    const anoIPTU = parseInt(p.iptuVencimento);
-    const tipo = anoIPTU < anoAtual ? "vencido" : "vencendo";
-    return { ...p, tipoIPTU: tipo, vencIPTU: `Competência ${p.iptuVencimento}` };
-  });
 
   // Alertas de chamada extra quase terminando (últimas 3 parcelas)
   const alertasChamadaExtra = PROPS.filter(p =>
@@ -3234,14 +3222,15 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
   const pendentes = pagMes.filter(p => !p.pag?.status && !isAtrasadoMes(p, anoSel, mesSel)).length;
   const calcAluguel = (p) => {
     const bruto = p.rent - (p.descontoAluguel||0);
+    const condoFeeM = p.hasCondominio ? Math.round((p.condoFee||0)/12) : 0;
     if (p.viaImobiliaria) {
       const adm = p.adminRecalc || Math.round(bruto * ((p.adminPct||8)/100));
       const iptuM = Math.round((p.iptu||0) / (p.iptuParcelas||10));
       const condoM = (p.fundoReserva||0) + (p.chamadaExtra||0);
-      // IPTU entra como receita (inquilino paga e imob. repassa); fundo/chamada são descontados pela imob.
-      return bruto - adm - condoM + iptuM;
+      // IPTU e condo entram como receita (inquilino paga e imob. repassa); fundo/chamada são descontados pela imob.
+      return bruto - adm - condoM + iptuM + condoFeeM;
     }
-    return bruto;
+    return bruto + condoFeeM;
   };
   const totalRecebido = pagMes.filter(p => p.pag?.status === "pago").reduce((s, p) => s + calcAluguel(p), 0);
   const totalEsperado = imovelOcupado.reduce((s, p) => s + calcAluguel(p), 0);
@@ -3309,8 +3298,8 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <div><div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>GESTÃO FINANCEIRA</div><h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Pagamentos</h1></div>
 
-      {/* Alertas de contrato, reajuste e IPTU */}
-      {(alertasContrato.length > 0 || alertasReajuste.length > 0 || alertasIPTU.length > 0 || alertasChamadaExtra.length > 0) && (
+      {/* Alertas de contrato, reajuste e chamada extra */}
+      {(alertasContrato.length > 0 || alertasReajuste.length > 0 || alertasChamadaExtra.length > 0) && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {alertasChamadaExtra.map(p => {
             const restam = p.chamadaExtraParcelas - p.chamadaExtraParcelaAtual;
@@ -3324,18 +3313,6 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
                   <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
                     Parcela {p.chamadaExtraParcelaAtual}/{p.chamadaExtraParcelas} · {fmt.brl(p.chamadaExtra)}/mês · economia futura: {fmt.brl(p.chamadaExtra)}/mês
                   </div>
-                </div>
-              </div>
-            );
-          })}
-          {alertasIPTU.map(p => {
-            const isVencido = p.tipoIPTU === "vencido";
-            const bgC = isVencido ? T.red : T.amber;
-            return (
-              <div key={`iptu-${p.id}`} style={{ padding: "14px 18px", background: bgC + "22", border: `1px solid ${bgC}44`, borderRadius: 12, display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>{p.name} — {isVencido ? "Mudança no IPTU" : "IPTU vencendo"}</div>
-                  <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>{p.vencIPTU} · {fmt.brl(p.iptu)} · {p.neighborhood}</div>
                 </div>
               </div>
             );
@@ -3414,11 +3391,12 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
           const maintM = p.maintMonthly || 0;
           const seguroM = Math.round((p.insurance||0)/12);
           const condoM = (p.fundoReserva||0) + (p.chamadaExtra||0);
-          // Com imobiliária: bolso = bruto - adm - fundo/chamada + iptu (inquilino paga, imob. repassa)
-          // Sem imobiliária: apenas aluguel - desconto
+          const condoFeeM = p.hasCondominio ? Math.round((p.condoFee||0)/12) : 0;
+          // Com imobiliária: bolso = bruto - adm - fundo/chamada + iptu + condo (inquilino paga, imob. repassa)
+          // Sem imobiliária: aluguel - desconto + condo (inquilino reembolsa)
           const bolsoBruto = p.viaImobiliaria
-            ? aluguelBruto - adminMensal - condoM + iptuMensal
-            : aluguelBruto;
+            ? aluguelBruto - adminMensal - condoM + iptuMensal + condoFeeM
+            : aluguelBruto + condoFeeM;
           const borderC = status === "pago" ? T.green + "40" : status === "atrasado" ? T.amber + "40" : status === "nao_pago" ? T.red + "40" : T.border;
           const isHighlighted = highlighted === p.id;
           return (
