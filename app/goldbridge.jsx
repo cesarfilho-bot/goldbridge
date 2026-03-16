@@ -869,15 +869,15 @@ function EditModal({ prop, onSave, onClose, userId }) {
                       </div>
                     )}
                   </div>
-                  <div style={{ gridColumn: "1 / -1" }}>
-                    <label style={S.label}>TAXAS EXTRAS (R$/mês)</label>
-                    <input type="number" style={S.input} value={form.taxasExtras} onChange={e=>set("taxasExtras",e.target.value)} />
-                    <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Sempre do proprietário</div>
-                  </div>
                 </div>
 
               </div>
             )}
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <label style={S.label}>TAXAS EXTRAS (R$/mês)</label>
+            <input type="number" style={S.input} value={form.taxasExtras} onChange={e=>set("taxasExtras",e.target.value)} />
+            <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Sempre do proprietário</div>
           </div>
           <div>
             <button style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: `1px solid ${T.border}`, borderRadius: 8, padding: "10px 14px", cursor: "pointer", color: T.muted, fontSize: 12, fontFamily: "inherit", width: "100%" }} onClick={() => setShowValorSection(v => !v)}>
@@ -4664,17 +4664,17 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
                           </div>
                         )}
                       </div>
-                      <div style={{ gridColumn: "1 / -1" }}>
-                        <label style={S.label}>TAXAS EXTRAS (R$/mês)</label>
-                        <input type="number" style={S.input} value={form.taxasExtras} onChange={e=>set("taxasExtras",e.target.value)} />
-                        <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Sempre do proprietário</div>
-                      </div>
                     </div>
                     <div style={{ color:T.green, fontSize:11, padding:"8px 10px", background:T.green+"11", borderRadius:6 }}>
-                      ✓ Condomínio mensal pago pelo inquilino — não entra nas suas despesas. Fundo de reserva, chamada extra e taxas extras são sempre do proprietário.
+                      ✓ Condomínio mensal pago pelo inquilino — não entra nas suas despesas. Fundo de reserva e chamada extra são sempre do proprietário.
                     </div>
                   </div>
                 )}
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <label style={S.label}>TAXAS EXTRAS (R$/mês)</label>
+                <input type="number" style={S.input} value={form.taxasExtras} onChange={e=>set("taxasExtras",e.target.value)} />
+                <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Sempre do proprietário</div>
               </div>
 
               {/* Regime fiscal */}
