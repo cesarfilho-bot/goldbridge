@@ -2176,6 +2176,20 @@ function PageLeakage({ PROPS, onNavPagamentos }) {
     return { ...p, diasVenc: dias, dataVencFmt: venc.toLocaleDateString("pt-BR") };
   }).sort((a, b) => a.diasVenc - b.diasVenc);
 
+  const contratosVencidos = PROPS.filter(p => {
+    if (!p.contratoVencimento || p.status !== "Ocupado") return false;
+    const venc = new Date(p.contratoVencimento+"T12:00");
+    return venc < hoje;
+  }).map(p => {
+    const venc = new Date(p.contratoVencimento+"T12:00");
+    const diasVencido = Math.round((hoje - venc) / (1000 * 60 * 60 * 24));
+    const mesesVencido = Math.floor(diasVencido / 30);
+    const tempoVencido = mesesVencido >= 2
+      ? `${mesesVencido} meses`
+      : diasVencido === 1 ? "1 dia" : `${diasVencido} dias`;
+    return { ...p, diasVencido, tempoVencido, dataVencFmt: venc.toLocaleDateString("pt-BR") };
+  }).sort((a, b) => b.diasVencido - a.diasVencido);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <div><div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>DIAGNÓSTICO</div><h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Alertas</h1></div>
@@ -2229,6 +2243,22 @@ function PageLeakage({ PROPS, onNavPagamentos }) {
                 </div>
               </div>
               <span style={S.badge(p.diasVenc <= 15 ? T.red : T.amber)}>Reajuste/Renovação</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {contratosVencidos.length > 0 && (
+        <div style={{ background: T.amber+"11", border: `1px solid ${T.amber}55`, borderRadius: 14, padding: 20 }}>
+          <div style={{ color: T.amber, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>CONTRATO VENCIDO — LOCAÇÃO POR PRAZO INDETERMINADO ({contratosVencidos.length})</div>
+          {contratosVencidos.map(p => (
+            <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${T.amber}22` }}>
+              <div>
+                <div style={{ color: T.text, fontWeight: 600 }}>{p.name}</div>
+                <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
+                  {p.neighborhood} · Venceu em <span style={{ color: T.amber, fontWeight: 700 }}>{p.dataVencFmt}</span> · vencido há <span style={{ color: T.amber, fontWeight: 700 }}>{p.tempoVencido}</span>
+                </div>
+              </div>
+              <span style={S.badge(T.amber)}>Prazo indeterminado</span>
             </div>
           ))}
         </div>
