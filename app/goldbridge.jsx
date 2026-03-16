@@ -702,6 +702,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
     chamadaExtra: prop.chamadaExtra ?? 0,
     chamadaExtraParcelas: prop.chamadaExtraParcelas ?? 0,
     chamadaExtraParcelaAtual: prop.chamadaExtraParcelaAtual ?? 0,
+    taxasExtras: prop.taxasExtras ?? 0,
     condoPagoPor: prop.condoPagoPor || "proprietario",
     descontoAluguel: prop.descontoAluguel ?? 0,
     contratoAnos: prop.contratoAnos ?? 12,
@@ -746,7 +747,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
     leakage = Math.min(98, Math.max(2, Math.round(leakage)));
     const proximoReajuste = form.contratoInicio ? (() => { const d = new Date(form.contratoInicio); const now = new Date(); let y = now.getFullYear(); if (new Date(y, d.getMonth(), d.getDate()) <= now) y++; return new Date(y, d.getMonth(), d.getDate()).toLocaleDateString("pt-BR"); })() : "";
     const adminFromPct = Math.round((Number(form.rent) - (Number(form.descontoAluguel)||0)) * (Number(form.adminPct)||0) / 100);
-    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: adminFromPct, adminPct: Number(form.adminPct), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), chamadaExtraParcelas: Number(form.chamadaExtraParcelas)||0, chamadaExtraParcelaAtual: Number(form.chamadaExtraParcelaAtual)||0, condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), contratoVencimento: form.contratoVencimento, clausula12Meses: form.clausula12Meses, vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, iptuParcelas: Number(form.iptuParcelas)||10, viaImobiliaria: form.viaImobiliaria, imobiliariaName: form.imobiliariaName, locatarioNome: form.locatarioNome, locatarioCPF: form.locatarioCPF, locatarioTelefone: form.locatarioTelefone, locatarioEmail: form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
+    onSave({ ...prop, ...form, size: Number(form.size), rent: Number(form.rent), iptu: Number(form.iptu), maintMonthly: Number(form.maintMonthly), insurance: Number(form.insurance), admin: adminFromPct, adminPct: Number(form.adminPct), vacancyDays: Number(form.vacancyDays), condoFee: Number(form.condoFee), fundoReserva: Number(form.fundoReserva), chamadaExtra: Number(form.chamadaExtra), chamadaExtraParcelas: Number(form.chamadaExtraParcelas)||0, chamadaExtraParcelaAtual: Number(form.chamadaExtraParcelaAtual)||0, taxasExtras: Number(form.taxasExtras)||0, condoPagoPor: form.condoPagoPor, descontoAluguel: Number(form.descontoAluguel), contratoAnos: Number(form.contratoAnos), contratoVencimento: form.contratoVencimento, clausula12Meses: form.clausula12Meses, vacancyCost, totalIncome, totalExpenses, noi, noiPct, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta, vacancyBenchmark: bm.vacancy_days, vacancyDelta, leakage, proximoReajuste, marketValueManual: Number(form.marketValueManual), regimeFiscal: form.regimeFiscal, indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, iptuParcelas: Number(form.iptuParcelas)||10, viaImobiliaria: form.viaImobiliaria, imobiliariaName: form.imobiliariaName, locatarioNome: form.locatarioNome, locatarioCPF: form.locatarioCPF, locatarioTelefone: form.locatarioTelefone, locatarioEmail: form.locatarioEmail, locatarioGarantia: form.locatarioGarantia });
   };
 
   return (
@@ -867,6 +868,11 @@ function EditModal({ prop, onSave, onClose, userId }) {
                         Parcela {form.chamadaExtraParcelaAtual}/{form.chamadaExtraParcelas} · restam {Number(form.chamadaExtraParcelas) - Number(form.chamadaExtraParcelaAtual)} meses · total restante: {new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format((Number(form.chamadaExtraParcelas) - Number(form.chamadaExtraParcelaAtual)) * (Number(form.chamadaExtra)||0))}
                       </div>
                     )}
+                  </div>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={S.label}>TAXAS EXTRAS (R$/mês)</label>
+                    <input type="number" style={S.input} value={form.taxasExtras} onChange={e=>set("taxasExtras",e.target.value)} />
+                    <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Sempre do proprietário</div>
                   </div>
                 </div>
 
@@ -3118,7 +3124,7 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
     if (prop.viaImobiliaria) {
       const adm = prop.adminRecalc || Math.round(bruto * ((prop.adminPct||8)/100));
       const iptuM = Math.round((prop.iptu||0) / (prop.iptuParcelas||10));
-      const condoM = (prop.fundoReserva||0) + (prop.chamadaExtra||0);
+      const condoM = (prop.fundoReserva||0) + (prop.chamadaExtra||0) + (prop.taxasExtras||0);
       valor = bruto - adm - condoM + iptuM + condoFeeM;
     } else {
       valor = bruto + condoFeeM;
@@ -3147,7 +3153,7 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
     if (prop.viaImobiliaria) {
       const adm = prop.adminRecalc || Math.round(bruto * ((prop.adminPct||8)/100));
       const iptuM = Math.round((prop.iptu||0) / (prop.iptuParcelas||10));
-      const condoM = (prop.fundoReserva||0) + (prop.chamadaExtra||0);
+      const condoM = (prop.fundoReserva||0) + (prop.chamadaExtra||0) + (prop.taxasExtras||0);
       valor = bruto - adm - condoM + iptuM + condoFeeM;
     } else {
       valor = bruto + condoFeeM;
@@ -3226,8 +3232,8 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
     if (p.viaImobiliaria) {
       const adm = p.adminRecalc || Math.round(bruto * ((p.adminPct||8)/100));
       const iptuM = Math.round((p.iptu||0) / (p.iptuParcelas||10));
-      const condoM = (p.fundoReserva||0) + (p.chamadaExtra||0);
-      // IPTU e condo entram como receita (inquilino paga e imob. repassa); fundo/chamada são descontados pela imob.
+      const condoM = (p.fundoReserva||0) + (p.chamadaExtra||0) + (p.taxasExtras||0);
+      // IPTU e condo entram como receita (inquilino paga e imob. repassa); fundo/chamada/taxas são descontados pela imob.
       return bruto - adm - condoM + iptuM + condoFeeM;
     }
     return bruto + condoFeeM;
@@ -3390,7 +3396,7 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
           const iptuMensal = Math.round((p.iptu||0) / (p.iptuParcelas||10));
           const maintM = p.maintMonthly || 0;
           const seguroM = Math.round((p.insurance||0)/12);
-          const condoM = (p.fundoReserva||0) + (p.chamadaExtra||0);
+          const condoM = (p.fundoReserva||0) + (p.chamadaExtra||0) + (p.taxasExtras||0);
           const condoFeeM = p.hasCondominio ? (p.condoFee||0) : 0;
           // Com imobiliária: bolso = bruto - adm - fundo/chamada + iptu + condo (inquilino paga, imob. repassa)
           // Sem imobiliária: aluguel - desconto + condo (inquilino reembolsa)
@@ -3447,7 +3453,8 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.border}`, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                   <div style={{ color: T.dim, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginRight: 4 }}>DEDUÇÕES:</div>
                   <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>Adm. </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl(adminMensal)}</span></div>
-                  {condoM > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>Fundo/Cond. </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl(condoM)}</span></div>}
+                  {((p.fundoReserva||0) + (p.chamadaExtra||0)) > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>Fundo/Cond. </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl((p.fundoReserva||0) + (p.chamadaExtra||0))}</span></div>}
+                  {(p.taxasExtras||0) > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>Taxas Extras </span><span style={{ color: T.amber, fontSize: 12, fontWeight: 700 }}>{fmt.brl(p.taxasExtras)}</span></div>}
                   <div style={{ marginLeft: "auto", background: bolsoBruto >= 0 ? T.green+"22" : T.red+"22", borderRadius: 6, padding: "4px 12px", border: `1px solid ${bolsoBruto >= 0 ? T.green : T.red}40` }}>
                     <span style={{ color: T.dim, fontSize: 10 }}>No bolso </span>
                     <span style={{ color: bolsoBruto >= 0 ? T.green : T.red, fontSize: 13, fontWeight: 800, ...S.mono }}>{fmt.brl(bolsoBruto)}</span>
@@ -3787,7 +3794,7 @@ function PageFluxoCaixa({ PROPS }) {
     const dataRef = new Date(ano, i, 1);
     const chave = `${ano}_${i}`;
     let entradaAluguel = 0, entradaIPTU = 0, entradaCondo = 0;
-    let saidaIPTU = 0, saidaCondoPago = 0, saidaFundoChamada = 0, saidaMaint = 0, saidaSeguro = 0, saidaAdmin = 0;
+    let saidaIPTU = 0, saidaCondoPago = 0, saidaFundoChamada = 0, saidaTaxasExtras = 0, saidaMaint = 0, saidaSeguro = 0, saidaAdmin = 0;
     let iptuPrevisto = false, condoPrevisto = false, inadimplentes = 0;
 
     props.forEach(p => {
@@ -3859,6 +3866,7 @@ function PageFluxoCaixa({ PROPS }) {
         }
         // Fundo/chamada sempre do proprietário
         saidaFundoChamada += (p.fundoReserva||0) + (p.chamadaExtra||0);
+        saidaTaxasExtras += (p.taxasExtras||0);
       }
 
       saidaAdmin += adminMensal;
@@ -3867,9 +3875,9 @@ function PageFluxoCaixa({ PROPS }) {
     });
 
     const entradas = entradaAluguel + entradaIPTU + entradaCondo;
-    const saidas = saidaMaint + saidaSeguro + saidaAdmin + saidaIPTU + saidaCondoPago + saidaFundoChamada;
+    const saidas = saidaMaint + saidaSeguro + saidaAdmin + saidaIPTU + saidaCondoPago + saidaFundoChamada + saidaTaxasExtras;
     const saldo = entradas - saidas;
-    return { mes, mesNum: i, entradas, saidas, saldo, inadimplentes, entradaAluguel, entradaIPTU, entradaCondo, saidaIPTU, iptuPrevisto, condoPrevisto, saidaMaint, saidaSeguro, saidaAdmin, saidaCondoPago, saidaFundoChamada };
+    return { mes, mesNum: i, entradas, saidas, saldo, inadimplentes, entradaAluguel, entradaIPTU, entradaCondo, saidaIPTU, iptuPrevisto, condoPrevisto, saidaMaint, saidaSeguro, saidaAdmin, saidaCondoPago, saidaFundoChamada, saidaTaxasExtras };
   });
 
   const propsVisao = visao === "imovel" && imovelId ? PROPS.filter(p => p.id === imovelId) : PROPS;
@@ -3974,7 +3982,7 @@ function PageFluxoCaixa({ PROPS }) {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: T.s2 }}>
-              {["MÊS","ALUGUEL","IPTU rest.","COND. rest.","= ENTRADAS","MANUTENÇÃO","SEGURO","ADMIN","IPTU","COND. pago","FUNDO/CHAM.","= SAÍDAS","SALDO","SALDO ACUM."].map(h => <th key={h} style={{ ...S.th, fontSize: 10, padding: "8px 10px" }}>{h}</th>)}
+              {["MÊS","ALUGUEL","IPTU rest.","COND. rest.","= ENTRADAS","MANUTENÇÃO","SEGURO","ADMIN","IPTU","COND. pago","FUNDO/CHAM.","TAXAS EXT.","= SAÍDAS","SALDO","SALDO ACUM."].map(h => <th key={h} style={{ ...S.th, fontSize: 10, padding: "8px 10px" }}>{h}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -4001,6 +4009,7 @@ function PageFluxoCaixa({ PROPS }) {
                     {m.saidaCondoPago > 0 ? <>{fmt.brl(m.saidaCondoPago)}{m.condoPrevisto && <span style={{color:T.dim,fontSize:9,marginLeft:3}}>prev.</span>}</> : "—"}
                   </td>
                   <td style={{ ...S.td, ...S.mono, color: T.amber, fontSize: 11 }}>{m.saidaFundoChamada > 0 ? fmt.brl(m.saidaFundoChamada) : <span style={{color:T.dim}}>—</span>}</td>
+                  <td style={{ ...S.td, ...S.mono, color: T.amber, fontSize: 11 }}>{m.saidaTaxasExtras > 0 ? fmt.brl(m.saidaTaxasExtras) : <span style={{color:T.dim}}>—</span>}</td>
                   <td style={{ ...S.td, ...S.mono, color: T.red, fontWeight: 700 }}>{fmt.brl(m.saidas)}</td>
                   <td style={{ ...S.td, ...S.mono, color: m.saldo >= 0 ? T.green : T.red, fontWeight: 800 }}>{fmt.brl(m.saldo)}</td>
                   <td style={{ ...S.td, ...S.mono, color: saldoAcumulado[i] >= 0 ? T.gold : T.red }}>{fmt.brl(saldoAcumulado[i])}</td>
@@ -4021,6 +4030,7 @@ function PageFluxoCaixa({ PROPS }) {
               <td style={{ ...S.td, ...S.mono, color: T.red, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.saidaIPTU,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.red, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.saidaCondoPago,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.amber, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.saidaFundoChamada,0))}</td>
+              <td style={{ ...S.td, ...S.mono, color: T.amber, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.saidaTaxasExtras,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.red, fontWeight: 800 }}>{fmt.brl(totalSaidas)}</td>
               <td style={{ ...S.td, ...S.mono, color: totalSaldo >= 0 ? T.green : T.red, fontWeight: 800 }}>{fmt.brl(totalSaldo)}</td>
               <td style={S.td}>—</td>
@@ -4039,7 +4049,8 @@ function PageFluxoCaixa({ PROPS }) {
             ["Seguros", propsVisao.reduce((s,p) => s+(p.insurance||0),0)/12, T.teal],
             ["Administração", propsVisao.filter(p=>p.viaImobiliaria).reduce((s,p)=>s+(p.adminRecalc||Math.round((p.rent-(p.descontoAluguel||0))*((p.adminPct||8)/100))),0), T.gold],
             ["Cond. mensal", propsVisao.filter(p=>p.hasCondominio).reduce((s,p)=>s+(p.condoFee||0),0), T.teal],
-            ["Fundo/Chamada", propsVisao.filter(p=>p.hasCondominio).reduce((s,p)=>s+(p.fundoReserva||0)+(p.chamadaExtra||0),0), T.muted],
+            ["Fundo/Chamada", propsVisao.reduce((s,p)=>s+(p.fundoReserva||0)+(p.chamadaExtra||0),0), T.muted],
+            ["Taxas Extras", propsVisao.reduce((s,p)=>s+(p.taxasExtras||0),0), T.muted],
           ].map(([label, val, color]) => (
             <div key={label} style={{ flex: 1, minWidth: 120, background: T.s2, padding: "12px 16px", borderRadius: 10 }}>
               <div style={{ color: T.dim, fontSize: 11, marginBottom: 4 }}>{label}</div>
@@ -4316,7 +4327,7 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
     // Aluguel (só se ocupado)
     rent: "", adminPct: "8", descontoAluguel: "0", contratoAnos: "12",
     contratoInicio: "", indiceReajuste: "IGPM",
-    hasCondominio: false, condoFee: "0", fundoReserva: "0", chamadaExtra: "0", chamadaExtraParcelas: "0", chamadaExtraParcelaAtual: "0", condoPagoPor: "proprietario",
+    hasCondominio: false, condoFee: "0", fundoReserva: "0", chamadaExtra: "0", chamadaExtraParcelas: "0", chamadaExtraParcelaAtual: "0", taxasExtras: "0", condoPagoPor: "proprietario",
     regimeFiscal: "PF",
     // Locatário
     locatarioNome: "", locatarioCPF: "", locatarioTelefone: "", locatarioEmail: "", locatarioGarantia: "Fiador", viaImobiliaria: false,
@@ -4374,7 +4385,7 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
       descontoAluguel, contratoAnos: parseFloat(form.contratoAnos)||1,
       contratoInicio: form.contratoInicio, hasCondominio: form.hasCondominio,
       condoFee: parseFloat(form.condoFee)||0, fundoReserva: parseFloat(form.fundoReserva)||0,
-      chamadaExtra: parseFloat(form.chamadaExtra)||0, chamadaExtraParcelas: parseFloat(form.chamadaExtraParcelas)||0, chamadaExtraParcelaAtual: parseFloat(form.chamadaExtraParcelaAtual)||0, condoPagoPor: form.condoPagoPor,
+      chamadaExtra: parseFloat(form.chamadaExtra)||0, chamadaExtraParcelas: parseFloat(form.chamadaExtraParcelas)||0, chamadaExtraParcelaAtual: parseFloat(form.chamadaExtraParcelaAtual)||0, taxasExtras: parseFloat(form.taxasExtras)||0, condoPagoPor: form.condoPagoPor,
       regimeFiscal: form.regimeFiscal,
       viaImobiliaria: form.viaImobiliaria, imobiliariaName: form.imobiliariaName,
       locatarioNome: form.locatarioNome, locatarioCPF: form.locatarioCPF,
@@ -4653,9 +4664,14 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
                           </div>
                         )}
                       </div>
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <label style={S.label}>TAXAS EXTRAS (R$/mês)</label>
+                        <input type="number" style={S.input} value={form.taxasExtras} onChange={e=>set("taxasExtras",e.target.value)} />
+                        <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Sempre do proprietário</div>
+                      </div>
                     </div>
                     <div style={{ color:T.green, fontSize:11, padding:"8px 10px", background:T.green+"11", borderRadius:6 }}>
-                      ✓ Condomínio mensal pago pelo inquilino — não entra nas suas despesas. Fundo de reserva e chamada extra são sempre do proprietário.
+                      ✓ Condomínio mensal pago pelo inquilino — não entra nas suas despesas. Fundo de reserva, chamada extra e taxas extras são sempre do proprietário.
                     </div>
                   </div>
                 )}
@@ -4940,12 +4956,13 @@ function recalcProp(prop, BENCHMARKS) {
         (prop.insurance || 0) / 12 +
         (prop.fundoReserva || 0) +
         (prop.chamadaExtra || 0) +
+        (prop.taxasExtras || 0) +
         (prop.hasCondominio ? (prop.condoFee || 0) : 0)
       )
     : 0;
 
-  // Condomínio: fundo + chamada sempre do proprietário; condo mensal sempre inquilino
-  const condoAnnual = prop.hasCondominio ? ((prop.fundoReserva||0) + (prop.chamadaExtra||0)) * 12 : 0;
+  // Condomínio: fundo + chamada + taxasExtras sempre do proprietário; condo mensal sempre inquilino
+  const condoAnnual = ((prop.fundoReserva||0) + (prop.chamadaExtra||0) + (prop.taxasExtras||0)) * 12;
 
   // Admin calculado sobre aluguel líquido (após desconto)
   const adminRecalc = prop.adminPct != null
@@ -4970,8 +4987,8 @@ function recalcProp(prop, BENCHMARKS) {
   // Aluguel líquido: valor mensal real no bolso após todas as deduções
   const iptuMensal = (prop.iptu||0) / (prop.iptuParcelas||1);
   const aluguelLiquido = prop.viaImobiliaria
-    ? (prop.rent||0) - (prop.descontoAluguel||0) - adminRecalc - iptuMensal - (prop.maintMonthly||0) - (prop.insurance||0)/12 - ((prop.fundoReserva||0) + (prop.chamadaExtra||0)) - ir/12
-    : (prop.rent||0) - (prop.descontoAluguel||0) - iptuMensal - (prop.maintMonthly||0) - (prop.insurance||0)/12 - ((prop.fundoReserva||0) + (prop.chamadaExtra||0)) - ir/12;
+    ? (prop.rent||0) - (prop.descontoAluguel||0) - adminRecalc - iptuMensal - (prop.maintMonthly||0) - (prop.insurance||0)/12 - ((prop.fundoReserva||0) + (prop.chamadaExtra||0) + (prop.taxasExtras||0)) - ir/12
+    : (prop.rent||0) - (prop.descontoAluguel||0) - iptuMensal - (prop.maintMonthly||0) - (prop.insurance||0)/12 - ((prop.fundoReserva||0) + (prop.chamadaExtra||0) + (prop.taxasExtras||0)) - ir/12;
   const lucroLiquidoPct = lucroLiquido / (receitaBruta || 1);
   const iptuBenchmark = Math.round(bm.iptu_m2 * (prop.size||0));
   const iptuDelta = iptuBenchmark > 0 ? Math.round(((prop.iptu||0) - iptuBenchmark) / iptuBenchmark * 100) : 0;
@@ -5046,7 +5063,7 @@ export default function App() {
           size: r.size||0, rent: r.rent||0, iptu: r.iptu||0, maintMonthly: r.maint_monthly||0,
           insurance: r.insurance||0, admin: r.admin||0, vacancyDays: r.vacancy_days||0,
           hasCondominio: r.has_condominio||false, condoFee: r.condo_fee||0,
-          fundoReserva: r.fundo_reserva||0, chamadaExtra: r.chamada_extra||0, chamadaExtraParcelas: r.chamada_extra_parcelas||0, chamadaExtraParcelaAtual: r.chamada_extra_parcela_atual||0,
+          fundoReserva: r.fundo_reserva||0, chamadaExtra: r.chamada_extra||0, chamadaExtraParcelas: r.chamada_extra_parcelas||0, chamadaExtraParcelaAtual: r.chamada_extra_parcela_atual||0, taxasExtras: r.taxas_extras||0,
           descontoAluguel: r.desconto_aluguel||0, contratoAnos: r.contrato_anos||1,
           contratoInicio: r.contrato_inicio||"", marketValueManual: r.market_value_manual||0,
           valorMercado: r.valor_mercado||0, valorCompra: r.valor_compra||0, anoCompra: r.ano_compra||null,
@@ -5073,7 +5090,7 @@ export default function App() {
     rent: prop.rent, iptu: prop.iptu, maint_monthly: prop.maintMonthly,
     insurance: prop.insurance, admin: prop.admin, vacancy_days: prop.vacancyDays,
     has_condominio: prop.hasCondominio||false, condo_fee: prop.condoFee||0,
-    fundo_reserva: prop.fundoReserva||0, chamada_extra: prop.chamadaExtra||0, chamada_extra_parcelas: prop.chamadaExtraParcelas||0, chamada_extra_parcela_atual: prop.chamadaExtraParcelaAtual||0,
+    fundo_reserva: prop.fundoReserva||0, chamada_extra: prop.chamadaExtra||0, chamada_extra_parcelas: prop.chamadaExtraParcelas||0, chamada_extra_parcela_atual: prop.chamadaExtraParcelaAtual||0, taxas_extras: prop.taxasExtras||0,
     desconto_aluguel: prop.descontoAluguel||0, contrato_anos: prop.contratoAnos||1,
     contrato_inicio: prop.contratoInicio||null, market_value_manual: prop.marketValueManual||0,
     valor_mercado: prop.valorMercado||0, valor_compra: prop.valorCompra||0, ano_compra: prop.anoCompra||null,
