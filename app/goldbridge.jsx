@@ -829,13 +829,26 @@ function EditModal({ prop, onSave, onClose, userId }) {
                 {form.rent && <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>= {new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Math.round((parseFloat(form.rent)||0)*(parseFloat(form.adminPct)||0)/100))}/mês</div>}
               </div>
               <div><label style={S.label}>DIAS DE VACÂNCIA/ANO</label><input type="number" style={S.input} value={form.vacancyDays} onChange={e=>set("vacancyDays",e.target.value)} /></div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={S.label}>TAXAS EXTRAS (R$/mês)</label>
+                <input type="number" style={S.input} value={form.taxasExtras} onChange={e=>set("taxasExtras",e.target.value)} placeholder="Ex: taxa do boleto, repasse" />
+                <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Taxa do boleto, repasse, etc. — custos repassados pela imobiliária (sempre do proprietário)</div>
+              </div>
             </div>
           </div>
           <div>
             <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>CONDOMÍNIO</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <input type="checkbox" id="hasCondominio" checked={form.hasCondominio} onChange={e => set("hasCondominio", e.target.checked)} style={{ width: 16, height: 16, accentColor: T.gold, cursor: "pointer" }} />
-              <label htmlFor="hasCondominio" style={{ color: T.muted, fontSize: 13, cursor: "pointer" }}>Este imóvel tem condomínio</label>
+            <div
+              style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 18px", marginBottom: form.hasCondominio ? 16 : 0, background: form.hasCondominio ? T.gold+"18" : T.s2, border:`2px solid ${form.hasCondominio ? T.gold : T.borderMid}`, borderRadius:12, cursor:"pointer" }}
+              onClick={() => set("hasCondominio", !form.hasCondominio)}
+            >
+              <div style={{ width:22, height:22, borderRadius:6, border:`2px solid ${form.hasCondominio ? T.gold : T.border}`, background:form.hasCondominio ? T.gold : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                {form.hasCondominio && <span style={{ color:"#1A0A00", fontSize:13, fontWeight:900 }}>✓</span>}
+              </div>
+              <div>
+                <div style={{ color: T.text, fontWeight:700, fontSize:14 }}>Este imóvel tem condomínio</div>
+                <div style={{ color: T.dim, fontSize:12, marginTop:2 }}>Cond. mensal, fundo de reserva e chamadas extras</div>
+              </div>
             </div>
             {form.hasCondominio && (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -875,11 +888,6 @@ function EditModal({ prop, onSave, onClose, userId }) {
 
               </div>
             )}
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <label style={S.label}>TAXAS EXTRAS (R$/mês)</label>
-            <input type="number" style={S.input} value={form.taxasExtras} onChange={e=>set("taxasExtras",e.target.value)} />
-            <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Sempre do proprietário</div>
           </div>
           <div>
             <button style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: `1px solid ${T.border}`, borderRadius: 8, padding: "10px 14px", cursor: "pointer", color: T.muted, fontSize: 12, fontFamily: "inherit", width: "100%" }} onClick={() => setShowValorSection(v => !v)}>
@@ -4812,6 +4820,11 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
                   <label style={S.label}>DESCONTO NO ALUGUEL (R$/mês)</label>
                   <input type="number" style={S.input} value={form.descontoAluguel} placeholder="0" onChange={e=>set("descontoAluguel",e.target.value)} />
                 </div>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={S.label}>TAXAS EXTRAS (R$/mês)</label>
+                  <input type="number" style={S.input} value={form.taxasExtras} placeholder="Ex: taxa do boleto, taxa de repasse" onChange={e=>set("taxasExtras",e.target.value)} />
+                  <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Taxa do boleto, taxa de repasse — custos repassados pela imobiliária (sempre do proprietário)</div>
+                </div>
                 <div>
                   <label style={S.label}>DURAÇÃO DO CONTRATO (meses)</label>
                   <input type="number" style={S.input} value={form.contratoAnos} placeholder="1" onChange={e=>set("contratoAnos",e.target.value)} />
@@ -4888,9 +4901,17 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
 
               {/* Condomínio */}
               <div style={{ marginTop: 16 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: form.hasCondominio ? 12 : 0 }}>
-                  <input type="checkbox" checked={form.hasCondominio} onChange={e=>set("hasCondominio",e.target.checked)} style={{ width:16, height:16, accentColor:T.gold, cursor:"pointer" }} />
-                  <span style={{ color: T.muted, fontSize: 13, cursor: "pointer" }}>Este imóvel tem condomínio</span>
+                <div
+                  style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 18px", marginBottom: form.hasCondominio ? 14 : 0, background: form.hasCondominio ? T.gold+"18" : T.s1, border:`2px solid ${form.hasCondominio ? T.gold : T.borderMid}`, borderRadius:12, cursor:"pointer" }}
+                  onClick={() => set("hasCondominio", !form.hasCondominio)}
+                >
+                  <div style={{ width:22, height:22, borderRadius:6, border:`2px solid ${form.hasCondominio ? T.gold : T.border}`, background:form.hasCondominio ? T.gold : "transparent", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                    {form.hasCondominio && <span style={{ color:"#1A0A00", fontSize:13, fontWeight:900 }}>✓</span>}
+                  </div>
+                  <div>
+                    <div style={{ color: T.text, fontWeight:700, fontSize:14 }}>Este imóvel tem condomínio</div>
+                    <div style={{ color: T.dim, fontSize:12, marginTop:2 }}>Cond. mensal, fundo de reserva e chamadas extras</div>
+                  </div>
                 </div>
                 {form.hasCondominio && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -4934,12 +4955,6 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
                   </div>
                 )}
               </div>
-              <div style={{ marginTop: 12 }}>
-                <label style={S.label}>TAXAS EXTRAS (R$/mês)</label>
-                <input type="number" style={S.input} value={form.taxasExtras} onChange={e=>set("taxasExtras",e.target.value)} />
-                <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Sempre do proprietário</div>
-              </div>
-
               {/* Regime fiscal */}
               <div style={{ marginTop: 16 }}>
                 <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>REGIME FISCAL</div>
