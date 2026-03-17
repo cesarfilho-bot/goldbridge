@@ -4003,7 +4003,7 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
     });
 
     // Lançamentos avulsos do mês
-    const imovelIds = new Set(propsParam.map(p => String(p.id)));
+    const imovelIds = new Set(props.map(p => String(p.id)));
     let entradaAvulsa = 0, saidaAvulsa = 0;
     (lancamentos || []).forEach(l => {
       if (!imovelIds.has(String(l.imovel_id))) return;
