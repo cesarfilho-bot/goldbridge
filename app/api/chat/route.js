@@ -1,13 +1,15 @@
 export async function POST(req) {
-  const { messages, system } = await req.json();
+  const { messages, system, betas } = await req.json();
+  const headers = {
+    "Content-Type": "application/json",
+    "x-api-key": process.env.ANTHROPIC_API_KEY,
+    "anthropic-version": "2023-06-01",
+  };
+  if (betas && betas.length > 0) headers["anthropic-beta"] = betas.join(",");
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, system, messages }),
+    headers,
+    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1500, system, messages }),
   });
   const data = await res.json();
   return Response.json(data);

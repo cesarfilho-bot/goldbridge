@@ -2018,7 +2018,7 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
 }
 
 // ─── NOI PAGE ─────────────────────────────────────────────────────────────────
-function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
+function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd, onDocs }) {
   const [sortCol, setSortCol] = useState("noi");
   const [sortDir, setSortDir] = useState(-1);
   const [filterType, setFilterType] = useState("");
@@ -2088,6 +2088,7 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd }) {
                       <div style={{ display: "flex", gap: 6 }}>
                         <button title="Editar" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onEdit(p); }}>Editar</button>
                         <button title="Obras" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onObras(p); }}>Obras</button>
+                        <button title="Documentos" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onDocs?.(p); }}>📎 Docs</button>
                         <button title="Remover" style={{ background: T.s3, border: `1px solid ${T.redDim}`, color: T.red, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onDelete(p); }}>Remover</button>
                       </div>
                     </td>
@@ -5114,6 +5115,213 @@ function DeleteConfirmModal({ prop, onConfirm, onClose }) {
   );
 }
 
+// ─── DOCUMENTOS MODAL ─────────────────────────────────────────────────────────
+function DocumentosModal({ prop, onClose, onUpdateDocs, onApplyAiData, userId }) {
+  const [docs, setDocs] = useState(prop.documentos || []);
+  const [uploading, setUploading] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [pendingFile, setPendingFile] = useState(null);
+  const [showChoice, setShowChoice] = useState(false);
+  const [aiReview, setAiReview] = useState(null);
+  const [aiSelected, setAiSelected] = useState({});
+  const fileInputRef = React.useRef(null);
+
+  const FIELD_LABELS = {
+    name: "Nome do imóvel", address: "Endereço", neighborhood: "Bairro", city: "Cidade",
+    size: "Área (m²)", rent: "Aluguel (R$)", iptu: "IPTU anual (R$)",
+    locatarioNome: "Nome do locatário", locatarioCPF: "CPF do locatário",
+    locatarioTelefone: "Telefone do locatário", contratoInicio: "Início do contrato",
+    contratoAnos: "Duração do contrato (anos)", valorCompra: "Valor de compra (R$)",
+  };
+
+  const persistDocs = async (newDocs) => {
+    setDocs(newDocs);
+    await supabase.from("imoveis").update({ documentos: newDocs }).eq("id", prop.id);
+    onUpdateDocs?.(newDocs);
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result.split(",")[1];
+      setPendingFile({ file, base64, mediaType: file.type });
+      setShowChoice(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadFile = async (file) => {
+    const uid = userId || "anon";
+    const path = `${uid}/${prop.id}/${Date.now()}_${file.name}`;
+    const { error } = await supabase.storage.from("documentos-imoveis").upload(path, file);
+    if (error) throw error;
+    const { data: urlData } = supabase.storage.from("documentos-imoveis").getPublicUrl(path);
+    return { path, url: urlData.publicUrl };
+  };
+
+  const handleSaveOnly = async () => {
+    const { file } = pendingFile;
+    setShowChoice(false); setUploading(true); setMsg("Enviando documento...");
+    try {
+      const { path, url } = await uploadFile(file);
+      const newDoc = { nome: file.name, path, url, tipo: file.type, data: new Date().toLocaleDateString("pt-BR"), size: file.size, bucket: "documentos-imoveis" };
+      await persistDocs([...docs, newDoc]);
+      setMsg("Documento salvo!");
+    } catch(e) { setMsg("Erro: " + e.message); }
+    setUploading(false); setPendingFile(null);
+  };
+
+  const handleAnalyzeWithAI = async () => {
+    const { file, base64, mediaType } = pendingFile;
+    setShowChoice(false); setUploading(true);
+    try {
+      setMsg("Enviando documento...");
+      const { path, url } = await uploadFile(file);
+      const docObj = { nome: file.name, path, url, tipo: file.type, data: new Date().toLocaleDateString("pt-BR"), size: file.size, bucket: "documentos-imoveis" };
+
+      setMsg("Analisando com IA...");
+      const isImage = mediaType.startsWith("image/");
+      const isPdf = mediaType === "application/pdf";
+      if (!isImage && !isPdf) throw new Error("Use PDF ou imagem para análise com IA");
+
+      const contentBlock = isImage
+        ? { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } }
+        : { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } };
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: [contentBlock, { type: "text", text: `Analise este documento de imóvel e extraia os dados em JSON, incluindo apenas campos encontrados:\n{"name":"","address":"","neighborhood":"","city":"","size":0,"rent":0,"iptu":0,"locatarioNome":"","locatarioCPF":"","locatarioTelefone":"","contratoInicio":"YYYY-MM-DD","contratoAnos":0,"valorCompra":0}\nRetorne APENAS o JSON.` }] }],
+          system: "Você extrai dados de documentos imobiliários em JSON estruturado.",
+          betas: isPdf ? ["pdfs-2024-09-25"] : undefined,
+        }),
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || "{}";
+      let extracted = {};
+      try { const m = text.match(/\{[\s\S]*\}/); if (m) extracted = JSON.parse(m[0]); } catch {}
+
+      const filled = Object.fromEntries(Object.entries(extracted).filter(([,v]) => v !== "" && v !== 0 && v !== null && v !== undefined));
+      setAiReview({ docObj, extracted: filled });
+      const sel = {};
+      Object.keys(filled).forEach(k => { sel[k] = true; });
+      setAiSelected(sel);
+      setMsg("");
+    } catch(e) { setMsg("Erro: " + e.message); }
+    setUploading(false); setPendingFile(null);
+  };
+
+  const handleConfirmAi = async () => {
+    const { docObj, extracted } = aiReview;
+    await persistDocs([...docs, docObj]);
+    const updates = Object.fromEntries(Object.entries(extracted).filter(([k]) => aiSelected[k]));
+    if (Object.keys(updates).length > 0) onApplyAiData?.(updates);
+    setAiReview(null);
+    setMsg("Documento salvo" + (Object.keys(updates).length > 0 ? " e dados aplicados!" : "!"));
+  };
+
+  const handleDeleteDoc = async (idx) => {
+    const doc = docs[idx];
+    try { await supabase.storage.from(doc.bucket || "documentos").remove([doc.path]); } catch {}
+    await persistDocs(docs.filter((_,i) => i !== idx));
+  };
+
+  return (
+    <div style={{ position:"fixed",inset:0,background:"#00000099",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:24 }}>
+      <div style={{ background:T.s1,border:`1px solid ${T.border}`,borderRadius:18,width:"100%",maxWidth:560,maxHeight:"85vh",display:"flex",flexDirection:"column" }}>
+        <div style={{ padding:"24px 28px 20px",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+          <div>
+            <div style={{ color:T.muted,fontSize:11,letterSpacing:2,fontWeight:700 }}>DOCUMENTOS</div>
+            <div style={{ color:T.text,fontSize:18,fontWeight:800,marginTop:2 }}>{prop.name}</div>
+          </div>
+          <button style={{ background:"transparent",border:"none",color:T.dim,fontSize:22,cursor:"pointer",lineHeight:1,padding:"4px 8px" }} onClick={onClose}>×</button>
+        </div>
+
+        <div style={{ flex:1,overflowY:"auto",padding:"20px 28px" }}>
+          {msg && (
+            <div style={{ padding:"10px 14px",background:msg.startsWith("Erro") ? T.red+"18" : T.green+"18",border:`1px solid ${msg.startsWith("Erro") ? T.red : T.green}30`,borderRadius:8,marginBottom:16,color:msg.startsWith("Erro") ? T.red : T.green,fontSize:13 }}>
+              {uploading && "⏳ "}{msg}
+            </div>
+          )}
+
+          {showChoice && pendingFile && (
+            <div style={{ background:T.s2,borderRadius:12,padding:20,marginBottom:16,border:`1px solid ${T.border}` }}>
+              <div style={{ color:T.text,fontWeight:700,fontSize:14,marginBottom:2 }}>📄 {pendingFile.file.name}</div>
+              <div style={{ color:T.dim,fontSize:12,marginBottom:16 }}>O que deseja fazer com este documento?</div>
+              <div style={{ display:"flex",gap:12,marginBottom:12 }}>
+                <button style={{ ...S.btnGhost,flex:1,display:"flex",flexDirection:"column",alignItems:"center",padding:16,gap:6,height:"auto",lineHeight:1.4 }} onClick={handleSaveOnly}>
+                  <span style={{ fontSize:24 }}>📁</span>
+                  <div style={{ fontWeight:700,fontSize:13 }}>Apenas salvar</div>
+                  <div style={{ color:T.dim,fontSize:11,fontWeight:400 }}>Guardar no repositório</div>
+                </button>
+                <button style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",padding:16,gap:6,height:"auto",lineHeight:1.4,background:T.goldGlow,border:`1px solid ${T.gold}`,borderRadius:10,cursor:"pointer",fontFamily:"inherit" }} onClick={handleAnalyzeWithAI} disabled={!pendingFile.mediaType.startsWith("image/") && pendingFile.mediaType !== "application/pdf"}>
+                  <span style={{ fontSize:24 }}>🤖</span>
+                  <div style={{ color:T.goldBright,fontWeight:700,fontSize:13 }}>Salvar e analisar com IA</div>
+                  <div style={{ color:T.dim,fontSize:11,fontWeight:400 }}>Extrair e preencher dados</div>
+                </button>
+              </div>
+              <button style={{ background:"transparent",border:"none",color:T.dim,fontSize:12,cursor:"pointer",width:"100%",fontFamily:"inherit" }} onClick={() => { setShowChoice(false); setPendingFile(null); }}>cancelar</button>
+            </div>
+          )}
+
+          {aiReview && (
+            <div style={{ background:T.s2,borderRadius:12,padding:20,marginBottom:16,border:`1px solid ${T.gold}30` }}>
+              <div style={{ color:T.gold,fontWeight:700,fontSize:14,marginBottom:4 }}>🤖 Dados extraídos pela IA</div>
+              <div style={{ color:T.dim,fontSize:12,marginBottom:16 }}>Selecione os campos que deseja aplicar ao imóvel:</div>
+              {Object.keys(aiReview.extracted).length === 0 ? (
+                <div style={{ color:T.muted,fontSize:13,marginBottom:16 }}>Nenhum dado identificado no documento.</div>
+              ) : (
+                <div style={{ display:"flex",flexDirection:"column",gap:8,marginBottom:16 }}>
+                  {Object.entries(aiReview.extracted).map(([k,v]) => (
+                    <label key={k} style={{ display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:aiSelected[k] ? T.gold+"12" : T.s1,borderRadius:8,cursor:"pointer",border:`1px solid ${aiSelected[k] ? T.gold+"40" : T.border}` }}>
+                      <input type="checkbox" checked={!!aiSelected[k]} onChange={e => setAiSelected(prev => ({...prev,[k]:e.target.checked}))} style={{ accentColor:T.gold,width:16,height:16 }} />
+                      <div style={{ flex:1 }}>
+                        <div style={{ color:T.dim,fontSize:11 }}>{FIELD_LABELS[k]||k}</div>
+                        <div style={{ color:T.text,fontWeight:600,fontSize:13 }}>{typeof v === "number" ? ((k==="rent"||k==="iptu"||k==="valorCompra") ? fmt.brl(v) : v) : String(v)}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+              <div style={{ display:"flex",gap:12 }}>
+                <button style={{ ...S.btnGhost,flex:1 }} onClick={() => { persistDocs([...docs, aiReview.docObj]); setAiReview(null); setMsg("Documento salvo!"); }}>Salvar sem aplicar</button>
+                <button style={{ ...S.btn,flex:1 }} onClick={handleConfirmAi}>Aplicar selecionados</button>
+              </div>
+            </div>
+          )}
+
+          {docs.length === 0 && !showChoice && !aiReview && (
+            <div style={{ textAlign:"center",padding:"32px 0",color:T.dim,fontSize:13 }}>Nenhum documento cadastrado</div>
+          )}
+          {docs.map((doc, idx) => (
+            <div key={idx} style={{ display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:T.s2,borderRadius:10,marginBottom:8,border:`1px solid ${T.border}` }}>
+              <span style={{ fontSize:20 }}>{doc.tipo?.startsWith("image/") ? "🖼️" : "📄"}</span>
+              <div style={{ flex:1,minWidth:0 }}>
+                <div style={{ color:T.text,fontWeight:600,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{doc.nome}</div>
+                <div style={{ color:T.dim,fontSize:11,marginTop:2 }}>{doc.data}{doc.size ? ` · ${(doc.size/1024).toFixed(0)} KB` : ""}</div>
+              </div>
+              <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ color:T.gold,fontSize:12,fontWeight:600,textDecoration:"none",flexShrink:0 }}>↗ Abrir</a>
+              <button style={{ background:T.red+"18",border:`1px solid ${T.red}30`,color:T.red,borderRadius:6,padding:"4px 8px",cursor:"pointer",fontSize:13,flexShrink:0 }} onClick={() => handleDeleteDoc(idx)}>×</button>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ padding:"16px 28px",borderTop:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+          <input ref={fileInputRef} type="file" accept="image/*,.pdf" style={{ display:"none" }} onChange={handleFileSelect} />
+          <button style={{ ...S.btn,display:"flex",alignItems:"center",gap:8 }} onClick={() => fileInputRef.current?.click()} disabled={uploading||showChoice||!!aiReview}>
+            {uploading ? "⏳ Processando..." : "📎 Adicionar documento"}
+          </button>
+          <button style={{ ...S.btnGhost }} onClick={onClose}>Fechar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
 function calcIR(totalIncome, totalExpenses, regimeFiscal, deducoes) {
   if (regimeFiscal === "PJ") {
@@ -5303,6 +5511,7 @@ export default function App() {
   const [deletingProp, setDeletingProp] = useState(null);
   const [cancelandoProp, setCancelandoProp] = useState(null);
   const [lancamentos, setLancamentos] = useState([]);
+  const [docsProp, setDocsProp] = useState(null);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") return localStorage.getItem("gb_theme") === "dark";
     return false;
@@ -5515,6 +5724,20 @@ export default function App() {
     setLancamentos(prev => prev.filter(l => l.id !== id));
   };
 
+  const handleUpdatePropDocs = (propId, newDocs) => {
+    setPropsRaw(prev => prev.map(p => p.id === propId ? { ...p, documentos: newDocs } : p));
+    if (docsProp?.id === propId) setDocsProp(prev => prev ? { ...prev, documentos: newDocs } : prev);
+  };
+
+  const handleApplyDocAiData = async (propId, updates) => {
+    const prop = props.find(p => p.id === propId);
+    if (!prop) return;
+    const updated = recalcProp({ ...prop, ...updates }, BENCHMARKS);
+    await supabase.from("imoveis").update(toDB(updated)).eq("id", updated.id).eq("user_id", user.id);
+    setPropsRaw(prev => prev.map(p => p.id === updated.id ? updated : p));
+    if (selectedProp?.id === updated.id) setSelectedProp(updated);
+  };
+
   // Loading state
   if (user === undefined) return (
     <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -5537,7 +5760,7 @@ export default function App() {
 
   const content = {
     dashboard: <PageDashboard PROPS={props} onNav={nav} onProp={setSelectedProp} onAdd={() => setAddingImovel(true)} />,
-    noi:       <PageNOI PROPS={props} onProp={setSelectedProp} onNav={nav} onEdit={handleEdit} onObras={(prop) => setObrasProps(props.find(p => p.id === prop.id) || prop)} onDelete={handleDeleteImovel} onAdd={() => setAddingImovel(true)} />,
+    noi:       <PageNOI PROPS={props} onProp={setSelectedProp} onNav={nav} onEdit={handleEdit} onObras={(prop) => setObrasProps(props.find(p => p.id === prop.id) || prop)} onDelete={handleDeleteImovel} onAdd={() => setAddingImovel(true)} onDocs={(prop) => setDocsProp(props.find(p => p.id === prop.id) || prop)} />,
     obras:     <PageObras PROPS={props} onUpdateProps={handleUpdateProps} />,
     mercado:   <PageValorMercado PROPS={props} onUpdateProps={handleUpdateProps} />,
     leakage:   <PageLeakage PROPS={props} onNavPagamentos={(propId) => { setHighlightPagPropId(propId); nav("pagamentos"); }} />,
@@ -5570,6 +5793,7 @@ export default function App() {
       {addingImovel && <AddImovelModal nextId={nextId} onSave={handleAddImovel} onClose={() => setAddingImovel(false)} userId={user?.id} />}
       {deletingProp && <DeleteConfirmModal prop={deletingProp} onConfirm={confirmDelete} onClose={() => setDeletingProp(null)} />}
       {cancelandoProp && <CancelarContratoModal prop={cancelandoProp} onConfirm={confirmCancelarContrato} onClose={() => setCancelandoProp(null)} />}
+      {docsProp && <DocumentosModal prop={docsProp} onClose={() => setDocsProp(null)} onUpdateDocs={(newDocs) => handleUpdatePropDocs(docsProp.id, newDocs)} onApplyAiData={(updates) => handleApplyDocAiData(docsProp.id, updates)} userId={user?.id} />}
 
       <div style={{ display: "flex", minHeight: "100vh", background: T.bg }}>
         {/* Sidebar */}
