@@ -3272,11 +3272,17 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
   }).length;
   const naoPagos = pagMes.filter(p => p.pag?.status === "nao_pago").length;
   const pendentes = pagMes.filter(p => !p.pag?.status && !isAtrasadoMes(p, anoSel, mesSel)).length;
+  const isPrimeiroMes = (p) => {
+    if (!p.contratoInicio) return false;
+    const inicio = new Date(p.contratoInicio + "T12:00:00");
+    const limite = new Date(inicio.getTime() + 30 * 24 * 60 * 60 * 1000);
+    return new Date() <= limite;
+  };
   const calcAluguel = (p) => {
     const bruto = p.rent - (p.descontoAluguel||0);
     const condoFeeM = p.hasCondominio ? (p.condoFee||0) : 0;
     if (p.viaImobiliaria) {
-      const adm = p.adminRecalc || Math.round(bruto * ((p.adminPct||8)/100));
+      const adm = isPrimeiroMes(p) ? 0 : (p.adminRecalc || Math.round(bruto * ((p.adminPct||8)/100)));
       const iptuM = Math.round((p.iptu||0) / (p.iptuParcelas||10));
       const condoM = (p.fundoReserva||0) + (p.chamadaExtra||0) + (p.taxasExtras||0);
       // IPTU e condo entram como receita (inquilino paga e imob. repassa); fundo/chamada/taxas são descontados pela imob.
@@ -3438,7 +3444,8 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
           const mesAnteriorAtrasado = mesSel === mesAtual && anoSel === anoAtual && isAtrasadoMes(p, prevAno, prevMes);
           const status = pagStatus || (isAutoAtrasado ? "atrasado" : null);
           const aluguelBruto = p.rent - (p.descontoAluguel || 0); // rent - desconto
-          const adminMensal = p.adminRecalc || Math.round(aluguelBruto * ((p.adminPct||8)/100));
+          const primeiroMesIsento = isPrimeiroMes(p);
+          const adminMensal = primeiroMesIsento ? 0 : (p.adminRecalc || Math.round(aluguelBruto * ((p.adminPct||8)/100)));
           const iptuMensal = Math.round((p.iptu||0) / (p.iptuParcelas||10));
           const maintM = p.maintMonthly || 0;
           const seguroM = Math.round((p.insurance||0)/12);
@@ -3463,6 +3470,9 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
                         style={{ background:T.s2, border:`1px solid ${T.border}`, color:T.muted, borderRadius:6, padding:"2px 8px", fontSize:11, cursor:"pointer", fontFamily:"inherit" }}
                         onClick={() => { navigator.clipboard.writeText(p.imobiliariaName); }}
                       >{p.imobiliariaName}</button>
+                    )}
+                    {primeiroMesIsento && (
+                      <span style={{ background: T.green+"22", border: `1px solid ${T.green}55`, color: T.green, borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>1º mês — admin isento</span>
                     )}
                   </div>
                   <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
@@ -5218,9 +5228,17 @@ function recalcProp(prop, BENCHMARKS) {
   const condoAnnual = ((prop.fundoReserva||0) + (prop.chamadaExtra||0) + (prop.taxasExtras||0)) * 12;
 
   // Admin calculado sobre aluguel líquido (após desconto)
-  const adminRecalc = prop.adminPct != null
+  // Isento no primeiro mês de contrato (primeiros 30 dias após contratoInicio)
+  const _adminBase = prop.adminPct != null
     ? Math.round(((prop.rent||0) - (prop.descontoAluguel||0)) * (prop.adminPct / 100))
     : (prop.admin || 0);
+  const _primeiroMes = (() => {
+    if (!prop.contratoInicio) return false;
+    const inicio = new Date(prop.contratoInicio + "T12:00:00");
+    const limite = new Date(inicio.getTime() + 30 * 24 * 60 * 60 * 1000);
+    return new Date() <= limite;
+  })();
+  const adminRecalc = _primeiroMes ? 0 : _adminBase;
 
   // IPTU: despesa do proprietário (paga à vista), restituído pelo inquilino
   // Aqui no anual: saída = iptu, entrada = restituição pelo inquilino (se ocupado)
