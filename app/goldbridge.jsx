@@ -4005,7 +4005,7 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
     // Lançamentos avulsos do mês
     const imovelIds = new Set(propsParam.map(p => String(p.id)));
     let entradaAvulsa = 0, saidaAvulsa = 0;
-    lancamentos.forEach(l => {
+    (lancamentos || []).forEach(l => {
       if (!imovelIds.has(String(l.imovel_id))) return;
       const d = new Date(l.data + "T12:00:00");
       if (d.getFullYear() === ano && d.getMonth() === i) {
@@ -5335,9 +5335,11 @@ export default function App() {
         }, BENCHMARKS));
         setPropsRaw(mapped);
       }
-      // Load lançamentos avulsos
-      const { data: lancs } = await supabase.from("lancamentos_avulsos").select("*").eq("portfolio_id", port.id).eq("user_id", user.id).order("data");
-      setLancamentos(lancs || []);
+      // Load lançamentos avulsos (tabela pode não existir ainda — tratar erro graciosamente)
+      try {
+        const { data: lancs, error: lancsErr } = await supabase.from("lancamentos_avulsos").select("*").eq("portfolio_id", port.id).eq("user_id", user.id).order("data");
+        if (!lancsErr) setLancamentos(lancs || []);
+      } catch (_) { /* tabela ainda não criada — ignora */ }
       setDbLoading(false);
     })();
   }, [user]);
