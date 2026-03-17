@@ -3992,10 +3992,11 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
             saidaCondoPago += condoFeeM;
           }
         }
-        // Fundo/chamada sempre do proprietário
-        saidaFundoChamada += (p.fundoReserva||0) + (p.chamadaExtra||0);
-        saidaTaxasExtras += (p.taxasExtras||0);
       }
+
+      // Fundo/chamada/taxas extras sempre do proprietário (independe de ter condomínio)
+      saidaFundoChamada += (p.fundoReserva||0) + (p.chamadaExtra||0);
+      saidaTaxasExtras += (p.taxasExtras||0);
 
       saidaAdmin += adminMensal;
       saidaMaint += p.maintMonthly || 0;
