@@ -3112,7 +3112,7 @@ function Login({ onLogin }) {
 }
 
 // ─── PAGE PAGAMENTOS ──────────────────────────────────────────────────────────
-function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
+function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [], onAddLancamento, onDeleteLancamento }) {
   const hoje = new Date();
   const mesAtual = hoje.getMonth();
   const anoAtual = hoje.getFullYear();
@@ -3126,6 +3126,8 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
   const [pagDataModal, setPagDataModal] = useState(null); // { prop }
   const [pagDataInput, setPagDataInput] = useState(new Date().toISOString().slice(0,10));
   const [highlighted, setHighlighted] = useState(highlightPropId || null);
+  const [formAbertoId, setFormAbertoId] = useState(null);
+  const [novoLanc, setNovoLanc] = useState({ data: new Date().toISOString().slice(0,10), tipo: "entrada", valor: "", categoria: "Manutenção", observacao: "" });
 
   // Scroll + highlight when highlightPropId is passed (coming from Alertas)
   React.useEffect(() => {
@@ -3505,6 +3507,88 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId }) {
                   </div>
                 </div>
               )}
+              {/* Lançamentos avulsos */}
+              {(() => {
+                const lancMes = lancamentos.filter(l => {
+                  const d = new Date(l.data + "T12:00:00");
+                  return String(l.imovel_id) === String(p.id) && d.getFullYear() === anoSel && d.getMonth() === mesSel;
+                });
+                return (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.border}` }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: lancMes.length > 0 || formAbertoId === p.id ? 8 : 0 }}>
+                      <div style={{ color: T.dim, fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>LANÇAMENTOS AVULSOS</div>
+                      {formAbertoId !== p.id && (
+                        <button
+                          style={{ background: "transparent", border: `1px solid ${T.border}`, color: T.muted, borderRadius: 6, padding: "3px 10px", fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}
+                          onClick={() => { setFormAbertoId(p.id); setNovoLanc({ data: new Date().toISOString().slice(0,10), tipo: "entrada", valor: "", categoria: "Manutenção", observacao: "" }); }}
+                        >+ Lançamento</button>
+                      )}
+                    </div>
+                    {formAbertoId === p.id && (
+                      <div style={{ background: T.s2, borderRadius: 10, padding: "12px 14px", marginBottom: 8, border: `1px solid ${T.border}` }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
+                          <div>
+                            <div style={S.label}>DATA</div>
+                            <input type="date" style={{ ...S.input, fontSize: 12 }} value={novoLanc.data} onChange={e => setNovoLanc(n => ({ ...n, data: e.target.value }))} />
+                          </div>
+                          <div>
+                            <div style={S.label}>TIPO</div>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              {[["entrada", "↑ Entrada"], ["saida", "↓ Saída"]].map(([val, label]) => (
+                                <button key={val} onClick={() => setNovoLanc(n => ({ ...n, tipo: val }))}
+                                  style={{ flex: 1, padding: "7px 4px", borderRadius: 8, border: `1px solid ${novoLanc.tipo === val ? (val === "entrada" ? T.green : T.red) : T.border}`, background: novoLanc.tipo === val ? (val === "entrada" ? T.green + "22" : T.red + "22") : T.s1, color: novoLanc.tipo === val ? (val === "entrada" ? T.green : T.red) : T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: novoLanc.tipo === val ? 700 : 400 }}
+                                >{label}</button>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={S.label}>VALOR (R$)</div>
+                            <input type="number" style={{ ...S.input, fontSize: 12 }} placeholder="0,00" value={novoLanc.valor} onChange={e => setNovoLanc(n => ({ ...n, valor: e.target.value }))} />
+                          </div>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                          <div>
+                            <div style={S.label}>CATEGORIA</div>
+                            <select style={{ ...S.sel, fontSize: 12 }} value={novoLanc.categoria} onChange={e => setNovoLanc(n => ({ ...n, categoria: e.target.value }))}>
+                              {["Manutenção", "Corretagem", "Compensação de Condomínio", "Multa/Juros", "Seguro", "Reforma", "Outro"].map(c => <option key={c}>{c}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <div style={S.label}>OBSERVAÇÃO (opcional)</div>
+                            <input style={{ ...S.input, fontSize: 12 }} placeholder="Ex: Desconto negociado" value={novoLanc.observacao} onChange={e => setNovoLanc(n => ({ ...n, observacao: e.target.value }))} />
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                          <button style={S.btnGhost} onClick={() => setFormAbertoId(null)}>Cancelar</button>
+                          <button style={{ ...S.btn, padding: "7px 16px", fontSize: 12, opacity: (!novoLanc.valor || Number(novoLanc.valor) <= 0) ? 0.5 : 1 }} onClick={async () => {
+                            if (!novoLanc.valor || Number(novoLanc.valor) <= 0) return;
+                            await onAddLancamento({ imovelId: p.id, ...novoLanc, valor: Number(novoLanc.valor) });
+                            setFormAbertoId(null);
+                          }}>Salvar</button>
+                        </div>
+                      </div>
+                    )}
+                    {lancMes.length > 0 && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        {lancMes.sort((a,b) => b.data.localeCompare(a.data)).map(l => {
+                          const dStr = new Date(l.data + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+                          return (
+                            <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px", background: T.s2, borderRadius: 7, fontSize: 12 }}>
+                              <span style={{ color: l.tipo === "entrada" ? T.green : T.red, fontWeight: 800, minWidth: 14 }}>{l.tipo === "entrada" ? "↑" : "↓"}</span>
+                              <span style={{ color: l.tipo === "entrada" ? T.green : T.red, fontWeight: 600, minWidth: 44 }}>{l.tipo === "entrada" ? "Entrada" : "Saída"}</span>
+                              <span style={{ color: T.muted }}>{l.categoria}</span>
+                              <span style={{ color: l.tipo === "entrada" ? T.green : T.red, fontWeight: 700, ...S.mono, marginLeft: "auto" }}>{fmt.brl(Number(l.valor))}</span>
+                              <span style={{ color: T.dim, minWidth: 36 }}>{dStr}</span>
+                              {l.observacao && <span style={{ color: T.dim, fontStyle: "italic", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>"{l.observacao}"</span>}
+                              <button style={{ background: "none", border: "none", color: T.dim, cursor: "pointer", fontSize: 15, padding: "0 2px", lineHeight: 1 }} onClick={() => onDeleteLancamento(l.id)} title="Excluir">×</button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
@@ -3825,7 +3909,7 @@ function PageLocatarios({ PROPS, onUpdateProps }) {
 }
 
 // ─── PAGE FLUXO DE CAIXA ─────────────────────────────────────────────────────
-function PageFluxoCaixa({ PROPS }) {
+function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
   const hoje = new Date();
   const [ano, setAno] = useState(hoje.getFullYear());
   const [visao, setVisao] = useState("carteira"); // "carteira" | "imovel"
@@ -3918,10 +4002,22 @@ function PageFluxoCaixa({ PROPS }) {
       saidaSeguro += Math.round((p.insurance||0)/12);
     });
 
-    const entradas = entradaAluguel + entradaIPTU + entradaCondo;
-    const saidas = saidaMaint + saidaSeguro + saidaAdmin + saidaIPTU + saidaCondoPago + saidaFundoChamada + saidaTaxasExtras;
+    // Lançamentos avulsos do mês
+    const imovelIds = new Set(propsParam.map(p => String(p.id)));
+    let entradaAvulsa = 0, saidaAvulsa = 0;
+    lancamentos.forEach(l => {
+      if (!imovelIds.has(String(l.imovel_id))) return;
+      const d = new Date(l.data + "T12:00:00");
+      if (d.getFullYear() === ano && d.getMonth() === i) {
+        if (l.tipo === "entrada") entradaAvulsa += Number(l.valor || 0);
+        else saidaAvulsa += Number(l.valor || 0);
+      }
+    });
+
+    const entradas = entradaAluguel + entradaIPTU + entradaCondo + entradaAvulsa;
+    const saidas = saidaMaint + saidaSeguro + saidaAdmin + saidaIPTU + saidaCondoPago + saidaFundoChamada + saidaTaxasExtras + saidaAvulsa;
     const saldo = entradas - saidas;
-    return { mes, mesNum: i, entradas, saidas, saldo, inadimplentes, entradaAluguel, entradaIPTU, entradaCondo, saidaIPTU, iptuPrevisto, condoPrevisto, saidaMaint, saidaSeguro, saidaAdmin, saidaCondoPago, saidaFundoChamada, saidaTaxasExtras };
+    return { mes, mesNum: i, entradas, saidas, saldo, inadimplentes, entradaAluguel, entradaIPTU, entradaCondo, saidaIPTU, iptuPrevisto, condoPrevisto, saidaMaint, saidaSeguro, saidaAdmin, saidaCondoPago, saidaFundoChamada, saidaTaxasExtras, entradaAvulsa, saidaAvulsa };
   });
 
   const propsVisao = visao === "imovel" && imovelId ? PROPS.filter(p => p.id === imovelId) : PROPS;
@@ -4026,7 +4122,7 @@ function PageFluxoCaixa({ PROPS }) {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: T.s2 }}>
-              {["MÊS","ALUGUEL","IPTU rest.","COND. rest.","= ENTRADAS","MANUTENÇÃO","SEGURO","ADMIN","IPTU","COND. pago","FUNDO/CHAM.","TAXAS EXT.","= SAÍDAS","SALDO","SALDO ACUM."].map(h => <th key={h} style={{ ...S.th, fontSize: 10, padding: "8px 10px" }}>{h}</th>)}
+              {["MÊS","ALUGUEL","IPTU rest.","COND. rest.","AVULSO ↑","= ENTRADAS","MANUTENÇÃO","SEGURO","ADMIN","IPTU","COND. pago","FUNDO/CHAM.","TAXAS EXT.","AVULSO ↓","= SAÍDAS","SALDO","SALDO ACUM."].map(h => <th key={h} style={{ ...S.th, fontSize: 10, padding: "8px 10px" }}>{h}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -4042,6 +4138,9 @@ function PageFluxoCaixa({ PROPS }) {
                   <td style={{ ...S.td, ...S.mono, color: T.teal, fontSize: 11 }}>
                     {m.entradaCondo > 0 ? <span title="Condomínio restituído pelo inquilino">{fmt.brl(m.entradaCondo)}{m.condoPrevisto && <span style={{color:T.dim,fontSize:9,marginLeft:3}}>prev.</span>}</span> : <span style={{color:T.dim}}>—</span>}
                   </td>
+                  <td style={{ ...S.td, ...S.mono, color: T.green, fontSize: 11 }} title="Entradas avulsas do mês">
+                    {m.entradaAvulsa > 0 ? fmt.brl(m.entradaAvulsa) : <span style={{color:T.dim}}>—</span>}
+                  </td>
                   <td style={{ ...S.td, ...S.mono, color: T.green, fontWeight: 700 }}>{fmt.brl(m.entradas)}</td>
                   <td style={{ ...S.td, ...S.mono, color: T.amber, fontSize: 11 }}>{m.saidaMaint > 0 ? fmt.brl(m.saidaMaint) : <span style={{color:T.dim}}>—</span>}</td>
                   <td style={{ ...S.td, ...S.mono, color: T.amber, fontSize: 11 }}>{m.saidaSeguro > 0 ? fmt.brl(m.saidaSeguro) : <span style={{color:T.dim}}>—</span>}</td>
@@ -4054,6 +4153,9 @@ function PageFluxoCaixa({ PROPS }) {
                   </td>
                   <td style={{ ...S.td, ...S.mono, color: T.amber, fontSize: 11 }}>{m.saidaFundoChamada > 0 ? fmt.brl(m.saidaFundoChamada) : <span style={{color:T.dim}}>—</span>}</td>
                   <td style={{ ...S.td, ...S.mono, color: T.amber, fontSize: 11 }}>{m.saidaTaxasExtras > 0 ? fmt.brl(m.saidaTaxasExtras) : <span style={{color:T.dim}}>—</span>}</td>
+                  <td style={{ ...S.td, ...S.mono, color: T.red, fontSize: 11 }} title="Saídas avulsas do mês">
+                    {m.saidaAvulsa > 0 ? fmt.brl(m.saidaAvulsa) : <span style={{color:T.dim}}>—</span>}
+                  </td>
                   <td style={{ ...S.td, ...S.mono, color: T.red, fontWeight: 700 }}>{fmt.brl(m.saidas)}</td>
                   <td style={{ ...S.td, ...S.mono, color: m.saldo >= 0 ? T.green : T.red, fontWeight: 800 }}>{fmt.brl(m.saldo)}</td>
                   <td style={{ ...S.td, ...S.mono, color: saldoAcumulado[i] >= 0 ? T.gold : T.red }}>{fmt.brl(saldoAcumulado[i])}</td>
@@ -4067,6 +4169,7 @@ function PageFluxoCaixa({ PROPS }) {
               <td style={{ ...S.td, ...S.mono, color: T.green, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.entradaAluguel,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.teal, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.entradaIPTU,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.teal, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.entradaCondo,0))}</td>
+              <td style={{ ...S.td, ...S.mono, color: T.green, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.entradaAvulsa,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.green, fontWeight: 800 }}>{fmt.brl(totalEntradas)}</td>
               <td style={{ ...S.td, ...S.mono, color: T.amber, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.saidaMaint,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.amber, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.saidaSeguro,0))}</td>
@@ -4075,6 +4178,7 @@ function PageFluxoCaixa({ PROPS }) {
               <td style={{ ...S.td, ...S.mono, color: T.red, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.saidaCondoPago,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.amber, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.saidaFundoChamada,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.amber, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.saidaTaxasExtras,0))}</td>
+              <td style={{ ...S.td, ...S.mono, color: T.red, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.saidaAvulsa,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.red, fontWeight: 800 }}>{fmt.brl(totalSaidas)}</td>
               <td style={{ ...S.td, ...S.mono, color: totalSaldo >= 0 ? T.green : T.red, fontWeight: 800 }}>{fmt.brl(totalSaldo)}</td>
               <td style={S.td}>—</td>
@@ -5164,6 +5268,7 @@ export default function App() {
   const [addingImovel, setAddingImovel] = useState(false);
   const [deletingProp, setDeletingProp] = useState(null);
   const [cancelandoProp, setCancelandoProp] = useState(null);
+  const [lancamentos, setLancamentos] = useState([]);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") return localStorage.getItem("gb_theme") === "dark";
     return false;
@@ -5230,6 +5335,9 @@ export default function App() {
         }, BENCHMARKS));
         setPropsRaw(mapped);
       }
+      // Load lançamentos avulsos
+      const { data: lancs } = await supabase.from("lancamentos_avulsos").select("*").eq("portfolio_id", port.id).eq("user_id", user.id).order("data");
+      setLancamentos(lancs || []);
       setDbLoading(false);
     })();
   }, [user]);
@@ -5351,6 +5459,26 @@ export default function App() {
     setPropsRaw(newProps);
   };
 
+  const handleAddLancamento = async (lancamento) => {
+    if (!portfolioId || !user) return;
+    const { data, error } = await supabase.from("lancamentos_avulsos").insert({
+      user_id: user.id,
+      imovel_id: String(lancamento.imovelId),
+      portfolio_id: portfolioId,
+      data: lancamento.data,
+      tipo: lancamento.tipo,
+      valor: lancamento.valor,
+      categoria: lancamento.categoria,
+      observacao: lancamento.observacao || "",
+    }).select().single();
+    if (!error && data) setLancamentos(prev => [...prev, data]);
+  };
+
+  const handleDeleteLancamento = async (id) => {
+    await supabase.from("lancamentos_avulsos").delete().eq("id", id).eq("user_id", user.id);
+    setLancamentos(prev => prev.filter(l => l.id !== id));
+  };
+
   // Loading state
   if (user === undefined) return (
     <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -5381,9 +5509,9 @@ export default function App() {
     detail:    <PageDetail prop={selectedProp} onBack={() => nav("noi")} onEdit={handleEdit} onObras={(prop) => setObrasProps(props.find(p => p.id === prop.id) || prop)} onDelete={handleDeleteImovel} onCancelarContrato={handleCancelarContrato} />,
     report:    <PageReport PROPS={props} />,
     ia:        <PageIA PROPS={props} />,
-    pagamentos: <PagePagamentos PROPS={props} onUpdateProps={handleUpdateProps} highlightPropId={highlightPagPropId} />,
+    pagamentos: <PagePagamentos PROPS={props} onUpdateProps={handleUpdateProps} highlightPropId={highlightPagPropId} lancamentos={lancamentos} onAddLancamento={handleAddLancamento} onDeleteLancamento={handleDeleteLancamento} />,
     iptu:      <PageIPTU PROPS={props} onUpdateProps={handleUpdateProps} />,
-    fluxo:     <PageFluxoCaixa PROPS={props} />,
+    fluxo:     <PageFluxoCaixa PROPS={props} lancamentos={lancamentos} />,
     locatarios: <PageLocatarios PROPS={props} onUpdateProps={handleUpdateProps} />,
     historico:  <PageHistorico PROPS={props} onUpdateProps={handleUpdateProps} />,
     admin:      <PageAdmin user={user} />,
