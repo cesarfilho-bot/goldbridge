@@ -714,6 +714,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
     iptuParcelas: prop.iptuParcelas || 10,
     viaImobiliaria: prop.viaImobiliaria || false,
     imobiliariaName: prop.imobiliariaName || "",
+    imobiliariaPossuiSeguro: prop.imobiliariaPossuiSeguro || false,
     locatarioNome: prop.locatarioNome || "",
     locatarioCPF: prop.locatarioCPF || "",
     locatarioTelefone: prop.locatarioTelefone || "",
@@ -959,10 +960,19 @@ function EditModal({ prop, onSave, onClose, userId }) {
               </div>
             </div>
             {form.viaImobiliaria && (
-              <div style={{ marginBottom: 14 }}>
-                <label style={S.label}>NOME DA IMOBILIÁRIA</label>
-                <input style={S.input} value={form.imobiliariaName} placeholder="Ex: Imobiliária XYZ" onChange={e=>set("imobiliariaName",e.target.value)} />
-              </div>
+              <>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={S.label}>NOME DA IMOBILIÁRIA</label>
+                  <input style={S.input} value={form.imobiliariaName} placeholder="Ex: Imobiliária XYZ" onChange={e=>set("imobiliariaName",e.target.value)} />
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, background:form.imobiliariaPossuiSeguro ? T.green+"12" : T.s1, borderRadius:10, padding:"10px 14px", border:`1px solid ${form.imobiliariaPossuiSeguro ? T.green+"44" : T.border}`, cursor:"pointer" }} onClick={() => set("imobiliariaPossuiSeguro", !form.imobiliariaPossuiSeguro)}>
+                  <input type="checkbox" checked={form.imobiliariaPossuiSeguro} onChange={e=>set("imobiliariaPossuiSeguro",e.target.checked)} style={{ width:16, height:16, accentColor:T.green, cursor:"pointer" }} onClick={e=>e.stopPropagation()} />
+                  <div>
+                    <div style={{ color:T.text, fontSize:13, fontWeight:600 }}>Imobiliária possui seguro de repasse?</div>
+                    <div style={{ color:T.dim, fontSize:11, marginTop:2 }}>Se sim, o repasse é garantido mesmo com inquilino inadimplente.</div>
+                  </div>
+                </div>
+              </>
             )}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div style={{ gridColumn: "1/-1" }}><label style={S.label}>NOME DO LOCATÁRIO</label><input style={S.input} value={form.locatarioNome} placeholder="Nome completo" onChange={e=>set("locatarioNome",e.target.value)} /></div>
@@ -2151,6 +2161,26 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd, onDoc
   );
 }
 
+// ─── INADIMPLÊNCIA HELPER ─────────────────────────────────────────────────────
+function countMesesEmAberto(prop, hoje) {
+  let count = 0;
+  const ano = hoje.getFullYear();
+  const mes = hoje.getMonth();
+  for (let i = 0; i < 12; i++) {
+    let a = ano, m = mes - i;
+    while (m < 0) { m += 12; a--; }
+    const pag = (prop.pagamentos || {})[`${a}_${m}`];
+    if (pag?.status === "pago") break;
+    const diaVenc = prop.contratoInicio ? new Date(prop.contratoInicio + "T12:00").getDate() : (prop.diaVencimento || 10);
+    const dataVenc = new Date(a, m, diaVenc);
+    const contratoAtivo = prop.contratoInicio ? new Date(prop.contratoInicio + "T12:00") <= dataVenc : true;
+    if (!contratoAtivo) break;
+    if (dataVenc < hoje) count++;
+    else break;
+  }
+  return count;
+}
+
 // ─── LEAKAGE PAGE ─────────────────────────────────────────────────────────────
 function PageLeakage({ PROPS, onNavPagamentos }) {
   const INSIGHTS = buildInsights(PROPS);
@@ -2248,29 +2278,68 @@ function PageLeakage({ PROPS, onNavPagamentos }) {
           ))}
         </div>
       )}
-      {inadimplentes.length > 0 && (
-        <div style={{ background: T.amber+"11", border: `1px solid ${T.amber}55`, borderRadius: 14, padding: 20 }}>
-          <div style={{ color: T.amber, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>INADIMPLÊNCIA ({inadimplentes.length})</div>
-          {inadimplentes.map(p => (
-            <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${T.amber}22` }}>
-              <div>
-                <div style={{ color: T.text, fontWeight: 600 }}>{p.name}</div>
-                <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
-                  {p.neighborhood}
-                  {p.mesAtualAtraso && <span style={{ color: T.amber, marginLeft: 8 }}>· mês atual em aberto</span>}
-                  {p.mesAnteriorAtraso && <span style={{ color: T.red, marginLeft: 8 }}>· {["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"][prevMesL]}/{prevAnoL} sem pagamento</span>}
+      {(() => {
+        // Inadimplência com escalonamento para imobiliária sem seguro
+        const inad = PROPS.filter(p => p.status === "Ocupado").map(p => {
+          const meses = countMesesEmAberto(p, hoje);
+          return { ...p, mesesEmAberto: meses };
+        }).filter(p => p.mesesEmAberto > 0);
+
+        // Sem seguro de repasse: escalonamento completo
+        const semSeguro = inad.filter(p => p.viaImobiliaria && !p.imobiliariaPossuiSeguro);
+        // Com seguro ou sem imobiliária: alerta simples
+        const outros = inad.filter(p => !(p.viaImobiliaria && !p.imobiliariaPossuiSeguro));
+
+        if (inad.length === 0) return null;
+        return (
+          <div style={{ background: T.amber+"11", border: `1px solid ${T.amber}55`, borderRadius: 14, padding: 20 }}>
+            <div style={{ color: T.amber, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>INADIMPLÊNCIA ({inad.length})</div>
+
+            {semSeguro.map(p => {
+              const totalEmAberto = p.mesesEmAberto * (p.rent - (p.descontoAluguel||0));
+              const acaoJudicial = p.pagamentos?.__acao_judicial;
+              let borderColor = T.amber, bgColor = T.amber+"11", emoji = "🟡", msg = `Aluguel em atraso — 1 mês em aberto`;
+              if (p.mesesEmAberto >= 3) { borderColor = T.red; bgColor = T.red+"11"; emoji = "🔴"; msg = `Ação judicial provável — ${p.mesesEmAberto} meses em aberto · Total em aberto: ${fmt.brl(totalEmAberto)}`; }
+              else if (p.mesesEmAberto === 2) { borderColor = "#FF8C00"; bgColor = "#FF8C0011"; emoji = "🟠"; msg = `2 meses sem receber — acompanhe com a imobiliária`; }
+              return (
+                <div key={p.id} style={{ padding: "12px 14px", background: bgColor, border: `1px solid ${borderColor}44`, borderRadius: 10, marginBottom: 8 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
+                    <div>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <span>{emoji}</span>
+                        <span style={{ color: T.text, fontWeight: 700 }}>{p.name}</span>
+                        {acaoJudicial?.ativo && <span style={{ background: T.red+"22", border:`1px solid ${T.red}44`, color:T.red, borderRadius:6, padding:"1px 8px", fontSize:11, fontWeight:700 }}>⚖️ Ação judicial em andamento</span>}
+                      </div>
+                      <div style={{ color: T.muted, fontSize: 12, marginTop: 4, marginLeft: 22 }}>
+                        {p.neighborhood} · {msg}
+                      </div>
+                      {p.imobiliariaName && <div style={{ color: T.dim, fontSize: 11, marginTop: 2, marginLeft: 22 }}>Via {p.imobiliariaName} · sem seguro de repasse</div>}
+                    </div>
+                    {onNavPagamentos && (
+                      <button style={{ background: T.amber+"22", border:`1px solid ${T.amber}55`, color:T.amber, borderRadius:8, padding:"6px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:700, flexShrink:0 }} onClick={() => onNavPagamentos(p.id)}>Ver →</button>
+                    )}
+                  </div>
                 </div>
+              );
+            })}
+
+            {outros.map(p => (
+              <div key={p.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 0", borderBottom:`1px solid ${T.amber}22` }}>
+                <div>
+                  <div style={{ color:T.text, fontWeight:600 }}>{p.name}</div>
+                  <div style={{ color:T.muted, fontSize:12, marginTop:2 }}>
+                    {p.neighborhood} · {p.mesesEmAberto} mês{p.mesesEmAberto > 1 ? "es" : ""} em aberto
+                    {p.viaImobiliaria && p.imobiliariaPossuiSeguro && <span style={{ color:T.green, marginLeft:8 }}>· repasse garantido pelo seguro</span>}
+                  </div>
+                </div>
+                {onNavPagamentos && (
+                  <button style={{ background:T.amber+"22", border:`1px solid ${T.amber}55`, color:T.amber, borderRadius:8, padding:"6px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:700 }} onClick={() => onNavPagamentos(p.id)}>Ver em Pagamentos →</button>
+                )}
               </div>
-              {onNavPagamentos && (
-                <button
-                  style={{ background: T.amber+"22", border: `1px solid ${T.amber}55`, color: T.amber, borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}
-                  onClick={() => onNavPagamentos(p.id)}
-                >Ver em Pagamentos →</button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        );
+      })()}
       {alertasVencContrato.length > 0 && (
         <div style={{ background: T.red+"11", border: `1px solid ${T.red}40`, borderRadius: 14, padding: 20 }}>
           <div style={{ color: T.red, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>CONTRATOS VENCENDO ({alertasVencContrato.length})</div>
@@ -3196,6 +3265,13 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
     setPagDataModal(null);
   };
 
+  const handleAcaoJudicial = (prop) => {
+    const hoje = new Date();
+    const dataStr = hoje.toISOString().slice(0, 10);
+    const updated = { ...prop, pagamentos: { ...(prop.pagamentos || {}), __acao_judicial: { ativo: true, data: dataStr } } };
+    onUpdateProps(PROPS.map(p => p.id === prop.id ? updated : p));
+  };
+
   const handleMarcar = (prop, status) => {
     if (status === "pago") {
       setPagDataInput(new Date().toISOString().slice(0,10));
@@ -3513,6 +3589,33 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
                   ⚠ {MESES[prevMes]}/{prevAno} sem pagamento registrado
                 </div>
               )}
+              {/* Inadimplência escalonada — apenas imobiliária sem seguro */}
+              {p.viaImobiliaria && !p.imobiliariaPossuiSeguro && (() => {
+                const mesesAberto = countMesesEmAberto(p, hoje);
+                if (mesesAberto === 0) return null;
+                const acaoJudicial = p.pagamentos?.__acao_judicial;
+                const totalEmAberto = mesesAberto * (p.rent - (p.descontoAluguel||0));
+                let bgColor, borderColor, emoji, msg;
+                if (mesesAberto >= 3) { bgColor = T.red+"18"; borderColor = T.red; emoji = "🔴"; msg = `Ação judicial provável — ${mesesAberto} meses em aberto · Total: ${fmt.brl(totalEmAberto)}`; }
+                else if (mesesAberto === 2) { bgColor = "#FF8C0018"; borderColor = "#FF8C00"; emoji = "🟠"; msg = "2 meses sem receber — acompanhe com a imobiliária"; }
+                else { bgColor = T.amber+"18"; borderColor = T.amber; emoji = "🟡"; msg = "Aluguel em atraso — 1 mês em aberto"; }
+                return (
+                  <div style={{ marginTop: 8, padding: "10px 14px", background: bgColor, borderRadius: 8, border: `1px solid ${borderColor}55` }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <span>{emoji}</span>
+                        <span style={{ color: T.text, fontSize: 12, fontWeight: 700 }}>{msg}</span>
+                        {acaoJudicial?.ativo && <span style={{ background:T.red+"22", border:`1px solid ${T.red}44`, color:T.red, borderRadius:6, padding:"1px 8px", fontSize:10, fontWeight:700 }}>⚖️ Ação judicial em andamento</span>}
+                      </div>
+                      {mesesAberto >= 2 && !acaoJudicial?.ativo && (
+                        <button style={{ background:T.red+"18", border:`1px solid ${T.red}44`, color:T.red, borderRadius:7, padding:"4px 12px", fontSize:11, cursor:"pointer", fontFamily:"inherit", fontWeight:700 }} onClick={() => handleAcaoJudicial(p)}>
+                          ⚖️ Registrar ação judicial
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
               {/* Com imobiliária: breakdown de todas as despesas */}
               {p.viaImobiliaria && (
                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.border}`, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -3942,7 +4045,7 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
     const chave = `${ano}_${i}`;
     let entradaAluguel = 0, entradaIPTU = 0, entradaCondo = 0;
     let saidaIPTU = 0, saidaCondoPago = 0, saidaFundoChamada = 0, saidaTaxasExtras = 0, saidaMaint = 0, saidaSeguro = 0, saidaAdmin = 0;
-    let iptuPrevisto = false, condoPrevisto = false, inadimplentes = 0;
+    let iptuPrevisto = false, condoPrevisto = false, inadimplentes = 0, naoRealizado = 0;
 
     props.forEach(p => {
       const aluguelBruto = p.rent - (p.descontoAluguel||0);
@@ -3950,9 +4053,18 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
 
       if (p.status === "Ocupado") {
         const pag = p.pagamentos?.[chave];
-        if (pag?.status === "pago") entradaAluguel += aluguelBruto;
-        else if (pag?.status === "atrasado") inadimplentes += aluguelBruto;
-        else if (dataRef < hoje) inadimplentes += aluguelBruto;
+        const isPastDue = dataRef < hoje;
+        const semPagamento = pag?.status !== "pago";
+        const isInadimplenteSemSeguro = p.viaImobiliaria && !p.imobiliariaPossuiSeguro;
+        if (pag?.status === "pago") {
+          entradaAluguel += aluguelBruto;
+        } else if (isInadimplenteSemSeguro && semPagamento && isPastDue) {
+          naoRealizado += aluguelBruto; // receita prevista, não realizada
+        } else if (pag?.status === "atrasado") {
+          inadimplentes += aluguelBruto;
+        } else if (isPastDue) {
+          inadimplentes += aluguelBruto;
+        }
       }
 
       // IPTU: usa parcelas pagas se disponível, senão distribui automaticamente (previsto)
@@ -4037,7 +4149,7 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
     const entradas = entradaAluguel + entradaIPTU + entradaCondo + entradaAvulsa;
     const saidas = saidaMaint + saidaSeguro + saidaAdmin + saidaIPTU + saidaCondoPago + saidaFundoChamada + saidaTaxasExtras + saidaAvulsa;
     const saldo = entradas - saidas;
-    return { mes, mesNum: i, entradas, saidas, saldo, inadimplentes, entradaAluguel, entradaIPTU, entradaCondo, saidaIPTU, iptuPrevisto, condoPrevisto, saidaMaint, saidaSeguro, saidaAdmin, saidaCondoPago, saidaFundoChamada, saidaTaxasExtras, entradaAvulsa, saidaAvulsa };
+    return { mes, mesNum: i, entradas, saidas, saldo, inadimplentes, naoRealizado, entradaAluguel, entradaIPTU, entradaCondo, saidaIPTU, iptuPrevisto, condoPrevisto, saidaMaint, saidaSeguro, saidaAdmin, saidaCondoPago, saidaFundoChamada, saidaTaxasExtras, entradaAvulsa, saidaAvulsa };
   });
 
   const propsVisao = visao === "imovel" && imovelId ? PROPS.filter(p => p.id === imovelId) : PROPS;
@@ -4142,7 +4254,7 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: T.s2 }}>
-              {["MÊS","ALUGUEL","IPTU rest.","COND. rest.","AVULSO ↑","= ENTRADAS","MANUTENÇÃO","SEGURO","ADMIN","IPTU","COND. pago","FUNDO/CHAM.","TAXAS EXT.","AVULSO ↓","= SAÍDAS","SALDO","SALDO ACUM."].map(h => <th key={h} style={{ ...S.th, fontSize: 10, padding: "8px 10px" }}>{h}</th>)}
+              {["MÊS","ALUGUEL","N. REALIZ.","IPTU rest.","COND. rest.","AVULSO ↑","= ENTRADAS","MANUTENÇÃO","SEGURO","ADMIN","IPTU","COND. pago","FUNDO/CHAM.","TAXAS EXT.","AVULSO ↓","= SAÍDAS","SALDO","SALDO ACUM."].map(h => <th key={h} style={{ ...S.th, fontSize: 10, padding: "8px 10px" }}>{h}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -4152,6 +4264,9 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
                 <tr key={m.mes} style={{ opacity: isFuture ? 0.5 : 1, fontSize: 11 }} onMouseEnter={e => e.currentTarget.style.background = T.s2} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                   <td style={{ ...S.td, fontWeight: 700, fontSize: 12 }}>{MESES_FULL[i].slice(0,3)}{isFuture && <span style={{ color: T.dim, fontSize: 9, marginLeft: 4 }}>prev.</span>}</td>
                   <td style={{ ...S.td, ...S.mono, color: T.green, fontSize: 11 }}>{m.entradaAluguel > 0 ? fmt.brl(m.entradaAluguel) : <span style={{color:T.dim}}>—</span>}</td>
+                  <td style={{ ...S.td, ...S.mono, color: T.dim, fontSize: 11 }} title="Receita prevista não realizada (imobiliária sem seguro)">
+                    {m.naoRealizado > 0 ? <span style={{ textDecoration:"line-through" }}>{fmt.brl(m.naoRealizado)}</span> : <span style={{color:T.dim}}>—</span>}
+                  </td>
                   <td style={{ ...S.td, ...S.mono, color: T.teal, fontSize: 11 }}>
                     {m.entradaIPTU > 0 ? <span title="IPTU restituído pelo inquilino">{fmt.brl(m.entradaIPTU)}{m.iptuPrevisto && <span style={{color:T.dim,fontSize:9,marginLeft:3}}>prev.</span>}</span> : <span style={{color:T.dim}}>—</span>}
                   </td>
@@ -4187,6 +4302,7 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
             <tr style={{ background: T.s2, fontWeight: 800 }}>
               <td style={{ ...S.td, color: T.text, fontWeight: 800 }}>TOTAL</td>
               <td style={{ ...S.td, ...S.mono, color: T.green, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.entradaAluguel,0))}</td>
+              <td style={{ ...S.td, ...S.mono, color: T.dim, fontWeight: 800 }}>{fluxo.reduce((s,m)=>s+m.naoRealizado,0) > 0 ? <span style={{textDecoration:"line-through"}}>{fmt.brl(fluxo.reduce((s,m)=>s+m.naoRealizado,0))}</span> : "—"}</td>
               <td style={{ ...S.td, ...S.mono, color: T.teal, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.entradaIPTU,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.teal, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.entradaCondo,0))}</td>
               <td style={{ ...S.td, ...S.mono, color: T.green, fontWeight: 800 }}>{fmt.brl(fluxo.reduce((s,m)=>s+m.entradaAvulsa,0))}</td>
@@ -4603,7 +4719,7 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
     regimeFiscal: "PF",
     // Locatário
     locatarioNome: "", locatarioCPF: "", locatarioTelefone: "", locatarioEmail: "", locatarioGarantia: "Fiador", viaImobiliaria: false,
-    imobiliariaName: "", contratoVencimento: "", clausula12Meses: false,
+    imobiliariaName: "", imobiliariaPossuiSeguro: false, contratoVencimento: "", clausula12Meses: false,
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const alugado = form.status === "Ocupado";
@@ -4862,10 +4978,19 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
                   </div>
                 </div>
                 {form.viaImobiliaria && (
-                  <div style={{ marginBottom: 14 }}>
-                    <label style={S.label}>NOME DA IMOBILIÁRIA</label>
-                    <input style={S.input} value={form.imobiliariaName} placeholder="Ex: Imobiliária XYZ" onChange={e=>set("imobiliariaName",e.target.value)} />
-                  </div>
+                  <>
+                    <div style={{ marginBottom: 14 }}>
+                      <label style={S.label}>NOME DA IMOBILIÁRIA</label>
+                      <input style={S.input} value={form.imobiliariaName} placeholder="Ex: Imobiliária XYZ" onChange={e=>set("imobiliariaName",e.target.value)} />
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, background:form.imobiliariaPossuiSeguro ? T.green+"12" : T.s1, borderRadius:10, padding:"10px 14px", border:`1px solid ${form.imobiliariaPossuiSeguro ? T.green+"44" : T.border}`, cursor:"pointer" }} onClick={() => set("imobiliariaPossuiSeguro", !form.imobiliariaPossuiSeguro)}>
+                      <input type="checkbox" checked={form.imobiliariaPossuiSeguro} onChange={e=>set("imobiliariaPossuiSeguro",e.target.checked)} style={{ width:16, height:16, accentColor:T.green, cursor:"pointer" }} onClick={e=>e.stopPropagation()} />
+                      <div>
+                        <div style={{ color:T.text, fontSize:13, fontWeight:600 }}>Imobiliária possui seguro de repasse?</div>
+                        <div style={{ color:T.dim, fontSize:11, marginTop:2 }}>Se sim, o repasse é garantido mesmo com inquilino inadimplente.</div>
+                      </div>
+                    </div>
+                  </>
                 )}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div style={{ gridColumn: "1/-1" }}>
@@ -5574,7 +5699,7 @@ export default function App() {
           locatarios: r.locatarios||[], historico: r.historico||[],
           iptuVencimento: r.iptu_vencimento||"", iptuParcelas: r.iptu_parcelas||10, indiceReajuste: r.indice_reajuste||"IGPM", adminPct: r.admin_pct != null ? r.admin_pct : 8,
           iptuParcelasPagas: r.iptu_parcelas_pagas||[], condoMesesPagos: r.condo_meses_pagos||[],
-          avaliacoes: r.avaliacoes||[], documentos: r.documentos||[], viaImobiliaria: r.via_imobiliaria||false, locatarioNome: r.locatario_nome||"", locatarioCPF: r.locatario_cpf||"", locatarioTelefone: r.locatario_telefone||"", locatarioEmail: r.locatario_email||"", locatarioGarantia: r.locatario_garantia||"Fiador",
+          avaliacoes: r.avaliacoes||[], documentos: r.documentos||[], viaImobiliaria: r.via_imobiliaria||false, imobiliariaPossuiSeguro: r.imobiliaria_possui_seguro||false, locatarioNome: r.locatario_nome||"", locatarioCPF: r.locatario_cpf||"", locatarioTelefone: r.locatario_telefone||"", locatarioEmail: r.locatario_email||"", locatarioGarantia: r.locatario_garantia||"Fiador",
         }, BENCHMARKS));
         setPropsRaw(mapped);
       }
@@ -5602,7 +5727,7 @@ export default function App() {
     monthly_data: prop.monthlyData||[], dia_vencimento: prop.diaVencimento||10,
     condo_pago_por: prop.condoPagoPor||"proprietario", regime_fiscal: prop.regimeFiscal||"PF", admin_pct: prop.adminPct != null ? Number(prop.adminPct) : 8,
     indice_reajuste: prop.indiceReajuste||"IGPM", iptu_vencimento: prop.iptuVencimento||null, iptu_parcelas: prop.iptuParcelas||10,
-    avaliacoes: prop.avaliacoes||[], documentos: prop.documentos||[], via_imobiliaria: prop.viaImobiliaria||false, locatario_nome: prop.locatarioNome||"", locatario_cpf: prop.locatarioCPF||"", locatario_telefone: prop.locatarioTelefone||"", locatario_email: prop.locatarioEmail||"", locatario_garantia: prop.locatarioGarantia||"Fiador",
+    avaliacoes: prop.avaliacoes||[], documentos: prop.documentos||[], via_imobiliaria: prop.viaImobiliaria||false, imobiliaria_possui_seguro: prop.imobiliariaPossuiSeguro||false, locatario_nome: prop.locatarioNome||"", locatario_cpf: prop.locatarioCPF||"", locatario_telefone: prop.locatarioTelefone||"", locatario_email: prop.locatarioEmail||"", locatario_garantia: prop.locatarioGarantia||"Fiador",
     locatarios: prop.locatarios||[], historico: prop.historico||[],
     iptu_parcelas_pagas: prop.iptuParcelasPagas||[], condo_meses_pagos: prop.condoMesesPagos||[],
   });
