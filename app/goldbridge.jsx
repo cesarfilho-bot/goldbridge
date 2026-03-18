@@ -5754,7 +5754,7 @@ export default function App() {
   const handleAddImovel = async (newProp) => {
     if (!portfolioId || !user) { alert("portfolioId=" + portfolioId + " user=" + (user?.id||"null")); setAddingImovel(false); return; }
     const dbData = toDB({ ...newProp, avaliacoes: newProp.avaliacoes||[] });
-    console.log("Inserting with portfolio_id:", dbData.portfolio_id, "user_id:", dbData.user_id);
+    console.log("[INSERT] payload enviado ao Supabase:", JSON.stringify(dbData, null, 2));
     const { data, error } = await supabase.from("imoveis").insert(dbData).select().single();
     if (error) { console.error("Erro ao adicionar imóvel:", error); alert("Erro ao salvar: " + error.message + " | portfolio_id=" + dbData.portfolio_id); setAddingImovel(false); return; }
     if (data) {
@@ -5799,7 +5799,10 @@ export default function App() {
     const oldProp = props.find(p => p.id === updatedProp.id);
     const withHist = autoHistorico(oldProp, updatedProp);
     const recalced = recalcProp(withHist, BENCHMARKS);
-    await supabase.from("imoveis").update(toDB(recalced)).eq("id", recalced.id).eq("user_id", user.id);
+    const dbData = toDB(recalced);
+    console.log("[UPDATE] payload enviado ao Supabase:", JSON.stringify(dbData, null, 2));
+    const { error: updateError } = await supabase.from("imoveis").update(dbData).eq("id", recalced.id).eq("user_id", user.id);
+    if (updateError) { console.error("[UPDATE] erro Supabase:", updateError); alert("Erro ao salvar: " + updateError.message); return; }
     setPropsRaw(prev => prev.map(p => p.id === recalced.id ? recalced : p));
     setEditingProp(null);
     if (selectedProp?.id === recalced.id) setSelectedProp(recalced);
