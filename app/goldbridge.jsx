@@ -3715,6 +3715,40 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
                         })}
                       </div>
                     )}
+                    {/* Resumo total do mês */}
+                    {(pagStatus === "pago" || lancMes.length > 0) && (() => {
+                      const somaEntradas = lancMes.filter(l => l.tipo === "entrada").reduce((s, l) => s + Number(l.valor), 0);
+                      const somaSaidas = lancMes.filter(l => l.tipo === "saida").reduce((s, l) => s + Number(l.valor), 0);
+                      const totalMes = bolsoBruto + somaEntradas - somaSaidas;
+                      const corTotal = totalMes >= 0 ? T.green : T.red;
+                      return (
+                        <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.border}` }}>
+                          {lancMes.length > 0 ? (
+                            <>
+                              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: T.muted, marginBottom: 4 }}>
+                                <span>No bolso</span>
+                                <span style={{ ...S.mono, color: T.text }}>{fmt.brl(bolsoBruto)}</span>
+                              </div>
+                              {lancMes.map(l => (
+                                <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: T.muted, marginBottom: 2 }}>
+                                  <span>+ {l.categoria}</span>
+                                  <span style={{ ...S.mono, color: l.tipo === "entrada" ? T.green : T.red }}>{l.tipo === "entrada" ? "+" : "−"} {fmt.brl(Number(l.valor))}</span>
+                                </div>
+                              ))}
+                              <div style={{ borderTop: `1px solid ${T.border}`, marginTop: 6, paddingTop: 6, display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 800 }}>
+                                <span style={{ color: T.muted }}>Total do mês</span>
+                                <span style={{ ...S.mono, color: corTotal }}>{fmt.brl(totalMes)}</span>
+                              </div>
+                            </>
+                          ) : (
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 800 }}>
+                              <span style={{ color: T.muted }}>Total do mês</span>
+                              <span style={{ ...S.mono, color: corTotal }}>{fmt.brl(totalMes)}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })()}
