@@ -5703,15 +5703,24 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Update last_seen on every authenticated load
+  useEffect(() => {
+    if (user?.id) {
+      supabase
+        .from('user_activity')
+        .upsert({ user_id: user.id, last_seen: new Date().toISOString() }, { onConflict: 'user_id' })
+        .then(({ error }) => {
+          if (error) console.error('Erro ao atualizar last_seen:', error);
+        });
+    }
+  }, [user?.id]);
+
   // Load data when user logs in
   const loadedRef = useRef(false);
   useEffect(() => {
     if (!user || loadedRef.current) return;
     loadedRef.current = true;
     (async () => {
-      // Track last_seen for admin analytics (fire-and-forget)
-      supabase.from("user_activity").upsert({ user_id: user.id, last_seen: new Date().toISOString() }, { onConflict: "user_id" });
-
       setDbLoading(true);
       // Get or create portfolio — always use the oldest one
       let { data: ports } = await supabase.from("portfolios").select("id").eq("user_id", user.id).order("created_at").limit(1);
