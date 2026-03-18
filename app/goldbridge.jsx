@@ -3244,9 +3244,11 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
   const confirmarPago = (prop, dataStr) => {
     const bruto = prop.rent - (prop.descontoAluguel||0);
     const condoFeeM = prop.hasCondominio ? (prop.condoFee||0) : 0;
+    const pagAtual = getPag(prop, anoSel, mesSel);
+    const isencaoAdmin = prop.contratoInicio && (!pagAtual || pagAtual.primeiroMes === true);
     let valor;
     if (prop.viaImobiliaria) {
-      const adm = isPrimeiroMes(prop) ? 0 : (prop.adminRecalc != null ? prop.adminRecalc : Math.round(bruto * ((prop.adminPct||8)/100)));
+      const adm = isencaoAdmin ? 0 : (prop.adminRecalc != null ? prop.adminRecalc : Math.round(bruto * ((prop.adminPct||8)/100)));
       const iptuM = Math.round((prop.iptu||0) / (prop.iptuParcelas||10));
       const condoM = (prop.fundoReserva||0) + (prop.chamadaExtra||0) + (prop.taxasExtras||0);
       valor = bruto - adm - condoM + iptuM + condoFeeM;
@@ -3260,6 +3262,7 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
       data: dataBR,
       dataPagamento: dataBR,
       vencimento: prop.diaVencimento || 10,
+      primeiroMes: false,
     });
     onUpdateProps(PROPS.map(p => p.id === prop.id ? updated : p));
     setPagDataModal(null);
@@ -3280,9 +3283,11 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
     }
     const bruto = prop.rent - (prop.descontoAluguel||0);
     const condoFeeM = prop.hasCondominio ? (prop.condoFee||0) : 0;
+    const pagAtual = getPag(prop, anoSel, mesSel);
+    const isencaoAdmin = prop.contratoInicio && (!pagAtual || pagAtual.primeiroMes === true);
     let valor;
     if (prop.viaImobiliaria) {
-      const adm = isPrimeiroMes(prop) ? 0 : (prop.adminRecalc != null ? prop.adminRecalc : Math.round(bruto * ((prop.adminPct||8)/100)));
+      const adm = isencaoAdmin ? 0 : (prop.adminRecalc != null ? prop.adminRecalc : Math.round(bruto * ((prop.adminPct||8)/100)));
       const iptuM = Math.round((prop.iptu||0) / (prop.iptuParcelas||10));
       const condoM = (prop.fundoReserva||0) + (prop.chamadaExtra||0) + (prop.taxasExtras||0);
       valor = bruto - adm - condoM + iptuM + condoFeeM;
@@ -3358,21 +3363,7 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
   const naoPagos = pagMes.filter(p => p.pag?.status === "nao_pago").length;
   const pendentes = pagMes.filter(p => !p.pag?.status && !isAtrasadoMes(p, anoSel, mesSel)).length;
   const isPrimeiroMes = (p) => {
-    if (!p.contratoInicio) return false;
-    const hoje = new Date();
-    const anoHoje = hoje.getFullYear();
-    const mesHoje = hoje.getMonth();
-    const diaHoje = hoje.getDate();
-    const partes = p.contratoInicio.split('-');
-    const anoContrato = parseInt(partes[0]);
-    const mesContrato = parseInt(partes[1]) - 1;
-    const diaContrato = parseInt(partes[2]);
-    const diasPassados = (anoHoje - anoContrato) * 365 +
-      (mesHoje - mesContrato) * 30 +
-      (diaHoje - diaContrato);
-    const isencaoAdmin = diasPassados <= 30;
-    console.log('diasPassados:', diasPassados, 'isencaoAdmin:', isencaoAdmin);
-    return isencaoAdmin;
+    return !!(p.contratoInicio && (!p.pag || p.pag.primeiroMes === true));
   };
   const calcAluguel = (p) => {
     const bruto = p.rent - (p.descontoAluguel||0);
@@ -5591,22 +5582,9 @@ function recalcProp(prop, BENCHMARKS) {
   const _adminBase = prop.adminPct != null
     ? Math.round(((prop.rent||0) - (prop.descontoAluguel||0)) * (prop.adminPct / 100))
     : (prop.admin || 0);
-  let _isencaoAdmin = false;
-  if (prop.contratoInicio) {
-    const _hoje = new Date();
-    const _anoHoje = _hoje.getFullYear();
-    const _mesHoje = _hoje.getMonth();
-    const _diaHoje = _hoje.getDate();
-    const _partes = prop.contratoInicio.split('-');
-    const _anoContrato = parseInt(_partes[0]);
-    const _mesContrato = parseInt(_partes[1]) - 1;
-    const _diaContrato = parseInt(_partes[2]);
-    const _diasPassados = (_anoHoje - _anoContrato) * 365 +
-      (_mesHoje - _mesContrato) * 30 +
-      (_diaHoje - _diaContrato);
-    _isencaoAdmin = _diasPassados <= 30;
-    console.log('diasPassados:', _diasPassados, 'isencaoAdmin:', _isencaoAdmin);
-  }
+  // Isento no primeiro pagamento: enquanto nenhum pagamento tiver primeiroMes === false
+  const _primeiroMesPago = Object.values(prop.pagamentos || {}).some(p => p?.primeiroMes === false);
+  const _isencaoAdmin = prop.contratoInicio && !_primeiroMesPago;
   const adminRecalc = _isencaoAdmin ? 0 : _adminBase;
 
   // IPTU: despesa do proprietário (paga à vista), restituído pelo inquilino
