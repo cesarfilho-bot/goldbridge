@@ -3246,7 +3246,7 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
     const condoFeeM = prop.hasCondominio ? (prop.condoFee||0) : 0;
     let valor;
     if (prop.viaImobiliaria) {
-      const adm = prop.adminRecalc || Math.round(bruto * ((prop.adminPct||8)/100));
+      const adm = isPrimeiroMes(prop) ? 0 : (prop.adminRecalc != null ? prop.adminRecalc : Math.round(bruto * ((prop.adminPct||8)/100)));
       const iptuM = Math.round((prop.iptu||0) / (prop.iptuParcelas||10));
       const condoM = (prop.fundoReserva||0) + (prop.chamadaExtra||0) + (prop.taxasExtras||0);
       valor = bruto - adm - condoM + iptuM + condoFeeM;
@@ -3282,7 +3282,7 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
     const condoFeeM = prop.hasCondominio ? (prop.condoFee||0) : 0;
     let valor;
     if (prop.viaImobiliaria) {
-      const adm = prop.adminRecalc || Math.round(bruto * ((prop.adminPct||8)/100));
+      const adm = isPrimeiroMes(prop) ? 0 : (prop.adminRecalc != null ? prop.adminRecalc : Math.round(bruto * ((prop.adminPct||8)/100)));
       const iptuM = Math.round((prop.iptu||0) / (prop.iptuParcelas||10));
       const condoM = (prop.fundoReserva||0) + (prop.chamadaExtra||0) + (prop.taxasExtras||0);
       valor = bruto - adm - condoM + iptuM + condoFeeM;
@@ -4049,7 +4049,7 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
 
     props.forEach(p => {
       const aluguelBruto = p.rent - (p.descontoAluguel||0);
-      const adminMensal = p.adminRecalc || Math.round(aluguelBruto * ((p.adminPct||8)/100));
+      const adminMensal = p.adminRecalc != null ? p.adminRecalc : Math.round(aluguelBruto * ((p.adminPct||8)/100));
 
       if (p.status === "Ocupado") {
         const pag = p.pagamentos?.[chave];
