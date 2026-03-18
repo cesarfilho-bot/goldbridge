@@ -3358,8 +3358,10 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
   const naoPagos = pagMes.filter(p => p.pag?.status === "nao_pago").length;
   const pendentes = pagMes.filter(p => !p.pag?.status && !isAtrasadoMes(p, anoSel, mesSel)).length;
   const isPrimeiroMes = (p) => {
-    const contratoInicio = p.contratoInicio ? new Date(p.contratoInicio) : null;
     const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const contratoInicio = p.contratoInicio ? new Date(p.contratoInicio + 'T00:00:00') : null;
+    if (contratoInicio) contratoInicio.setHours(0, 0, 0, 0);
     const trintaDiasDepois = contratoInicio ? new Date(contratoInicio.getTime() + 30 * 24 * 60 * 60 * 1000) : null;
     const isencaoAdmin = contratoInicio && hoje <= trintaDiasDepois;
     console.log('contratoInicio:', p.contratoInicio, 'isencaoAdmin:', isencaoAdmin);
@@ -5582,8 +5584,10 @@ function recalcProp(prop, BENCHMARKS) {
   const _adminBase = prop.adminPct != null
     ? Math.round(((prop.rent||0) - (prop.descontoAluguel||0)) * (prop.adminPct / 100))
     : (prop.admin || 0);
-  const _contratoInicio = prop.contratoInicio ? new Date(prop.contratoInicio) : null;
   const _hoje = new Date();
+  _hoje.setHours(0, 0, 0, 0);
+  const _contratoInicio = prop.contratoInicio ? new Date(prop.contratoInicio + 'T00:00:00') : null;
+  if (_contratoInicio) _contratoInicio.setHours(0, 0, 0, 0);
   const _trintaDiasDepois = _contratoInicio ? new Date(_contratoInicio.getTime() + 30 * 24 * 60 * 60 * 1000) : null;
   const _isencaoAdmin = _contratoInicio && _hoje <= _trintaDiasDepois;
   console.log('contratoInicio:', prop.contratoInicio, 'isencaoAdmin:', _isencaoAdmin);
