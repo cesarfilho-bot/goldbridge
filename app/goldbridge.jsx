@@ -3244,8 +3244,7 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
   const confirmarPago = (prop, dataStr) => {
     const bruto = prop.rent - (prop.descontoAluguel||0);
     const condoFeeM = prop.hasCondominio ? (prop.condoFee||0) : 0;
-    const pagAtual = getPag(prop, anoSel, mesSel);
-    const isencaoAdmin = prop.contratoInicio && (!pagAtual || pagAtual.primeiroMes === true);
+    const isencaoAdmin = calcIsencaoAdmin(prop.contratoInicio);
     let valor;
     if (prop.viaImobiliaria) {
       const adm = isencaoAdmin ? 0 : (prop.adminRecalc != null ? prop.adminRecalc : Math.round(bruto * ((prop.adminPct||8)/100)));
@@ -3262,7 +3261,6 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
       data: dataBR,
       dataPagamento: dataBR,
       vencimento: prop.diaVencimento || 10,
-      primeiroMes: false,
     });
     onUpdateProps(PROPS.map(p => p.id === prop.id ? updated : p));
     setPagDataModal(null);
@@ -3283,8 +3281,7 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
     }
     const bruto = prop.rent - (prop.descontoAluguel||0);
     const condoFeeM = prop.hasCondominio ? (prop.condoFee||0) : 0;
-    const pagAtual = getPag(prop, anoSel, mesSel);
-    const isencaoAdmin = prop.contratoInicio && (!pagAtual || pagAtual.primeiroMes === true);
+    const isencaoAdmin = calcIsencaoAdmin(prop.contratoInicio);
     let valor;
     if (prop.viaImobiliaria) {
       const adm = isencaoAdmin ? 0 : (prop.adminRecalc != null ? prop.adminRecalc : Math.round(bruto * ((prop.adminPct||8)/100)));
@@ -3362,9 +3359,17 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
   }).length;
   const naoPagos = pagMes.filter(p => p.pag?.status === "nao_pago").length;
   const pendentes = pagMes.filter(p => !p.pag?.status && !isAtrasadoMes(p, anoSel, mesSel)).length;
-  const isPrimeiroMes = (p) => {
-    return !!(p.contratoInicio && (!p.pag || p.pag.primeiroMes === true));
+  const calcIsencaoAdmin = (contratoInicio) => {
+    if (!contratoInicio) return false;
+    const partes = contratoInicio.split('-');
+    const mesContrato = parseInt(partes[1]) - 1;
+    const anoContrato = parseInt(partes[0]);
+    const mesPrimeiroPagamento = mesContrato === 11 ? 0 : mesContrato + 1;
+    const anoPrimeiroPagamento = mesContrato === 11 ? anoContrato + 1 : anoContrato;
+    const hoje = new Date();
+    return hoje.getMonth() === mesPrimeiroPagamento && hoje.getFullYear() === anoPrimeiroPagamento;
   };
+  const isPrimeiroMes = (p) => calcIsencaoAdmin(p.contratoInicio);
   const calcAluguel = (p) => {
     const bruto = p.rent - (p.descontoAluguel||0);
     const condoFeeM = p.hasCondominio ? (p.condoFee||0) : 0;
@@ -5582,9 +5587,17 @@ function recalcProp(prop, BENCHMARKS) {
   const _adminBase = prop.adminPct != null
     ? Math.round(((prop.rent||0) - (prop.descontoAluguel||0)) * (prop.adminPct / 100))
     : (prop.admin || 0);
-  // Isento no primeiro pagamento: enquanto nenhum pagamento tiver primeiroMes === false
-  const _primeiroMesPago = Object.values(prop.pagamentos || {}).some(p => p?.primeiroMes === false);
-  const _isencaoAdmin = prop.contratoInicio && !_primeiroMesPago;
+  // Isento no mês imediatamente seguinte ao início do contrato
+  let _isencaoAdmin = false;
+  if (prop.contratoInicio) {
+    const _partes = prop.contratoInicio.split('-');
+    const _mesContrato = parseInt(_partes[1]) - 1;
+    const _anoContrato = parseInt(_partes[0]);
+    const _mesPrimeiroPag = _mesContrato === 11 ? 0 : _mesContrato + 1;
+    const _anoPrimeiroPag = _mesContrato === 11 ? _anoContrato + 1 : _anoContrato;
+    const _hoje = new Date();
+    _isencaoAdmin = _hoje.getMonth() === _mesPrimeiroPag && _hoje.getFullYear() === _anoPrimeiroPag;
+  }
   const adminRecalc = _isencaoAdmin ? 0 : _adminBase;
 
   // IPTU: despesa do proprietário (paga à vista), restituído pelo inquilino
