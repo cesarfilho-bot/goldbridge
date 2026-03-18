@@ -3364,7 +3364,12 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
     if (contratoInicio) contratoInicio.setHours(0, 0, 0, 0);
     const trintaDiasDepois = contratoInicio ? new Date(contratoInicio.getTime() + 30 * 24 * 60 * 60 * 1000) : null;
     const isencaoAdmin = contratoInicio && hoje <= trintaDiasDepois;
-    console.log('contratoInicio:', p.contratoInicio, 'isencaoAdmin:', isencaoAdmin);
+    console.log('contratoInicio:', p.contratoInicio);
+    console.log('contratoInicio parsed:', contratoInicio);
+    console.log('trintaDiasDepois:', trintaDiasDepois);
+    console.log('hoje:', hoje);
+    console.log('hoje <= trintaDiasDepois:', hoje <= trintaDiasDepois);
+    console.log('isencaoAdmin:', isencaoAdmin);
     return isencaoAdmin;
   };
   const calcAluguel = (p) => {
@@ -5590,7 +5595,12 @@ function recalcProp(prop, BENCHMARKS) {
   if (_contratoInicio) _contratoInicio.setHours(0, 0, 0, 0);
   const _trintaDiasDepois = _contratoInicio ? new Date(_contratoInicio.getTime() + 30 * 24 * 60 * 60 * 1000) : null;
   const _isencaoAdmin = _contratoInicio && _hoje <= _trintaDiasDepois;
-  console.log('contratoInicio:', prop.contratoInicio, 'isencaoAdmin:', _isencaoAdmin);
+  console.log('contratoInicio:', prop.contratoInicio);
+  console.log('contratoInicio parsed:', _contratoInicio);
+  console.log('trintaDiasDepois:', _trintaDiasDepois);
+  console.log('hoje:', _hoje);
+  console.log('hoje <= trintaDiasDepois:', _hoje <= _trintaDiasDepois);
+  console.log('isencaoAdmin:', _isencaoAdmin);
   const adminRecalc = _isencaoAdmin ? 0 : _adminBase;
 
   // IPTU: despesa do proprietário (paga à vista), restituído pelo inquilino
