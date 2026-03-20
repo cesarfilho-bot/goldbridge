@@ -14,20 +14,26 @@ import {
 } from "recharts";
 
 const DARK_T = {
-  bg: "#09112B", s0: "#0D1835", s1: "#111F40", s2: "#162650", s3: "#1C2E60",
-  border: "#243558", borderMid: "#2D4570", gold: "#4A80C8", goldBright: "#6A9FE0",
-  goldDim: "#1B3060", goldGlow: "#4A80C833", text: "#E8EEF6", muted: "#7A98C0",
-  dim: "#3A5070", green: "#2ECC9A", greenDim: "#1A7A5C", red: "#E85565",
-  redDim: "#7A2230", amber: "#F5A623", amberDim: "#7A5212", blue: "#5A9FFF",
-  blueDim: "#1E3D7A", teal: "#2EC4B6",
+  bg: "#0C0F0A", s0: "#0F120D", s1: "#131610", s2: "#1A1E16", s3: "#222620",
+  border: "rgba(255,255,255,0.07)", borderMid: "rgba(255,255,255,0.12)",
+  gold: "#748FFC", goldBright: "#8FA3FF",
+  goldDim: "rgba(116,143,252,0.25)", goldGlow: "rgba(116,143,252,0.1)",
+  text: "#F0EDE6", muted: "#A8A8A0", dim: "#6B6B66",
+  green: "#69DB7C", greenDim: "rgba(105,219,124,0.1)",
+  red: "#FF6B6B", redDim: "rgba(255,107,107,0.1)",
+  amber: "#FFD43B", amberDim: "rgba(255,212,59,0.1)",
+  blue: "#748FFC", blueDim: "rgba(116,143,252,0.1)", teal: "#4FD1C5",
 };
 const LIGHT_T = {
-  bg: "#F2F6FB", s0: "#FFFFFF", s1: "#FFFFFF", s2: "#EBF1F9", s3: "#DDE7F3",
-  border: "#C8D6E8", borderMid: "#A3B8CF", gold: "#1B3A6B", goldBright: "#0F2548",
-  goldDim: "#C2D5ED", goldGlow: "#1B3A6B1A", text: "#1E2D45", muted: "#5C7A9A",
-  dim: "#A0B4C8", green: "#0E7A5A", greenDim: "#D0EEE5", red: "#C0283C",
-  redDim: "#FAD5DA", amber: "#B06810", amberDim: "#FCECD4", blue: "#2B6CB0",
-  blueDim: "#C5DCF5", teal: "#1A7A8A",
+  bg: "#F7F7F6", s0: "#FAFAF9", s1: "#FFFFFF", s2: "#F2F2F0", s3: "#E4E4E0",
+  border: "#E4E4E0", borderMid: "#D0D0CA",
+  gold: "#3B5BDB", goldBright: "#2B4AC4",
+  goldDim: "#C5D0FA", goldGlow: "#EEF2FF",
+  text: "#1A1A18", muted: "#6B6B66", dim: "#9B9B96",
+  green: "#2F9E44", greenDim: "#EBFBEE",
+  red: "#E03131", redDim: "#FFF5F5",
+  amber: "#E67700", amberDim: "#FFF9DB",
+  blue: "#3B5BDB", blueDim: "#EEF2FF", teal: "#0CA678",
 };
 let T = { ...LIGHT_T };
 // Initialize theme from localStorage immediately (before first render)
@@ -43,7 +49,52 @@ function applyTheme(theme) {
   Object.entries(theme).forEach(([k, v]) => {
     root.style.setProperty(`--t-${k}`, v);
   });
-  root.setAttribute("data-theme", theme.bg === LIGHT_T.bg ? "light" : "dark");
+  const isDark = theme.bg !== LIGHT_T.bg;
+  root.setAttribute("data-theme", isDark ? "dark" : "light");
+  // Design system CSS variables
+  if (isDark) {
+    root.style.setProperty("--bg", "#0C0F0A");
+    root.style.setProperty("--surface", "#131610");
+    root.style.setProperty("--surface2", "#1A1E16");
+    root.style.setProperty("--border", "rgba(255,255,255,0.07)");
+    root.style.setProperty("--border2", "rgba(255,255,255,0.12)");
+    root.style.setProperty("--text", "#F0EDE6");
+    root.style.setProperty("--text2", "#A8A8A0");
+    root.style.setProperty("--text3", "#6B6B66");
+    root.style.setProperty("--accent", "#748FFC");
+    root.style.setProperty("--accent-light", "rgba(116,143,252,0.1)");
+    root.style.setProperty("--accent-border", "rgba(116,143,252,0.25)");
+    root.style.setProperty("--green", "#69DB7C");
+    root.style.setProperty("--green-light", "rgba(105,219,124,0.1)");
+    root.style.setProperty("--red", "#FF6B6B");
+    root.style.setProperty("--red-light", "rgba(255,107,107,0.1)");
+    root.style.setProperty("--amber", "#FFD43B");
+    root.style.setProperty("--amber-light", "rgba(255,212,59,0.1)");
+    root.style.setProperty("--sidebar", "#0F120D");
+    root.style.setProperty("--radius", "8px");
+    root.style.setProperty("--radius-lg", "12px");
+  } else {
+    root.style.setProperty("--bg", "#F7F7F6");
+    root.style.setProperty("--surface", "#FFFFFF");
+    root.style.setProperty("--surface2", "#F2F2F0");
+    root.style.setProperty("--border", "#E4E4E0");
+    root.style.setProperty("--border2", "#D0D0CA");
+    root.style.setProperty("--text", "#1A1A18");
+    root.style.setProperty("--text2", "#6B6B66");
+    root.style.setProperty("--text3", "#9B9B96");
+    root.style.setProperty("--accent", "#3B5BDB");
+    root.style.setProperty("--accent-light", "#EEF2FF");
+    root.style.setProperty("--accent-border", "#C5D0FA");
+    root.style.setProperty("--green", "#2F9E44");
+    root.style.setProperty("--green-light", "#EBFBEE");
+    root.style.setProperty("--red", "#E03131");
+    root.style.setProperty("--red-light", "#FFF5F5");
+    root.style.setProperty("--amber", "#E67700");
+    root.style.setProperty("--amber-light", "#FFF9DB");
+    root.style.setProperty("--sidebar", "#FAFAF9");
+    root.style.setProperty("--radius", "8px");
+    root.style.setProperty("--radius-lg", "12px");
+  }
   // Inject global CSS if not already present
   if (!document.getElementById("gb-theme-style")) {
     const style = document.createElement("style");
@@ -51,7 +102,7 @@ function applyTheme(theme) {
     style.textContent = `
       [data-theme="light"] { color-scheme: light; }
       [data-theme="dark"] { color-scheme: dark; }
-      body { background: var(--t-bg) !important; transition: background 0.2s; }
+      body { background: var(--bg) !important; transition: background 0.2s; }
       * { transition: background-color 0.15s, border-color 0.15s, color 0.15s; }
     `;
     document.head.appendChild(style);
@@ -566,18 +617,19 @@ function buildInsights(PROPS) {
 }
 
 const S = {
-  card: { background: T.s1, border: `1px solid ${T.border}`, borderRadius: 14, padding: 24 },
-  cardGold: { background: `linear-gradient(135deg, ${T.s1} 0%, #1A1608 100%)`, border: `1px solid ${T.goldDim}`, borderRadius: 14, padding: 24 },
-  badge: (c) => ({ background: c + "20", color: c, border: `1px solid ${c}40`, borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 700, letterSpacing: 0.6, display: "inline-flex", alignItems: "center", gap: 4 }),
-  btn: { background: `linear-gradient(135deg, ${T.gold}, ${T.goldBright})`, color: "#0A0800", border: "none", borderRadius: 9, padding: "11px 22px", fontWeight: 800, cursor: "pointer", fontSize: 14, fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: 0.3 },
-  btnGhost: { background: "transparent", color: T.gold, border: `1px solid ${T.goldDim}`, borderRadius: 9, padding: "10px 20px", fontWeight: 600, cursor: "pointer", fontSize: 14, fontFamily: "'Bricolage Grotesque', sans-serif" },
-  btnDanger: { background: "transparent", color: T.red, border: `1px solid ${T.redDim}`, borderRadius: 9, padding: "10px 20px", fontWeight: 600, cursor: "pointer", fontSize: 14, fontFamily: "'Bricolage Grotesque', sans-serif" },
-  input: { background: T.s2, border: `1px solid ${T.border}`, borderRadius: 9, padding: "11px 14px", color: T.text, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box", fontFamily: "'Bricolage Grotesque', sans-serif" },
-  sel: { background: T.s2, border: `1px solid ${T.border}`, borderRadius: 9, padding: "10px 14px", color: T.text, fontSize: 13, outline: "none", cursor: "pointer", fontFamily: "'Bricolage Grotesque', sans-serif" },
-  th: { textAlign: "left", padding: "10px 14px", color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, borderBottom: `1px solid ${T.border}`, whiteSpace: "nowrap" },
-  td: { padding: "11px 14px", fontSize: 13, borderBottom: `1px solid ${T.border}40`, color: T.text },
+  card: { background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, padding: "16px 18px" },
+  cardGold: { background: T.s1, border: `1px solid ${T.goldDim}`, borderRadius: 12, padding: "16px 18px" },
+  badge: (c) => ({ background: c + "18", color: c, borderRadius: 4, padding: "2px 6px", fontSize: 11, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 4 }),
+  pill: (color, bg) => ({ background: bg, color, display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 100, fontSize: 11, fontWeight: 500 }),
+  btn: { background: T.gold, color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontWeight: 500, cursor: "pointer", fontSize: 13, fontFamily: "Inter, system-ui, sans-serif", letterSpacing: 0, transition: "background 0.15s" },
+  btnGhost: { background: T.s1, color: T.muted, border: `1px solid ${T.border}`, borderRadius: 8, padding: "7px 14px", fontWeight: 500, cursor: "pointer", fontSize: 13, fontFamily: "Inter, system-ui, sans-serif", transition: "background 0.15s" },
+  btnDanger: { background: T.redDim, color: T.red, border: `1px solid ${T.redDim}`, borderRadius: 8, padding: "7px 14px", fontWeight: 500, cursor: "pointer", fontSize: 13, fontFamily: "Inter, system-ui, sans-serif" },
+  input: { background: T.s2, border: `1px solid ${T.border}`, borderRadius: 8, padding: "7px 12px", color: T.text, fontSize: 13, outline: "none", width: "100%", boxSizing: "border-box", fontFamily: "Inter, system-ui, sans-serif" },
+  sel: { background: T.s2, border: `1px solid ${T.border}`, borderRadius: 8, padding: "7px 12px", color: T.text, fontSize: 13, outline: "none", cursor: "pointer", fontFamily: "Inter, system-ui, sans-serif" },
+  th: { textAlign: "left", padding: "11px 14px", color: T.dim, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", borderBottom: `1px solid ${T.border}`, whiteSpace: "nowrap", background: T.s2 },
+  td: { padding: "11px 14px", fontSize: 13, fontWeight: 400, borderBottom: `1px solid ${T.border}`, color: T.text },
   mono: { fontFamily: "'DM Mono', monospace" },
-  label: { color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6, display: "block" },
+  label: { color: T.muted, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6, display: "block" },
 };
 
 const Tip = ({ active, payload, label }) => {
@@ -1903,70 +1955,75 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
   const totalObras = PROPS.reduce((s, p) => s + (p.obras || []).length, 0);
   const obrasEmAndamento = PROPS.reduce((s, p) => s + (p.obras || []).filter(o => o.status === "Em andamento").length, 0);
 
+  // Cálculos KPI
+  const receitaMensal = PROPS.filter(p => p.status === "Ocupado").reduce((s, p) => s + (p.aluguelLiquido || (p.rent - (p.descontoAluguel||0))), 0);
+  const vagos = PROPS.filter(p => p.status === "Vago" || p.status === "Em desocupação");
+  const vacanciaQtd = vagos.length;
+  const vacanciaPorc = PROPS.length > 0 ? Math.round(vacanciaQtd / PROPS.length * 100) : 0;
+  const totalValuation = PROPS.reduce((s, p) => {
+    const bm = getFipeZAP(p.neighborhood, p.city, p.type);
+    const m2 = (p.type === "Comercial" || p.type === "Sala Comercial") ? bm.com : bm.res;
+    return s + (p.valorMercado > 0 ? p.valorMercado : (p.valorCompra > 0 ? p.valorCompra : m2 * p.size));
+  }, 0);
+  const yieldMedioPort = (() => {
+    const comVM = PROPS.filter(p => p.status === "Ocupado" && ((p.aluguelLiquido||0) > 0));
+    if (comVM.length === 0) return 0;
+    const totalLiq = comVM.reduce((s,p) => s + (p.aluguelLiquido||0)*12, 0);
+    const totalVM = comVM.reduce((s,p) => {
+      const bm = getFipeZAP(p.neighborhood, p.city, p.type);
+      const m2 = (p.type === "Comercial" || p.type === "Sala Comercial") ? bm.com : bm.res;
+      return s + (p.valorMercado > 0 ? p.valorMercado : (p.valorCompra > 0 ? p.valorCompra : m2 * p.size));
+    }, 0);
+    return totalVM > 0 ? (totalLiq / totalVM * 100) : 0;
+  })();
+  // benchmark de yield: média dos benchmarks por cidade/tipo
+  const benchmarkYield = (() => {
+    if (PROPS.length === 0) return 0.06;
+    const avg = PROPS.reduce((s,p) => s + getBenchmark(p.city, p.type).cap_rate, 0) / PROPS.length;
+    return avg * 100;
+  })();
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
         <div>
-          <div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>PORTFÓLIO · {PROPS.length} IMÓVEIS</div>
-          <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Visão Geral</h1>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>Portfólio · {PROPS.length} imóveis</div>
+          <h1 style={{ color: T.text, fontSize: 20, fontWeight: 600, margin: 0, letterSpacing: "-0.02em" }}>Visão Geral</h1>
         </div>
         <div style={{ color: T.dim, fontSize: 12 }}>{fmt.date()}</div>
       </div>
 
-      <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-        {(() => {
-          const receitaAnual = PROPS.filter(p => p.status === "Ocupado").reduce((s, p) => s + (p.rent - (p.descontoAluguel||0)) * 12, 0);
-          const receitaMensal = Math.round(receitaAnual / 12);
-          return (
-            <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
-              <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Receita Bruta</div>
-              <div style={{ color: T.gold, fontSize: 26, fontWeight: 800, ...S.mono, lineHeight: 1 }}>{fmt.brl(receitaMensal)}<span style={{ fontSize: 13, fontWeight: 500, marginLeft: 4 }}>/mês</span></div>
-              <div style={{ color: T.dim, fontSize: 12, marginTop: 6 }}>{fmt.brlK(receitaAnual)}/ano</div>
-            </div>
-          );
-        })()}
-        {(() => {
-          const lucroMensal = PROPS.reduce((s, p) => s + (p.aluguelLiquido || 0), 0);
-          const lucroAnual = lucroMensal * 12;
-          return (
-            <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
-              <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Lucro Líquido</div>
-              <div style={{ color: lucroMensal >= 0 ? T.green : T.red, fontSize: 26, fontWeight: 800, ...S.mono, lineHeight: 1 }}>{fmt.brl(lucroMensal)}<span style={{ fontSize: 13, fontWeight: 500, marginLeft: 4 }}>/mês</span></div>
-              <div style={{ color: T.dim, fontSize: 12, marginTop: 6 }}>{fmt.brlK(lucroAnual)}/ano · margem {fmt.pct(PORT.lucroLiquidoPct||PORT.noiPct)}</div>
-            </div>
-          );
-        })()}
-        {(() => {
-          const vagos = PROPS.filter(p => p.status === "Vago").length;
-          return (
-            <div style={{ ...S.card, flex: 1, minWidth: 150, position: "relative", overflow: "hidden" }}>
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${T.red}, ${T.amber})` }} />
-              <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Custo Vacância</div>
-              <div style={{ color: T.amber, fontSize: 26, fontWeight: 800, ...S.mono, lineHeight: 1 }}>{fmt.brl(PORT.vacancyCost)}<span style={{ fontSize: 13, fontWeight: 500, marginLeft: 4 }}>/mês</span></div>
-              <div style={{ color: T.dim, fontSize: 12, marginTop: 6 }}>{fmt.brlK(PORT.vacancyCost * 12)}/ano · {vagos} imóvel(is) vago(s)</div>
-            </div>
-          );
-        })()}
-        {(() => {
-          const comVM = PROPS.filter(p => (p.valorMercado||0) > 0);
-          const totalVM = comVM.reduce((s,p) => s+(p.valorMercado||0), 0);
-          return (
-            <div style={{ ...S.card, minWidth: 180, flex: 1, cursor: "pointer" }} onClick={() => onNav("mercado")}>
-              <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>VALOR DE MERCADO</div>
-              {totalVM > 0 ? (
-                <>
-                  <div style={{ color: T.gold, fontSize: 28, fontWeight: 800, ...S.mono, lineHeight: 1 }}>{fmt.brlK(totalVM)}</div>
-                  <div style={{ color: T.dim, fontSize: 12, marginTop: 6 }}>{comVM.length}/{PROPS.length} imóveis avaliados · ver análise →</div>
-                </>
-              ) : (
-                <>
-                  <div style={{ color: T.dim, fontSize: 20, fontWeight: 700, lineHeight: 1 }}>—</div>
-                  <div style={{ color: T.dim, fontSize: 12, marginTop: 6 }}>Cadastre o valor de mercado dos imóveis →</div>
-                </>
-              )}
-            </div>
-          );
-        })()}
+      {/* KPI Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+        {/* Receita mensal */}
+        <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, padding: "16px 18px" }}>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 12 }}>Receita Mensal</div>
+          <div style={{ color: T.text, fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1, marginBottom: 8, fontFamily: "'DM Mono', monospace" }}>{fmt.brl(receitaMensal)}</div>
+          <div style={{ color: T.muted, fontSize: 13 }}>{fmt.brlK(receitaMensal * 12)}/ano</div>
+        </div>
+        {/* Yield médio */}
+        <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, padding: "16px 18px" }}>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 12 }}>Yield Médio</div>
+          <div style={{ color: T.text, fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1, marginBottom: 8, fontFamily: "'DM Mono', monospace" }}>{yieldMedioPort.toFixed(2)}%</div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 6px", borderRadius: 4, fontSize: 11, fontWeight: 500,
+            background: yieldMedioPort >= benchmarkYield ? T.greenDim : T.redDim,
+            color: yieldMedioPort >= benchmarkYield ? T.green : T.red
+          }}>
+            {yieldMedioPort >= benchmarkYield ? "↑" : "↓"} {Math.abs(yieldMedioPort - benchmarkYield).toFixed(1)}pp vs benchmark
+          </div>
+        </div>
+        {/* Valuation total */}
+        <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, padding: "16px 18px", cursor: "pointer" }} onClick={() => onNav("mercado")}>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 12 }}>Valuation Total</div>
+          <div style={{ color: T.text, fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1, marginBottom: 8, fontFamily: "'DM Mono', monospace" }}>{fmt.brlK(totalValuation)}</div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 6px", borderRadius: 4, fontSize: 11, fontWeight: 500, background: T.goldGlow, color: T.gold }}>FipeZap</div>
+        </div>
+        {/* Vacância */}
+        <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, padding: "16px 18px" }}>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 12 }}>Vacância</div>
+          <div style={{ color: vacanciaQtd > 0 ? T.amber : T.text, fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1, marginBottom: 8, fontFamily: "'DM Mono', monospace" }}>{vacanciaQtd} imóvel{vacanciaQtd !== 1 ? "is" : ""}</div>
+          <div style={{ color: T.muted, fontSize: 13 }}>{vacanciaPorc}% do portfólio</div>
+        </div>
       </div>
 
       {totalObras > 0 && (
@@ -2029,12 +2086,22 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
 
 // ─── NOI PAGE ─────────────────────────────────────────────────────────────────
 function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd, onDocs }) {
-  const [sortCol, setSortCol] = useState("noi");
+  const [sortCol, setSortCol] = useState("aluguelLiquido");
   const [sortDir, setSortDir] = useState(-1);
   const [filterType, setFilterType] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState(null);
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("rently_view_mode") || "table";
+    return "table";
+  });
+
+  const setView = (mode) => {
+    setViewMode(mode);
+    if (typeof window !== "undefined") localStorage.setItem("rently_view_mode", mode);
+  };
+
   const sorted = useMemo(() => {
     let list = PROPS;
     if (filterType) list = list.filter(p => p.type === filterType);
@@ -2042,119 +2109,325 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd, onDoc
     if (search) list = list.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.neighborhood.toLowerCase().includes(search.toLowerCase()) || p.address.toLowerCase().includes(search.toLowerCase()));
     return [...list].sort((a, b) => (a[sortCol] - b[sortCol]) * sortDir);
   }, [sortCol, sortDir, filterType, filterStatus, search, PROPS]);
+
   const toggle = (c) => { if (sortCol === c) setSortDir(d => -d); else { setSortCol(c); setSortDir(-1); } };
-  const Th = ({ col, label }) => <th style={{ ...S.th, cursor: "pointer" }} onClick={() => toggle(col)}>{label}{sortCol === col ? (sortDir < 0 ? " ↓" : " ↑") : ""}</th>;
+  const Th = ({ col, label }) => (
+    <th style={{ ...S.th, cursor: "pointer" }} onClick={() => toggle(col)}>
+      {label}{sortCol === col ? (sortDir < 0 ? " ↓" : " ↑") : ""}
+    </th>
+  );
+
+  // Calcula métricas novas por prop
+  const getPropMetrics = (p) => {
+    const aliqLiq = p.aluguelLiquido || (p.rent - (p.descontoAluguel||0));
+    const bm = getFipeZAP(p.neighborhood, p.city, p.type);
+    const m2 = (p.type === "Comercial" || p.type === "Sala Comercial") ? bm.com : bm.res;
+    const valuation = p.valorMercado > 0 ? p.valorMercado : (p.valorCompra > 0 ? p.valorCompra : m2 * p.size);
+    const yieldReal = valuation > 0 ? (aliqLiq * 12) / valuation * 100 : 0;
+    const payback = p.valorCompra > 0 && aliqLiq > 0 ? p.valorCompra / (aliqLiq * 12) : null;
+    const benchmarkYield = getBenchmark(p.city, p.type).cap_rate * 100;
+    const yieldDelta = yieldReal - benchmarkYield;
+    return { aliqLiq, valuation, yieldReal, payback, benchmarkYield, yieldDelta };
+  };
+
+  // badge de status (pill com dot)
+  const StatusPill = ({ status }) => {
+    const map = {
+      "Ocupado": { bg: T.greenDim, color: T.green },
+      "Vago": { bg: T.amberDim, color: T.amber },
+      "Em desocupação": { bg: T.amberDim, color: T.amber },
+      "Inadimplente": { bg: T.redDim, color: T.red },
+    };
+    const style = map[status] || { bg: T.s2, color: T.muted };
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: style.bg, color: style.color }}>
+        <span style={{ width: 5, height: 5, borderRadius: "50%", background: style.color, flexShrink: 0 }} />
+        {status}
+      </span>
+    );
+  };
+
+  const TypeBadge = ({ type }) => {
+    const isRes = !["Comercial","Sala Comercial","Galpão/Industrial"].includes(type);
+    return (
+      <span style={{ background: isRes ? T.goldGlow : T.blueDim, color: isRes ? T.gold : T.blue, borderRadius: 4, padding: "2px 6px", fontSize: 11, fontWeight: 500 }}>
+        {isRes ? "Residencial" : "Comercial"}
+      </span>
+    );
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-        <div><div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>ANÁLISE</div><h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Imóveis</h1></div>
-        <button style={{ ...S.btn, display: "flex", alignItems: "center", gap: 8 }} onClick={onAdd}>+ Adicionar Imóvel</button>
+        <div>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>Análise</div>
+          <h1 style={{ color: T.text, fontSize: 20, fontWeight: 600, margin: 0, letterSpacing: "-0.02em" }}>Imóveis</h1>
+        </div>
+        <button style={{ ...S.btn, display: "flex", alignItems: "center", gap: 6 }} onClick={onAdd}>+ Adicionar Imóvel</button>
       </div>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-        <input placeholder="Buscar imóvel, bairro ou endereço..." style={{ ...S.input, maxWidth: 280 }} value={search} onChange={e => setSearch(e.target.value)} />
-        <select style={S.sel} value={filterType} onChange={e => setFilterType(e.target.value)}><option value="">Todos os tipos</option><option>Apartamento</option><option>Casa</option><option>Casa de Condomínio</option><option>Sala Comercial</option><option>Industrial</option><option>Loja</option><option>Galpão</option><option>Salão Comercial</option><option>Terreno</option></select>
-        <select style={S.sel} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}><option value="">Todos os status</option><option>Ocupado</option><option>Vago</option></select>
-        <span style={{ color: T.muted, fontSize: 12 }}>{sorted.length} imóveis</span>
+
+      {/* Filters + Toggle */}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+        <input placeholder="Buscar imóvel, bairro ou endereço..." style={{ ...S.input, maxWidth: 260 }} value={search} onChange={e => setSearch(e.target.value)} />
+        <select style={S.sel} value={filterType} onChange={e => setFilterType(e.target.value)}>
+          <option value="">Todos os tipos</option>
+          <option>Apartamento</option><option>Casa</option><option>Casa de Condomínio</option>
+          <option>Sala Comercial</option><option>Industrial</option><option>Loja</option>
+          <option>Galpão</option><option>Salão Comercial</option><option>Terreno</option>
+        </select>
+        <select style={S.sel} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+          <option value="">Todos os status</option><option>Ocupado</option><option>Vago</option><option>Em desocupação</option>
+        </select>
+        <span style={{ color: T.dim, fontSize: 12 }}>{sorted.length} imóveis</span>
+        {/* Toggle view */}
+        <div style={{ marginLeft: "auto", display: "flex", gap: 2, background: T.s2, borderRadius: 8, padding: 3, border: `1px solid ${T.border}` }}>
+          {[["table","☰ Tabela"],["cards","⊞ Cards"]].map(([mode, label]) => (
+            <button key={mode} onClick={() => setView(mode)} style={{
+              background: viewMode === mode ? T.s1 : "transparent",
+              color: viewMode === mode ? T.text : T.muted,
+              border: viewMode === mode ? `1px solid ${T.border}` : "1px solid transparent",
+              borderRadius: 6, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontFamily: "inherit", fontWeight: viewMode === mode ? 500 : 400,
+              transition: "all 0.15s", boxShadow: viewMode === mode ? "0 1px 2px rgba(0,0,0,0.06)" : "none"
+            }}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
-      <div style={{ ...S.card, padding: 0, overflow: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ background: T.s2 }}>
-              <Th col="id" label="#" /><th style={S.th}>Imóvel / Endereço</th><th style={S.th}>Tipo</th><th style={S.th}>Status</th>
-              <Th col="rent" label="Aluguel bruto" /><Th col="totalExpenses" label="Despesas/ano" /><Th col="ir" label="IR/ano" /><Th col="aluguelLiquido" label="Aluguel líquido" /><Th col="aluguelLiquido" label="Aluguel Líquido/ano" /><Th col="noiPct" label="Margem" />
-              <Th col="vacancyDays" label="Vacância" /><th style={S.th}>Obras</th><th style={S.th}>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((p) => {
-              const obrasCount = (p.obras || []).length, obrasAtivas = (p.obras || []).filter(o => o.status === "Em andamento").length;
-              const isExpanded = expandedId === p.id;
-              const condoAnnual = p.hasCondominio ? ((p.fundoReserva||0)+(p.chamadaExtra||0))*12 : 0;
-              return (
-                <>
-                  <tr key={p.id} style={{ cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.background = T.s2} onMouseLeave={e => e.currentTarget.style.background = isExpanded ? T.s2 : "transparent"}>
-                    <td style={{ ...S.td, color: T.dim, ...S.mono, fontSize: 11 }} onClick={() => { onProp(p); onNav("detail"); }}>{String(p.id).padStart(2, "0")}</td>
-                    <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><div style={{ color: T.goldBright, fontWeight: 600, fontSize: 13 }}>{p.name}</div><div style={{ color: T.dim, fontSize: 11 }}>{p.address} · {p.neighborhood}</div></td>
-                    <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={S.badge(p.type === "Comercial" ? T.blue : T.teal)}>{p.type}</span></td>
-                    <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={S.badge(p.status === "Ocupado" ? T.green : T.red)}>{p.status}</span></td>
-                    <td style={{ ...S.td, ...S.mono }} onClick={() => { onProp(p); onNav("detail"); }}>
-                      {fmt.brl(p.rent)}
-                      {(p.descontoAluguel||0) > 0 && <div style={{ color:T.dim, fontSize:10 }}>desc. {fmt.brl(p.descontoAluguel)}</div>}
-                    </td>
-                    <td style={{ ...S.td, ...S.mono, cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : p.id)}>
-                      <span style={{ color: T.amber, fontWeight: 600 }}>{fmt.brl(p.totalExpenses)}</span>
-                      <div style={{ color: T.dim, fontSize: 10 }}>{fmt.brl(Math.round(p.totalExpenses/12))}/mês {isExpanded ? "▲" : "▼"}</div>
-                    </td>
-                    <td style={{ ...S.td, ...S.mono, color: T.red }} onClick={() => { onProp(p); onNav("detail"); }}>{p.ir > 0 ? fmt.brl(p.ir) : <span style={{ color: T.dim }}>—</span>}</td>
-                    <td style={{ ...S.td, ...S.mono, color: T.green }} onClick={() => { onProp(p); onNav("detail"); }}>
-                      {fmt.brl(p.aluguelLiquido || (p.rent-(p.descontoAluguel||0)))}
-                      {p.viaImobiliaria && <div style={{ color:T.dim, fontSize:10 }}>via imob.</div>}
-                    </td>
-                    <td style={{ ...S.td, ...S.mono, color: (p.aluguelLiquido || (p.rent-(p.descontoAluguel||0))) > 0 ? T.green : T.red, fontWeight: 700 }} onClick={() => { onProp(p); onNav("detail"); }}>{fmt.brl((p.aluguelLiquido || (p.rent-(p.descontoAluguel||0))) * 12)}</td>
-                    <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}><span style={{ color: (p.lucroLiquidoPct||p.noiPct) > 0.45 ? T.green : (p.lucroLiquidoPct||p.noiPct) > 0.3 ? T.amber : T.red, fontSize: 12, fontWeight: 700, ...S.mono }}>{fmt.pct(p.lucroLiquidoPct||p.noiPct)}</span></td>
-                    <td style={{ ...S.td, color: p.vacancyDays > p.vacancyBenchmark ? T.amber : T.muted }} onClick={() => { onProp(p); onNav("detail"); }}>{p.vacancyDays}d</td>
-                    <td style={S.td}>{obrasCount > 0 ? <span style={S.badge(obrasAtivas > 0 ? T.amber : T.muted)}>{obrasCount}{obrasAtivas > 0 ? ` (${obrasAtivas} ativ.)` : ""}</span> : <span style={{ color: T.dim, fontSize: 11 }}>—</span>}</td>
-                    <td style={S.td}>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button title="Editar" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onEdit(p); }}>Editar</button>
-                        <button title="Obras" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onObras(p); }}>Obras</button>
-                        <button title="Documentos" style={{ background: T.s3, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onDocs?.(p); }}>📎 Docs</button>
-                        <button title="Remover" style={{ background: T.s3, border: `1px solid ${T.redDim}`, color: T.red, borderRadius: 7, padding: "5px 10px", cursor: "pointer", fontSize: 13 }} onClick={e => { e.stopPropagation(); onDelete(p); }}>Remover</button>
-                      </div>
-                    </td>
-                  </tr>
-                  {isExpanded && (
-                    <tr key={`exp-${p.id}`} style={{ background: T.s0 }}>
-                      <td colSpan={13} style={{ padding: "14px 20px", borderBottom: `1px solid ${T.border}` }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-start" }}>
-                            <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, alignSelf: "center", minWidth: 80 }}>DESPESAS</div>
+
+      {PROPS.length === 0 && (
+        <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, textAlign: "center", padding: "60px 20px" }}>
+          <div style={{ color: T.text, fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Nenhum imóvel no portfólio</div>
+          <div style={{ color: T.muted, fontSize: 13, marginBottom: 24 }}>Adicione o primeiro imóvel para começar</div>
+          <button style={S.btn} onClick={onAdd}>+ Adicionar Imóvel</button>
+        </div>
+      )}
+
+      {/* ── TABELA DENSA ── */}
+      {viewMode === "table" && sorted.length > 0 && (
+        <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, overflow: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={S.th}>Imóvel</th>
+                <th style={S.th}>Tipo</th>
+                <th style={S.th}>Status</th>
+                <Th col="aluguelLiquido" label="Aluguel Líq." />
+                <th style={S.th}>Yield</th>
+                <th style={S.th}>Valuation</th>
+                <th style={S.th}>Payback</th>
+                <th style={S.th}>Benchmark</th>
+                <th style={S.th}>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((p) => {
+                const { aliqLiq, valuation, yieldReal, payback, yieldDelta } = getPropMetrics(p);
+                const obrasCount = (p.obras || []).length;
+                const obrasAtivas = (p.obras || []).filter(o => o.status === "Em andamento").length;
+                const isExpanded = expandedId === p.id;
+                const condoAnnual = p.hasCondominio ? ((p.fundoReserva||0)+(p.chamadaExtra||0))*12 : 0;
+                const maxYield = 12; // para barra proporcional
+                return (
+                  <React.Fragment key={p.id}>
+                    <tr
+                      style={{ cursor: "pointer", transition: "background 0.1s" }}
+                      onMouseEnter={e => e.currentTarget.style.background = T.bg}
+                      onMouseLeave={e => e.currentTarget.style.background = isExpanded ? T.bg : "transparent"}
+                    >
+                      {/* Imóvel */}
+                      <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}>
+                        <div style={{ fontWeight: 500, color: T.text, fontSize: 13 }}>{p.name}</div>
+                        <div style={{ color: T.muted, fontSize: 12, marginTop: 1 }}>{p.neighborhood}{p.city ? ` · ${p.city}` : ""}</div>
+                      </td>
+                      {/* Tipo */}
+                      <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}>
+                        <TypeBadge type={p.type} />
+                      </td>
+                      {/* Status */}
+                      <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}>
+                        <StatusPill status={p.status} />
+                      </td>
+                      {/* Aluguel líquido */}
+                      <td style={{ ...S.td, fontFamily: "'DM Mono',monospace", color: aliqLiq > 0 ? T.text : T.dim }} onClick={() => { onProp(p); onNav("detail"); }}>
+                        {aliqLiq > 0 ? fmt.brl(aliqLiq) : "—"}
+                      </td>
+                      {/* Yield */}
+                      <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}>
+                        {yieldReal > 0 ? (
+                          <div>
+                            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 500, color: yieldReal >= 6 ? T.green : yieldReal >= 4 ? T.amber : T.muted }}>
+                              {yieldReal.toFixed(2)}%
+                            </div>
+                            <div style={{ width: 60, height: 3, background: T.s3, borderRadius: 2, marginTop: 4 }}>
+                              <div style={{ width: `${Math.min(100, yieldReal / maxYield * 100)}%`, height: "100%", borderRadius: 2, background: yieldReal >= 6 ? T.green : yieldReal >= 4 ? T.amber : T.muted }} />
+                            </div>
+                          </div>
+                        ) : <span style={{ color: T.dim }}>—</span>}
+                      </td>
+                      {/* Valuation */}
+                      <td style={{ ...S.td, fontFamily: "'DM Mono',monospace" }} onClick={() => { onProp(p); onNav("detail"); }}>
+                        {valuation > 0 ? fmt.brlK(valuation) : <span style={{ color: T.dim }}>—</span>}
+                      </td>
+                      {/* Payback */}
+                      <td style={{ ...S.td, fontFamily: "'DM Mono',monospace" }} onClick={() => { onProp(p); onNav("detail"); }}>
+                        {payback != null ? (
+                          <span style={{ color: payback < 12 ? T.green : payback < 20 ? T.amber : T.muted }}>
+                            {payback.toFixed(1)}a
+                          </span>
+                        ) : <span style={{ color: T.dim }}>—</span>}
+                      </td>
+                      {/* Benchmark */}
+                      <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}>
+                        {yieldReal > 0 ? (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 6px", borderRadius: 4, fontSize: 11, fontWeight: 500, background: yieldDelta >= 0 ? T.greenDim : T.redDim, color: yieldDelta >= 0 ? T.green : T.red }}>
+                            {yieldDelta >= 0 ? "↑" : "↓"} {Math.abs(yieldDelta).toFixed(1)}pp
+                          </span>
+                        ) : <span style={{ color: T.dim }}>—</span>}
+                      </td>
+                      {/* Ações */}
+                      <td style={S.td}>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button style={{ background: T.s2, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 12, fontFamily: "inherit" }} onClick={e => { e.stopPropagation(); onEdit(p); }}>Editar</button>
+                          <button style={{ background: T.s2, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 12, fontFamily: "inherit" }} onClick={e => { e.stopPropagation(); onObras(p); }}>Obras</button>
+                          {onDocs && <button style={{ background: T.s2, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 12, fontFamily: "inherit" }} onClick={e => { e.stopPropagation(); onDocs(p); }}>Docs</button>}
+                          <button style={{ background: T.redDim, border: `1px solid ${T.redDim}`, color: T.red, borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 12, fontFamily: "inherit" }} onClick={e => { e.stopPropagation(); onDelete(p); }}>✕</button>
+                        </div>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr key={`exp-${p.id}`} style={{ background: T.bg }}>
+                        <td colSpan={9} style={{ padding: "14px 20px", borderBottom: `1px solid ${T.border}` }}>
+                          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                             {(() => {
                               const adminAnual = (p.adminRecalc || p.admin || 0) * 12;
                               const condoA = p.condoAnnual || condoAnnual;
                               const itens = [
-                                ...(p.status !== "Ocupado" ? [{ label: "IPTU", anual: p.iptu||0, mensal: Math.round((p.iptu||0)/12), note: "sem inquilino", noteColor: T.dim }] : []),
+                                ...(p.status !== "Ocupado" ? [{ label: "IPTU", anual: p.iptu||0, mensal: Math.round((p.iptu||0)/12) }] : []),
                                 { label: "Manutenção", anual: (p.maintMonthly||0)*12, mensal: p.maintMonthly||0 },
                                 { label: "Seguro", anual: p.insurance||0, mensal: Math.round((p.insurance||0)/12) },
                                 { label: "Administração", anual: adminAnual, mensal: Math.round(adminAnual/12) },
-                                ...(condoA > 0 ? [{ label: "Fundo/Chamada", anual: condoA, mensal: Math.round(condoA/12), note: "sempre proprietário" }] : []),
-                                ...(p.hasCondominio ? [{ label: "Cond. mensal", anual: 0, mensal: 0, note: "pago pelo inquilino", noteColor: T.green }] : []),
+                                ...(condoA > 0 ? [{ label: "Fundo/Chamada", anual: condoA, mensal: Math.round(condoA/12) }] : []),
                               ];
-                              return itens.map(({ label, anual, mensal, note, noteColor }) => (
-                                <div key={label} style={{ background: T.s2, padding: "8px 14px", borderRadius: 8 }}>
-                                  <div style={{ color: T.dim, fontSize: 10, marginBottom: 4 }}>{label}</div>
-                                  {anual > 0 && <div style={{ color: T.amber, fontWeight: 700, fontSize: 13 }}>{fmt.brl(anual)}<span style={{ color:T.dim, fontSize:9, marginLeft:3 }}>ano</span></div>}
-                                  {mensal > 0 && <div style={{ color: T.muted, fontSize: 11 }}>{fmt.brl(mensal)}<span style={{ color:T.dim, fontSize:9, marginLeft:3 }}>/mês</span></div>}
-                                  {note && <div style={{ color: noteColor||T.dim, fontSize: 10, marginTop: 2 }}>{note}</div>}
+                              return itens.map(({ label, anual, mensal }) => (
+                                <div key={label} style={{ background: T.s1, border: `1px solid ${T.border}`, padding: "8px 12px", borderRadius: 8 }}>
+                                  <div style={{ color: T.dim, fontSize: 11, marginBottom: 3 }}>{label}</div>
+                                  <div style={{ color: T.text, fontWeight: 500, fontSize: 13, fontFamily: "'DM Mono',monospace" }}>{fmt.brl(mensal)}<span style={{ color: T.dim, fontSize: 10, marginLeft: 2 }}>/mês</span></div>
                                 </div>
                               ));
                             })()}
-                            <div style={{ background: T.s2, padding: "8px 14px", borderRadius: 8, borderLeft: `2px solid ${T.red}` }}>
-                              <div style={{ color: T.dim, fontSize: 10, marginBottom: 2 }}>IR ({p.regimeFiscal || "PF"})</div>
-                              <div style={{ color: T.red, fontWeight: 700, fontSize: 13 }}>{fmt.brl(p.ir||0)}</div>
-                              <div style={{ color: T.dim, fontSize: 10 }}>anual</div>
+                            <div style={{ background: T.redDim, border: `1px solid ${T.border}`, padding: "8px 12px", borderRadius: 8 }}>
+                              <div style={{ color: T.dim, fontSize: 11, marginBottom: 3 }}>IR ({p.regimeFiscal || "PF"})</div>
+                              <div style={{ color: T.red, fontWeight: 500, fontSize: 13, fontFamily: "'DM Mono',monospace" }}>{fmt.brl(p.ir||0)}<span style={{ color: T.dim, fontSize: 10, marginLeft: 2 }}>/ano</span></div>
                             </div>
-                            <div style={{ background: T.s2, padding: "8px 14px", borderRadius: 8, borderLeft: `2px solid ${T.green}` }}>
-                              <div style={{ color: T.dim, fontSize: 10, marginBottom: 2 }}>Lucro Líquido</div>
-                              <div style={{ color: T.green, fontWeight: 700, fontSize: 13 }}>{fmt.brl(p.lucroLiquido||p.noi)}</div>
-                              <div style={{ color: T.dim, fontSize: 10 }}>{fmt.brl(Math.round((p.lucroLiquido||p.noi)/12))}/mês</div>
+                            <div style={{ background: T.greenDim, border: `1px solid ${T.border}`, padding: "8px 12px", borderRadius: 8 }}>
+                              <div style={{ color: T.dim, fontSize: 11, marginBottom: 3 }}>Lucro Líquido</div>
+                              <div style={{ color: T.green, fontWeight: 500, fontSize: 13, fontFamily: "'DM Mono',monospace" }}>{fmt.brl(Math.round((p.lucroLiquido||p.noi)/12))}<span style={{ color: T.dim, fontSize: 10, marginLeft: 2 }}>/mês</span></div>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── CARDS ESPAÇADOS ── */}
+      {viewMode === "cards" && sorted.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+          {sorted.map(p => {
+            const { aliqLiq, valuation, yieldReal, payback, yieldDelta } = getPropMetrics(p);
+            const isVago = p.status === "Vago" || p.status === "Em desocupação";
+            const diasVago = p.status === "Vago" && p.contratoInicio ? Math.floor((new Date() - new Date(p.contratoInicio+"T12:00")) / 86400000) : 0;
+            const perdaMes = isVago ? (p.rent || 0) : 0;
+            const contrVenc = p.contratoVencimento ? new Date(p.contratoVencimento+"T12:00").toLocaleDateString("pt-BR") : null;
+            const benchmarkYield = getBenchmark(p.city, p.type).cap_rate * 100;
+            const maxBar = Math.max(yieldReal, benchmarkYield) * 1.5 || 12;
+            return (
+              <div key={p.id} style={{
+                background: T.s1,
+                border: `1px solid ${isVago ? T.amber : T.border}`,
+                borderRadius: 12,
+                overflow: "hidden",
+                display: "flex", flexDirection: "column",
+                transition: "box-shadow 0.15s",
+              }}>
+                {/* Card Header */}
+                <div style={{ padding: "14px 16px 12px", borderBottom: `1px solid ${isVago ? T.amber+"40" : T.border}`, background: isVago ? T.amberDim : "transparent" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: T.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
+                      <div style={{ color: T.muted, fontSize: 12, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.address || p.neighborhood}</div>
+                    </div>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: isVago ? T.amberDim : T.greenDim, color: isVago ? T.amber : T.green, flexShrink: 0 }}>
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: isVago ? T.amber : T.green }} />
+                      {p.status}
+                    </span>
+                  </div>
+                  {isVago && perdaMes > 0 && (
+                    <div style={{ marginTop: 8, padding: "6px 10px", background: T.amber+"18", borderRadius: 6, display: "flex", gap: 12, alignItems: "center" }}>
+                      <div>
+                        <div style={{ color: T.amber, fontSize: 11, fontWeight: 500 }}>Perda estimada/mês</div>
+                        <div style={{ color: T.amber, fontSize: 14, fontWeight: 600, fontFamily: "'DM Mono',monospace" }}>{fmt.brl(perdaMes)}</div>
+                      </div>
+                      {diasVago > 0 && <div style={{ color: T.amber, fontSize: 12 }}>Vago há {diasVago}d</div>}
+                    </div>
                   )}
-                </>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      {PROPS.length === 0 && (
-        <div style={{ ...S.card, textAlign: "center", padding: "60px 20px" }}>
-          <div style={{ color: T.text, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Nenhum imóvel no portfólio</div>
-          <div style={{ color: T.muted, fontSize: 14, marginBottom: 24 }}>Adicione o primeiro imóvel para começar</div>
-          <button style={S.btn} onClick={onAdd}>+ Adicionar Imóvel</button>
+                </div>
+
+                {/* Métricas 2x2 */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: T.border }}>
+                  {[
+                    { label: "Yield Real", value: yieldReal > 0 ? `${yieldReal.toFixed(2)}%` : "—", color: yieldReal >= 6 ? T.green : yieldReal >= 4 ? T.amber : T.muted },
+                    { label: "Aluguel Líq.", value: aliqLiq > 0 ? fmt.brl(aliqLiq) : "—", color: T.text },
+                    { label: "Valuation", value: valuation > 0 ? fmt.brlK(valuation) : "—", color: T.text },
+                    { label: "Payback", value: payback != null ? `${payback.toFixed(1)} anos` : "—", color: payback != null ? (payback < 12 ? T.green : payback < 20 ? T.amber : T.muted) : T.dim },
+                  ].map(m => (
+                    <div key={m.label} style={{ background: T.s1, padding: "10px 14px" }}>
+                      <div style={{ color: T.dim, fontSize: 11, marginBottom: 3 }}>{m.label}</div>
+                      <div style={{ color: m.color, fontSize: 14, fontWeight: 600, fontFamily: "'DM Mono',monospace" }}>{m.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Benchmark bar */}
+                {yieldReal > 0 && (
+                  <div style={{ padding: "10px 16px", borderTop: `1px solid ${T.border}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                      <span style={{ color: T.dim, fontSize: 11 }}>Benchmark regional</span>
+                      <span style={{ fontSize: 11, fontWeight: 500, padding: "1px 5px", borderRadius: 4, background: yieldDelta >= 0 ? T.greenDim : T.redDim, color: yieldDelta >= 0 ? T.green : T.red }}>
+                        {yieldDelta >= 0 ? "↑" : "↓"} {Math.abs(yieldDelta).toFixed(1)}pp
+                      </span>
+                    </div>
+                    <div style={{ position: "relative", height: 4, background: T.s3, borderRadius: 2 }}>
+                      <div style={{ width: `${Math.min(100, yieldReal / maxBar * 100)}%`, height: "100%", borderRadius: 2, background: yieldDelta >= 0 ? T.green : T.amber }} />
+                      <div style={{ position: "absolute", top: -4, left: `${Math.min(99, benchmarkYield / maxBar * 100)}%`, width: 2, height: 12, background: T.dim, borderRadius: 1 }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
+                      <span style={{ color: T.gold, fontSize: 10, fontFamily: "'DM Mono',monospace" }}>{yieldReal.toFixed(1)}% real</span>
+                      <span style={{ color: T.dim, fontSize: 10, fontFamily: "'DM Mono',monospace" }}>{benchmarkYield.toFixed(1)}% bm</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Footer */}
+                <div style={{ padding: "10px 16px", borderTop: `1px solid ${T.border}`, marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "center", background: T.s2 }}>
+                  <div style={{ color: T.dim, fontSize: 11 }}>
+                    {contrVenc ? `Contrato até ${contrVenc}` : p.type}
+                  </div>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <button style={{ background: T.s1, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }} onClick={() => onEdit(p)}>Editar</button>
+                    <button style={{ background: T.gold, color: "#fff", border: "none", borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontSize: 11, fontFamily: "inherit", fontWeight: 500 }} onClick={() => { onProp(p); onNav("detail"); }}>Ver detalhes →</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -4517,16 +4790,43 @@ function PageAdmin({ user }) {
 }
 
 // ─── NAV ──────────────────────────────────────────────────────────────────────
-const NAV = [
-  { id: "dashboard",  label: "Visão Geral",      icon: "◈" },
-  { id: "noi",        label: "Imóveis",           icon: "⊞" },
-  { id: "pagamentos", label: "Pagamentos",         icon: "" },
-  { id: "iptu",       label: "IPTU & Cond.",       icon: "🏛" },
-  { id: "fluxo",      label: "Fluxo de Caixa",    icon: "" },
-  { id: "mercado",    label: "Valor da Carteira",  icon: "🏦" },
-  { id: "leakage",    label: "Alertas",            icon: "◎" },
-  { id: "decision",   label: "Decisão por Imóvel", icon: "⟁" },
+const NAV_SECTIONS = [
+  {
+    label: "PRINCIPAL",
+    items: [
+      { id: "dashboard",  label: "Portfólio",      icon: "⊞" },
+      { id: "noi",        label: "Rentabilidade",  icon: "◎" },
+      { id: "mercado",    label: "Benchmark",      icon: "↗" },
+      { id: "fluxo",      label: "Fluxo de Caixa", icon: "≡" },
+    ]
+  },
+  {
+    label: "GESTÃO",
+    items: [
+      { id: "pagamentos", label: "Contratos",        icon: "◷" },
+      { id: "leakage",    label: "Inadimplência",    icon: "⚑" },
+      { id: "iptu",       label: "IPTU & Cond.",     icon: "◈" },
+    ]
+  },
+  {
+    label: "ANÁLISE",
+    items: [
+      { id: "decision",   label: "Valuation",    icon: "⬡" },
+      { id: "report",     label: "Relatórios",   icon: "◑" },
+      { id: "ia",         label: "Assistente IA", icon: "✦" },
+    ]
+  },
+  {
+    label: "IMÓVEIS",
+    items: [
+      { id: "obras",      label: "Obras",        icon: "⚒" },
+      { id: "locatarios", label: "Locatários",   icon: "◉" },
+      { id: "historico",  label: "Histórico",    icon: "◔" },
+    ]
+  },
 ];
+// backwards compat: flat NAV for any code that might reference it
+const NAV = NAV_SECTIONS.flatMap(s => s.items);
 
 // ─── PAGE HISTÓRICO DO IMÓVEL ─────────────────────────────────────────────────
 function PageHistorico({ PROPS, onUpdateProps }) {
@@ -5924,16 +6224,16 @@ export default function App() {
   // Loading state
   if (user === undefined) return (
     <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
-      <div style={{ color:T.gold, fontSize:22, fontWeight:800 }}>RENTLY</div>
+      <div style={{ color:T.gold, fontSize:20, fontWeight:600, letterSpacing:"-0.03em" }}>Rently.</div>
     </div>
   );
 
   if (!user) return <Login onLogin={(u) => setUser(u)} />;
 
   if (dbLoading) return (
-    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}>
-      <div style={{ color:T.gold, fontSize:22, fontWeight:800 }}>RENTLY</div>
-      <div style={{ color:T.muted, fontSize:14 }}>Carregando seu portfólio...</div>
+    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:12 }}>
+      <div style={{ color:T.gold, fontSize:20, fontWeight:600, letterSpacing:"-0.03em" }}>Rently.</div>
+      <div style={{ color:T.muted, fontSize:13 }}>Carregando seu portfólio...</div>
     </div>
   );
 
@@ -5962,13 +6262,15 @@ export default function App() {
   return (
     <React.Fragment key={themeKey}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
         *{box-sizing:border-box}
-        body{margin:0;font-family:'Bricolage Grotesque',sans-serif;background:${T.bg};color:${T.text}}
+        body{margin:0;font-family:'Inter',system-ui,sans-serif;font-size:14px;background:${T.bg};color:${T.text};-webkit-font-smoothing:antialiased}
         ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:${T.bg}}::-webkit-scrollbar-thumb{background:${T.border};border-radius:3px}
-        select option{background:${T.s2}}
+        select option{background:${T.s2};color:${T.text}}
         input::placeholder{color:${T.dim}}
         input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5)}
+        button{font-family:'Inter',system-ui,sans-serif}
+        h1,h2,h3{letter-spacing:-0.02em;font-weight:600}
       `}</style>
 
       {editingProp && <EditModal prop={editingProp} onSave={handleSaveEdit} onClose={() => setEditingProp(null)} userId={user?.id} />}
@@ -5980,53 +6282,76 @@ export default function App() {
 
       <div style={{ display: "flex", minHeight: "100vh", background: T.bg }}>
         {/* Sidebar */}
-        <div style={{ width: 230, background: T.s0, borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 100 }}>
-          <div style={{ padding: "28px 22px 20px" }}>
-            <div style={{ color: T.gold, fontSize: 17, fontWeight: 900, letterSpacing: -0.5 }}>RENTLY</div>
-            <div style={{ color: T.dim, fontSize: 9, letterSpacing: 3, marginTop: 2 }}>PORTFOLIO INTELLIGENCE</div>
+        <div style={{ width: 220, background: T.s0, borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 100 }}>
+          {/* Logo */}
+          <div style={{ padding: "24px 20px 16px", borderBottom: `1px solid ${T.border}` }}>
+            <div style={{ color: T.gold, fontSize: 17, fontWeight: 600, letterSpacing: "-0.03em" }}>Rently.</div>
+            <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>{props.length} imóveis · {props.filter(p=>p.status==="Ocupado").length} alugados</div>
           </div>
-          <div style={{ margin: "0 12px 16px", padding: "10px 14px", background: T.s1, borderRadius: 10, border: `1px solid ${T.border}` }}>
-            <div style={{ color: T.dim, fontSize: 10, letterSpacing: 1, marginBottom: 4 }}>PORTFÓLIO ATIVO</div>
-            <div style={{ color: T.text, fontSize: 13, fontWeight: 700 }}>{user?.user_metadata?.full_name || "Meu Portfólio"}</div>
-            <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{props.length} imóveis</div>
-          </div>
-          <nav style={{ flex: 1 }}>
-            {NAV.map(n => {
-              const active = page === n.id || (n.id === "noi" && page === "detail");
-              return (
-                <button key={n.id} onClick={() => nav(n.id)} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 22px", background: active ? T.goldGlow : "transparent", color: active ? T.goldBright : T.muted, border: "none", borderRight: active ? `2px solid ${T.gold}` : "2px solid transparent", cursor: "pointer", fontSize: 13, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: active ? 700 : 400, textAlign: "left" }}>
-                  <span style={{ fontSize: 14, opacity: active ? 1 : 0.6 }}>{n.icon}</span>
-                  {n.label}
-                </button>
-              );
-            })}
+          {/* Navigation */}
+          <nav style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+            {NAV_SECTIONS.map(section => (
+              <div key={section.label} style={{ marginBottom: 4 }}>
+                <div style={{ padding: "10px 20px 4px", color: T.dim, fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>{section.label}</div>
+                {section.items.map(n => {
+                  const active = page === n.id || (n.id === "noi" && page === "detail");
+                  return (
+                    <button key={n.id} onClick={() => nav(n.id)} style={{
+                      display: "flex", alignItems: "center", gap: 9, width: "100%",
+                      padding: "8px 20px", background: active ? T.goldGlow : "transparent",
+                      color: active ? T.gold : T.muted,
+                      border: "none", borderRight: active ? `2px solid ${T.gold}` : "2px solid transparent",
+                      cursor: "pointer", fontSize: 13, fontFamily: "inherit",
+                      fontWeight: active ? 500 : 400, textAlign: "left",
+                      transition: "background 0.15s, color 0.15s",
+                    }}
+                    onMouseEnter={e => { if (!active) { e.currentTarget.style.background = T.s2; } }}
+                    onMouseLeave={e => { if (!active) { e.currentTarget.style.background = "transparent"; } }}
+                    >
+                      <span style={{ fontSize: 13, width: 16, textAlign: "center", opacity: active ? 1 : 0.5, flexShrink: 0 }}>{n.icon}</span>
+                      {n.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
             {user?.email === ADMIN_EMAIL && (() => {
               const active = page === "admin";
               return (
-                <button onClick={() => nav("admin")} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 22px", background: active ? T.goldGlow : "transparent", color: active ? T.goldBright : T.dim, border: "none", borderRight: active ? `2px solid ${T.gold}` : "2px solid transparent", cursor: "pointer", fontSize: 13, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: active ? 700 : 400, textAlign: "left", marginTop: 8, borderTop: `1px solid ${T.border}` }}>
-                  <span style={{ fontSize: 14, opacity: active ? 1 : 0.6 }}>⚙</span>
-                  Admin
-                </button>
+                <div style={{ borderTop: `1px solid ${T.border}`, marginTop: 4 }}>
+                  <button onClick={() => nav("admin")} style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "8px 20px", background: active ? T.goldGlow : "transparent", color: active ? T.gold : T.dim, border: "none", borderRight: active ? `2px solid ${T.gold}` : "2px solid transparent", cursor: "pointer", fontSize: 13, fontFamily: "inherit", fontWeight: active ? 500 : 400, textAlign: "left" }}>
+                    <span style={{ fontSize: 13, width: 16, textAlign: "center", opacity: 0.5 }}>⚙</span>
+                    Admin
+                  </button>
+                </div>
               );
             })()}
           </nav>
-          <div style={{ padding: "14px 22px", borderTop: `1px solid ${T.border}` }}>
-            <div style={{ color: T.dim, fontSize: 11, marginBottom: 6 }}>{user?.email}</div>
-            <button
-              style={{ width: "100%", marginBottom: 8, padding: "8px 12px", borderRadius: 9, border: `1px solid ${T.border}`, background: T.s2, color: T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "space-between" }}
-              onClick={() => { const next = !darkMode; const theme = next ? DARK_T : LIGHT_T; Object.assign(T, theme); applyTheme(theme); localStorage.setItem("gb_theme", next ? "dark" : "light"); setDarkMode(next); setThemeKey(k => k + 1); }}
-            >
-              <span>{darkMode ? "Modo Escuro" : "Modo Claro"}</span>
-              <span style={{ fontSize: 10, opacity: 0.6 }}>trocar</span>
-            </button>
-            <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-              <button style={{ color: T.dim, fontSize: 11, background: "none", border: "none", cursor: "pointer", padding: 0 }} onClick={() => supabase.auth.signOut()}>Sair →</button>
+          {/* Footer */}
+          <div style={{ padding: "12px 20px", borderTop: `1px solid ${T.border}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: T.goldGlow, border: `1px solid ${T.goldDim}`, display: "flex", alignItems: "center", justifyContent: "center", color: T.gold, fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
+                {(user?.email?.[0] || "U").toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: T.text, fontSize: 12, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Usuário"}</div>
+                <div style={{ color: T.dim, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email}</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                style={{ flex: 1, padding: "5px 8px", borderRadius: 6, border: `1px solid ${T.border}`, background: T.s2, color: T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 11, fontWeight: 500 }}
+                onClick={() => { const next = !darkMode; const theme = next ? DARK_T : LIGHT_T; Object.assign(T, theme); applyTheme(theme); localStorage.setItem("gb_theme", next ? "dark" : "light"); setDarkMode(next); setThemeKey(k => k + 1); }}
+              >
+                {darkMode ? "☀ Claro" : "☾ Escuro"}
+              </button>
+              <button style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${T.border}`, background: T.s2, color: T.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 11 }} onClick={() => supabase.auth.signOut()}>Sair</button>
             </div>
           </div>
         </div>
 
         {/* Main */}
-        <div style={{ marginLeft: 230, flex: 1, padding: "32px 36px", minHeight: "100vh", maxWidth: "calc(100vw - 230px)" }}>
+        <div style={{ marginLeft: 220, flex: 1, padding: "32px 36px", minHeight: "100vh", maxWidth: "calc(100vw - 220px)", background: T.bg }}>
           {content}
         </div>
       </div>
