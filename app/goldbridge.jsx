@@ -1997,7 +1997,7 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
         {/* Receita mensal */}
         <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, padding: "16px 18px" }}>
-          <div style={{ color: T.muted, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 12 }}>Receita Mensal</div>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 12 }}>Receita Mensal Líquida</div>
           <div style={{ color: T.text, fontSize: 24, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1, marginBottom: 8, fontFamily: "'DM Mono', monospace" }}>{fmt.brl(receitaMensal)}</div>
           <div style={{ color: T.muted, fontSize: 13 }}>{fmt.brlK(receitaMensal * 12)}/ano</div>
         </div>
@@ -2213,22 +2213,27 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd, onDoc
                 <th style={S.th}>Imóvel</th>
                 <th style={S.th}>Tipo</th>
                 <th style={S.th}>Status</th>
+                <Th col="rent" label="Aluguel Bruto" />
                 <Th col="aluguelLiquido" label="Aluguel Líq." />
                 <th style={S.th}>Yield</th>
                 <th style={S.th}>Valuation</th>
-                <th style={S.th}>Payback</th>
-                <th style={S.th}>Benchmark</th>
+                <th style={S.th}>Despesas/mês</th>
                 <th style={S.th}>Ações</th>
               </tr>
             </thead>
             <tbody>
               {sorted.map((p) => {
-                const { aliqLiq, valuation, yieldReal, payback, yieldDelta } = getPropMetrics(p);
-                const obrasCount = (p.obras || []).length;
-                const obrasAtivas = (p.obras || []).filter(o => o.status === "Em andamento").length;
+                const { aliqLiq, valuation, yieldReal } = getPropMetrics(p);
                 const isExpanded = expandedId === p.id;
                 const condoAnnual = p.hasCondominio ? ((p.fundoReserva||0)+(p.chamadaExtra||0))*12 : 0;
-                const maxYield = 12; // para barra proporcional
+                const maxYield = 12;
+                // despesas mensais
+                const adminMensal = p.adminRecalc || p.admin || 0;
+                const iptuMensal = Math.round((p.iptu||0)/12);
+                const condoMensal = Math.round(condoAnnual/12);
+                const despesasTotal = adminMensal + iptuMensal + (p.maintMonthly||0) + Math.round((p.insurance||0)/12) + condoMensal;
+                // desconto
+                const temDesconto = (p.descontoAluguel||0) > 0;
                 return (
                   <React.Fragment key={p.id}>
                     <tr
@@ -2249,8 +2254,21 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd, onDoc
                       <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}>
                         <StatusPill status={p.status} />
                       </td>
+                      {/* Aluguel bruto + desconto */}
+                      <td style={{ ...S.td, fontFamily: "'DM Mono',monospace" }} onClick={() => { onProp(p); onNav("detail"); }}>
+                        {p.rent > 0 ? (
+                          <div>
+                            <div style={{ color: T.text }}>{fmt.brl(p.rent)}</div>
+                            {temDesconto && (
+                              <div style={{ color: T.amber, fontSize: 11, marginTop: 1 }}>
+                                {fmt.brl(p.rent - (p.descontoAluguel||0))} <span style={{ opacity: 0.7 }}>(-{fmt.brl(p.descontoAluguel)})</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : <span style={{ color: T.dim }}>—</span>}
+                      </td>
                       {/* Aluguel líquido */}
-                      <td style={{ ...S.td, fontFamily: "'DM Mono',monospace", color: aliqLiq > 0 ? T.text : T.dim }} onClick={() => { onProp(p); onNav("detail"); }}>
+                      <td style={{ ...S.td, fontFamily: "'DM Mono',monospace", color: aliqLiq > 0 ? T.green : T.dim }} onClick={() => { onProp(p); onNav("detail"); }}>
                         {aliqLiq > 0 ? fmt.brl(aliqLiq) : "—"}
                       </td>
                       {/* Yield */}
@@ -2270,27 +2288,15 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd, onDoc
                       <td style={{ ...S.td, fontFamily: "'DM Mono',monospace" }} onClick={() => { onProp(p); onNav("detail"); }}>
                         {valuation > 0 ? fmt.brlK(valuation) : <span style={{ color: T.dim }}>—</span>}
                       </td>
-                      {/* Payback */}
-                      <td style={{ ...S.td, fontFamily: "'DM Mono',monospace" }} onClick={() => { onProp(p); onNav("detail"); }}>
-                        {payback != null ? (
-                          <span style={{ color: payback < 12 ? T.green : payback < 20 ? T.amber : T.muted }}>
-                            {payback.toFixed(1)}a
-                          </span>
-                        ) : <span style={{ color: T.dim }}>—</span>}
-                      </td>
-                      {/* Benchmark */}
-                      <td style={S.td} onClick={() => { onProp(p); onNav("detail"); }}>
-                        {yieldReal > 0 ? (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 6px", borderRadius: 4, fontSize: 11, fontWeight: 500, background: yieldDelta >= 0 ? T.greenDim : T.redDim, color: yieldDelta >= 0 ? T.green : T.red }}>
-                            {yieldDelta >= 0 ? "↑" : "↓"} {Math.abs(yieldDelta).toFixed(1)}pp
-                          </span>
-                        ) : <span style={{ color: T.dim }}>—</span>}
+                      {/* Despesas/mês — clicável para expandir breakdown */}
+                      <td style={{ ...S.td, fontFamily: "'DM Mono',monospace", cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : p.id)}>
+                        <span style={{ color: T.red, fontWeight: 500 }}>{fmt.brl(despesasTotal)}</span>
+                        <span style={{ color: T.dim, fontSize: 11, marginLeft: 4 }}>{isExpanded ? "▲" : "▼"}</span>
                       </td>
                       {/* Ações */}
                       <td style={S.td}>
                         <div style={{ display: "flex", gap: 4 }}>
                           <button style={{ background: T.s2, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 12, fontFamily: "inherit" }} onClick={e => { e.stopPropagation(); onEdit(p); }}>Editar</button>
-                          <button style={{ background: T.s2, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 12, fontFamily: "inherit" }} onClick={e => { e.stopPropagation(); onObras(p); }}>Obras</button>
                           {onDocs && <button style={{ background: T.s2, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 12, fontFamily: "inherit" }} onClick={e => { e.stopPropagation(); onDocs(p); }}>Docs</button>}
                           <button style={{ background: T.redDim, border: `1px solid ${T.redDim}`, color: T.red, borderRadius: 6, padding: "4px 8px", cursor: "pointer", fontSize: 12, fontFamily: "inherit" }} onClick={e => { e.stopPropagation(); onDelete(p); }}>✕</button>
                         </div>
@@ -2301,16 +2307,15 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd, onDoc
                         <td colSpan={9} style={{ padding: "14px 20px", borderBottom: `1px solid ${T.border}` }}>
                           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                             {(() => {
-                              const adminAnual = (p.adminRecalc || p.admin || 0) * 12;
                               const condoA = p.condoAnnual || condoAnnual;
                               const itens = [
-                                ...(p.status !== "Ocupado" ? [{ label: "IPTU", anual: p.iptu||0, mensal: Math.round((p.iptu||0)/12) }] : []),
-                                { label: "Manutenção", anual: (p.maintMonthly||0)*12, mensal: p.maintMonthly||0 },
-                                { label: "Seguro", anual: p.insurance||0, mensal: Math.round((p.insurance||0)/12) },
-                                { label: "Administração", anual: adminAnual, mensal: Math.round(adminAnual/12) },
-                                ...(condoA > 0 ? [{ label: "Fundo/Chamada", anual: condoA, mensal: Math.round(condoA/12) }] : []),
-                              ];
-                              return itens.map(({ label, anual, mensal }) => (
+                                { label: "Adm.", mensal: adminMensal },
+                                { label: "IPTU", mensal: iptuMensal },
+                                { label: "Manutenção", mensal: p.maintMonthly||0 },
+                                { label: "Seguro", mensal: Math.round((p.insurance||0)/12) },
+                                ...(condoA > 0 ? [{ label: "Fundo/Chamada", mensal: Math.round(condoA/12) }] : []),
+                              ].filter(i => i.mensal > 0);
+                              return itens.map(({ label, mensal }) => (
                                 <div key={label} style={{ background: T.s1, border: `1px solid ${T.border}`, padding: "8px 12px", borderRadius: 8 }}>
                                   <div style={{ color: T.dim, fontSize: 11, marginBottom: 3 }}>{label}</div>
                                   <div style={{ color: T.text, fontWeight: 500, fontSize: 13, fontFamily: "'DM Mono',monospace" }}>{fmt.brl(mensal)}<span style={{ color: T.dim, fontSize: 10, marginLeft: 2 }}>/mês</span></div>
@@ -4794,34 +4799,33 @@ const NAV_SECTIONS = [
   {
     label: "PRINCIPAL",
     items: [
-      { id: "dashboard",  label: "Portfólio",      icon: "⊞" },
-      { id: "noi",        label: "Rentabilidade",  icon: "◎" },
-      { id: "mercado",    label: "Benchmark",      icon: "↗" },
-      { id: "fluxo",      label: "Fluxo de Caixa", icon: "≡" },
+      { id: "dashboard",  label: "Visão Geral da Carteira", icon: "⊞" },
+      { id: "noi",        label: "Portfólio de Imóveis",    icon: "◎" },
+      { id: "mercado",    label: "Valuation da Carteira",   icon: "↗" },
+      { id: "fluxo",      label: "Fluxo de Caixa",          icon: "≡" },
     ]
   },
   {
     label: "GESTÃO",
     items: [
-      { id: "pagamentos", label: "Contratos",        icon: "◷" },
-      { id: "leakage",    label: "Inadimplência",    icon: "⚑" },
-      { id: "iptu",       label: "IPTU & Cond.",     icon: "◈" },
+      { id: "pagamentos", label: "Pagamentos",   icon: "◷" },
+      { id: "leakage",    label: "Alertas",      icon: "⚑" },
+      { id: "iptu",       label: "IPTU & Cond.", icon: "◈" },
     ]
   },
   {
     label: "ANÁLISE",
     items: [
-      { id: "decision",   label: "Valuation",    icon: "⬡" },
-      { id: "report",     label: "Relatórios",   icon: "◑" },
-      { id: "ia",         label: "Assistente IA", icon: "✦" },
+      { id: "decision",   label: "Decisão por Imóvel", icon: "⬡" },
+      { id: "report",     label: "Relatórios",          icon: "◑" },
+      { id: "ia",         label: "Assistente IA",        icon: "✦" },
     ]
   },
   {
     label: "IMÓVEIS",
     items: [
-      { id: "obras",      label: "Obras",        icon: "⚒" },
-      { id: "locatarios", label: "Locatários",   icon: "◉" },
-      { id: "historico",  label: "Histórico",    icon: "◔" },
+      { id: "locatarios", label: "Locatários", icon: "◉" },
+      { id: "historico",  label: "Histórico",  icon: "◔" },
     ]
   },
 ];
