@@ -3467,6 +3467,264 @@ function Login({ onLogin }) {
   );
 }
 
+// ─── MODAL IMPORTAR REPASSE ───────────────────────────────────────────────────
+function ModalImportarRepasse({ PROPS, onClose, onAddLancamento, onUpdateProps }) {
+  const [step, setStep] = useState("upload"); // upload | processing | confirming | done
+  const [files, setFiles] = useState([]);
+  const [dragging, setDragging] = useState(false);
+  const [results, setResults] = useState([]);
+  const [error, setError] = useState(null);
+
+  const handleFiles = (newFiles) => {
+    const arr = Array.from(newFiles).filter(f => f.type === "application/pdf");
+    Promise.all(arr.map(f => new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => resolve({ name: f.name, base64: e.target.result.split(",")[1] });
+      reader.readAsDataURL(f);
+    }))).then(fs => setFiles(prev => [...prev, ...fs]));
+  };
+
+  const processar = async () => {
+    setStep("processing");
+    setError(null);
+    try {
+      const res = await fetch("/api/parse-repasse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files }),
+      });
+      const data = await res.json();
+      const matched = (data.results || []).map(r => {
+        if (r.error || !r.dados) return { fileName: r.fileName, dados: null, imovelId: null, descartado: false, erro: r.error };
+        const endLower = (r.dados.endereco_imovel || "").toLowerCase();
+        const match = PROPS.find(p => {
+          const addr = (p.address || "").toLowerCase();
+          return addr.length > 8 && (endLower.includes(addr.slice(0, 12)) || addr.includes(endLower.slice(0, 12)));
+        });
+        return { fileName: r.fileName, dados: r.dados, imovelId: match ? match.id : null, descartado: false, erro: null };
+      });
+      setResults(matched);
+      setStep("confirming");
+    } catch (e) {
+      setError(e.message);
+      setStep("upload");
+    }
+  };
+
+  const confirmarTodos = async () => {
+    const validos = results.filter(r => !r.descartado && r.imovelId && r.dados);
+    let updatedProps = [...PROPS];
+
+    for (const r of validos) {
+      const { dados } = r;
+      const parts = (dados.competencia || "").split("/");
+      const mes = parseInt(parts[0]) - 1;
+      const ano = parseInt(parts[1]);
+      if (isNaN(mes) || isNaN(ano)) continue;
+      const idx = updatedProps.findIndex(p => p.id === r.imovelId);
+      if (idx === -1) continue;
+      const prop = updatedProps[idx];
+      const dataBR = dados.data_repasse || dados.data_pagamento || "";
+      updatedProps[idx] = {
+        ...prop,
+        pagamentos: {
+          ...(prop.pagamentos || {}),
+          [`${ano}_${mes}`]: { status: "pago", valor: dados.total_repasse || 0, data: dataBR, dataPagamento: dataBR, vencimento: prop.diaVencimento || 10 },
+        },
+      };
+    }
+    await onUpdateProps(updatedProps);
+
+    for (const r of validos) {
+      const { dados } = r;
+      const parts = (dados.competencia || "").split("/");
+      const mesStr = (parts[0] || "01").padStart(2, "0");
+      const anoStr = parts[1] || "";
+      const dataBR = dados.data_repasse || dados.data_pagamento || "";
+      const dataISO = dataBR ? dataBR.split("/").reverse().join("-") : `${anoStr}-${mesStr}-01`;
+      const FIXOS = ["aluguel", "taxa de administração", "tarifa boleto ou repasse", "tarifa de repasse", "tarifa repasse"];
+      const itensVar = (dados.itens || []).filter(item =>
+        !FIXOS.some(fixo => (item.descricao || "").toLowerCase().includes(fixo))
+      );
+      for (const item of itensVar) {
+        await onAddLancamento({
+          imovelId: r.imovelId,
+          data: dataISO,
+          tipo: item.tipo === "debito" ? "saida" : "entrada",
+          valor: Math.abs(item.valor || 0),
+          categoria: "Outro",
+          observacao: item.descricao + (item.observacao ? ` — ${item.observacao}` : ""),
+        });
+      }
+    }
+    setStep("done");
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#00000099", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ background: T.s1, border: `1px solid ${T.borderMid}`, borderRadius: 16, width: "100%", maxWidth: 700, maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "20px 24px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 2 }}>GESTÃO FINANCEIRA</div>
+            <div style={{ color: T.text, fontWeight: 800, fontSize: 18 }}>Importar Repasse</div>
+          </div>
+          <button style={{ ...S.btnGhost, padding: "6px 12px" }} onClick={onClose}>✕</button>
+        </div>
+
+        <div style={{ padding: 24, overflow: "auto", flex: 1 }}>
+          {step === "upload" && (
+            <>
+              <div
+                onDragOver={e => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={e => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); }}
+                onClick={() => document.getElementById("pdf-upload-input").click()}
+                style={{ border: `2px dashed ${dragging ? T.gold : T.border}`, borderRadius: 12, padding: "36px 24px", textAlign: "center", cursor: "pointer", background: dragging ? T.goldGlow : T.s2, transition: "all 0.2s" }}
+              >
+                <div style={{ fontSize: 30, marginBottom: 8 }}>📄</div>
+                <div style={{ color: T.text, fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Arraste os PDFs aqui ou clique para selecionar</div>
+                <div style={{ color: T.muted, fontSize: 12 }}>Aceita múltiplos arquivos · extratos de repasse em PDF</div>
+              </div>
+              <input id="pdf-upload-input" type="file" accept="application/pdf" multiple style={{ display: "none" }} onChange={e => handleFiles(e.target.files)} />
+
+              {files.length > 0 && (
+                <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 6 }}>
+                  {files.map((f, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: T.s2, borderRadius: 8, border: `1px solid ${T.border}` }}>
+                      <span style={{ fontSize: 15 }}>📄</span>
+                      <span style={{ color: T.text, fontSize: 13, flex: 1 }}>{f.name}</span>
+                      <button style={{ background: "none", border: "none", color: T.dim, cursor: "pointer", fontSize: 16 }} onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {error && <div style={{ marginTop: 12, padding: "10px 14px", background: T.red + "18", border: `1px solid ${T.red}44`, borderRadius: 8, color: T.red, fontSize: 12 }}>{error}</div>}
+
+              <div style={{ marginTop: 20, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button style={S.btnGhost} onClick={onClose}>Cancelar</button>
+                <button style={{ ...S.btn, opacity: files.length === 0 ? 0.5 : 1 }} disabled={files.length === 0} onClick={processar}>
+                  Processar {files.length > 0 ? `(${files.length} arquivo${files.length > 1 ? "s" : ""})` : ""}
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === "processing" && (
+            <div style={{ textAlign: "center", padding: "48px 0" }}>
+              <div style={{ color: T.gold, fontSize: 36, marginBottom: 14 }}>⚙️</div>
+              <div style={{ color: T.text, fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Lendo os extratos...</div>
+              <div style={{ color: T.muted, fontSize: 13 }}>A IA está extraindo os dados de cada PDF</div>
+            </div>
+          )}
+
+          {step === "confirming" && (
+            <>
+              <div style={{ color: T.muted, fontSize: 12, marginBottom: 16 }}>
+                Confira os dados extraídos e vincule ao imóvel correto antes de lançar.
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {results.map((r, i) => {
+                  if (r.descartado) return null;
+                  if (!r.dados) return (
+                    <div key={i} style={{ background: T.red + "12", border: `1px solid ${T.red}44`, borderRadius: 12, padding: 16 }}>
+                      <div style={{ color: T.red, fontWeight: 700, fontSize: 13 }}>{r.fileName}</div>
+                      <div style={{ color: T.muted, fontSize: 12, marginTop: 4 }}>Erro: {r.erro}</div>
+                    </div>
+                  );
+                  const { dados } = r;
+                  const creditos = (dados.itens || []).filter(it => it.tipo === "credito");
+                  const debitos = (dados.itens || []).filter(it => it.tipo === "debito");
+                  return (
+                    <div key={i} style={{ background: T.s2, borderRadius: 12, padding: 16, border: `1px solid ${T.border}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                        <div>
+                          <div style={{ color: T.text, fontWeight: 700, fontSize: 14 }}>
+                            {dados.numero_contrato ? `Contrato ${dados.numero_contrato} — ` : ""}{dados.endereco_imovel || r.fileName}
+                          </div>
+                          <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
+                            {dados.competencia && `Competência: ${dados.competencia}`}
+                            {dados.data_repasse && ` · Repasse: ${dados.data_repasse}`}
+                            {dados.imobiliaria && ` · ${dados.imobiliaria}`}
+                          </div>
+                        </div>
+                        <button style={{ background: "none", border: "none", color: T.dim, cursor: "pointer", fontSize: 18, lineHeight: 1 }} title="Descartar" onClick={() => setResults(prev => prev.map((rr, j) => j === i ? { ...rr, descartado: true } : rr))}>✕</button>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                        {creditos.length > 0 && (
+                          <div>
+                            <div style={{ color: T.green, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>CRÉDITOS</div>
+                            {creditos.map((it, j) => (
+                              <div key={j} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12, marginBottom: 3 }}>
+                                <span style={{ color: T.muted }}>{it.descricao}{it.observacao ? ` (${it.observacao})` : ""}</span>
+                                <span style={{ color: T.green, fontWeight: 600, ...S.mono, flexShrink: 0 }}>{fmt.brl(it.valor)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {debitos.length > 0 && (
+                          <div>
+                            <div style={{ color: T.red, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>DÉBITOS</div>
+                            {debitos.map((it, j) => (
+                              <div key={j} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12, marginBottom: 3 }}>
+                                <span style={{ color: T.muted }}>{it.descricao}</span>
+                                <span style={{ color: T.red, fontWeight: 600, ...S.mono, flexShrink: 0 }}>−{fmt.brl(Math.abs(it.valor))}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: `1px solid ${T.border}`, flexWrap: "wrap", gap: 10 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>TOTAL REPASSE</span>
+                          <span style={{ color: T.green, fontWeight: 800, fontSize: 16, ...S.mono }}>{fmt.brl(dados.total_repasse)}</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ color: T.muted, fontSize: 11 }}>Imóvel:</span>
+                          <select
+                            style={{ ...S.sel, fontSize: 12, minWidth: 200 }}
+                            value={r.imovelId || ""}
+                            onChange={e => setResults(prev => prev.map((rr, j) => j === i ? { ...rr, imovelId: Number(e.target.value) || null } : rr))}
+                          >
+                            <option value="">— Selecione —</option>
+                            {PROPS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ marginTop: 20, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button style={S.btnGhost} onClick={() => { setStep("upload"); setResults([]); }}>← Voltar</button>
+                <button
+                  style={{ ...S.btn, opacity: results.some(r => !r.descartado && r.imovelId && r.dados) ? 1 : 0.5 }}
+                  disabled={!results.some(r => !r.descartado && r.imovelId && r.dados)}
+                  onClick={confirmarTodos}
+                >
+                  Confirmar Lançamento
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === "done" && (
+            <div style={{ textAlign: "center", padding: "48px 0" }}>
+              <div style={{ color: T.green, fontSize: 40, marginBottom: 14 }}>✓</div>
+              <div style={{ color: T.text, fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Lançamentos confirmados!</div>
+              <div style={{ color: T.muted, fontSize: 13, marginBottom: 24 }}>Os dados foram lançados no Rently com sucesso.</div>
+              <button style={S.btn} onClick={onClose}>Fechar</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── PAGE PAGAMENTOS ──────────────────────────────────────────────────────────
 function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [], onAddLancamento, onDeleteLancamento }) {
   const hoje = new Date();
@@ -3482,6 +3740,7 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
   const [pagDataModal, setPagDataModal] = useState(null); // { prop }
   const [pagDataInput, setPagDataInput] = useState(new Date().toISOString().slice(0,10));
   const [highlighted, setHighlighted] = useState(highlightPropId || null);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [formAbertoId, setFormAbertoId] = useState(null);
   const [novoLanc, setNovoLanc] = useState({ data: new Date().toISOString().slice(0,10), tipo: "entrada", valor: "", categoria: "Manutenção", observacao: "" });
 
@@ -3724,7 +3983,15 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div><div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>GESTÃO FINANCEIRA</div><h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Pagamentos</h1></div>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>GESTÃO FINANCEIRA</div>
+          <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Pagamentos</h1>
+        </div>
+        <button style={{ ...S.btn, padding: "9px 18px", fontSize: 13 }} onClick={() => setShowImportModal(true)}>
+          ↑ Importar PDF
+        </button>
+      </div>
 
       {/* Alertas de contrato, reajuste e chamada extra */}
       {(alertasContrato.length > 0 || alertasReajuste.length > 0 || alertasChamadaExtra.length > 0) && (
@@ -4048,6 +4315,15 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
             </div>
           </div>
         </div>
+      )}
+
+      {showImportModal && (
+        <ModalImportarRepasse
+          PROPS={PROPS}
+          onClose={() => setShowImportModal(false)}
+          onAddLancamento={onAddLancamento}
+          onUpdateProps={onUpdateProps}
+        />
       )}
     </div>
   );
