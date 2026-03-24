@@ -3408,14 +3408,26 @@ function Login({ onLogin }) {
     else onLogin(data.user);
     setLoading(false);
   };
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref) localStorage.setItem("rently_ref", ref);
+  }, []);
+
   const handleRegister = async () => {
     if (!name) { setError("Digite seu nome."); return; }
     if (password.length < 6) { setError("Senha deve ter no mínimo 6 caracteres."); return; }
     setLoading(true); setError("");
+    const ref = typeof window !== "undefined"
+      ? (new URLSearchParams(window.location.search).get("ref") || localStorage.getItem("rently_ref") || null)
+      : null;
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
-    if (error) setError(error.message);
-    else if (data.user && !data.user.confirmed_at) setSuccess("Verifique seu email para confirmar a conta.");
-    else onLogin(data.user);
+    if (error) { setError(error.message); setLoading(false); return; }
+    if (data.user) {
+      await supabase.from("profiles").insert({ id: data.user.id, email: data.user.email, nome: name, status: "pending", indicado_por: ref });
+      if (ref) localStorage.removeItem("rently_ref");
+      onLogin(data.user);
+    }
     setLoading(false);
   };
   const handleForgot = async () => {
@@ -4967,12 +4979,59 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
 
 
 // ─── PAGE ADMIN ───────────────────────────────────────────────────────────────
+// ─── PENDING APPROVAL SCREEN ──────────────────────────────────────────────────
+function PendingApproval({ status, onLogout }) {
+  const isBlocked = status === "blocked";
+  return (
+    <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div style={{ width: "100%", maxWidth: 480, textAlign: "center" }}>
+        <div style={{ color: T.gold, fontSize: 28, fontWeight: 900, letterSpacing: -1, marginBottom: 32 }}>Rently.</div>
+        <div style={{ background: T.s1, border: `1px solid ${T.borderMid}`, borderRadius: 18, padding: "40px 32px" }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>{isBlocked ? "🚫" : "⏳"}</div>
+          <div style={{ color: T.text, fontWeight: 800, fontSize: 22, marginBottom: 12 }}>
+            {isBlocked ? "Acesso bloqueado" : "Cadastro recebido!"}
+          </div>
+          <div style={{ color: T.muted, fontSize: 15, lineHeight: 1.7, marginBottom: 24 }}>
+            {isBlocked
+              ? "Sua conta foi suspensa. Entre em contato para mais informações."
+              : <>Sua conta está em análise.<br />Você receberá um contato assim que o acesso for liberado.<br /><span style={{ color: T.dim, fontSize: 13 }}>Tempo médio: até 24 horas.</span></>
+            }
+          </div>
+          {!isBlocked && (
+            <a
+              href="https://wa.me/5519999999999"
+              target="_blank" rel="noopener noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#25D36622", border: "1px solid #25D36655", color: "#25D366", borderRadius: 10, padding: "12px 24px", fontSize: 14, fontWeight: 700, textDecoration: "none", marginBottom: 20 }}
+            >
+              Dúvidas? Fale pelo WhatsApp
+            </a>
+          )}
+          <div style={{ marginTop: 8 }}>
+            <button style={{ background: "none", border: "none", color: T.dim, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }} onClick={onLogout}>
+              Sair da conta
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PAGE ADMIN ───────────────────────────────────────────────────────────────
 function PageAdmin({ user }) {
+  const [adminTab, setAdminTab] = useState("usuarios");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+  const [profiles, setProfiles] = useState([]);
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
+  const [parceiros, setParceiros] = useState([]);
+  const [parceiroContagens, setParceiroContagens] = useState({});
+  const [novoParc, setNovoParc] = useState({ nome: "", email: "", telefone: "", slug: "" });
+  const [salvandoParc, setSalvandoParc] = useState(false);
 
+  // Load main admin data
   useEffect(() => {
     if (!user || user.email !== ADMIN_EMAIL) return;
     (async () => {
@@ -4986,6 +5045,57 @@ function PageAdmin({ user }) {
     })();
   }, [user]);
 
+  // Load profiles for Acesso tab
+  useEffect(() => {
+    if (adminTab !== "acesso" || !user || user.email !== ADMIN_EMAIL) return;
+    setLoadingProfiles(true);
+    supabase.from("profiles").select("*").order("criado_em", { ascending: false })
+      .then(({ data: p }) => { setProfiles(p || []); setLoadingProfiles(false); });
+  }, [adminTab, user]);
+
+  // Load parceiros for Parceiros tab
+  useEffect(() => {
+    if (adminTab !== "parceiros" || !user || user.email !== ADMIN_EMAIL) return;
+    supabase.from("parceiros").select("*").order("criado_em", { ascending: false })
+      .then(async ({ data: ps }) => {
+        const ps2 = ps || [];
+        setParceiros(ps2);
+        const counts = {};
+        await Promise.all(ps2.map(async (p) => {
+          const [{ count: total }, { count: aprovados }] = await Promise.all([
+            supabase.from("profiles").select("*", { count: "exact", head: true }).eq("indicado_por", p.slug),
+            supabase.from("profiles").select("*", { count: "exact", head: true }).eq("indicado_por", p.slug).eq("status", "active"),
+          ]);
+          counts[p.id] = { total: total || 0, aprovados: aprovados || 0 };
+        }));
+        setParceiroContagens(counts);
+      });
+  }, [adminTab, user]);
+
+  const aprovar = async (profileId) => {
+    await supabase.from("profiles").update({ status: "active", aprovado_em: new Date().toISOString() }).eq("id", profileId);
+    setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, status: "active" } : p));
+  };
+
+  const bloquear = async (profileId) => {
+    await supabase.from("profiles").update({ status: "blocked" }).eq("id", profileId);
+    setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, status: "blocked" } : p));
+  };
+
+  const gerarSlug = (nome) => nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+  const salvarParceiro = async () => {
+    if (!novoParc.nome || !novoParc.slug) return;
+    setSalvandoParc(true);
+    const { data: inserted } = await supabase.from("parceiros").insert({ nome: novoParc.nome, email: novoParc.email || null, telefone: novoParc.telefone || null, slug: novoParc.slug, ativo: true }).select().single();
+    if (inserted) {
+      setParceiros(prev => [inserted, ...prev]);
+      setParceiroContagens(prev => ({ ...prev, [inserted.id]: { total: 0, aprovados: 0 } }));
+    }
+    setNovoParc({ nome: "", email: "", telefone: "", slug: "" });
+    setSalvandoParc(false);
+  };
+
   if (!user || user.email !== ADMIN_EMAIL) return (
     <div style={{ color: T.red, padding: 40, textAlign: "center", fontSize: 16, fontWeight: 700 }}>Acesso restrito.</div>
   );
@@ -4994,11 +5104,11 @@ function PageAdmin({ user }) {
 
   const { summary, users: allUsers } = data;
   const filtered = allUsers.filter(u => u.email.toLowerCase().includes(search.toLowerCase()));
-
   const growthPct = summary.usersPrevMonth === 0
     ? (summary.usersThisMonth > 0 ? 100 : 0)
     : Math.round((summary.usersThisMonth - summary.usersPrevMonth) / summary.usersPrevMonth * 100);
   const growthLabel = (growthPct >= 0 ? "+" : "") + growthPct + "%";
+  const TABS = [["usuarios", "Usuários"], ["acesso", "Acesso"], ["parceiros", "Parceiros"]];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -5007,6 +5117,7 @@ function PageAdmin({ user }) {
         <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Painel Admin</h1>
       </div>
 
+      {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
         <div style={S.card}>
           <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>USUÁRIOS CADASTRADOS</div>
@@ -5028,44 +5139,205 @@ function PageAdmin({ user }) {
         </div>
       </div>
 
-      <div style={S.card}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Usuários ({filtered.length})</div>
-          <input style={{ ...S.input, width: 260 }} placeholder="Buscar por email..." value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th style={S.th}>Email</th>
-                <th style={S.th}>Cadastro</th>
-                <th style={S.th}>Último Acesso</th>
-                <th style={S.th}>Imóveis</th>
-                <th style={S.th}>Perfil</th>
-                <th style={S.th}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(u => (
-                <tr key={u.id}>
-                  <td style={S.td}>{u.email}</td>
-                  <td style={{ ...S.td, color: T.muted }}>{u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "—"}</td>
-                  <td style={{ ...S.td, color: T.muted }}>{u.last_seen ? new Date(u.last_seen).toLocaleDateString("pt-BR") : <span style={{ color: T.dim }}>Nunca</span>}</td>
-                  <td style={{ ...S.td, fontWeight: 700, color: u.imoveis_count > 0 ? T.goldBright : T.dim }}>{u.imoveis_count}</td>
-                  <td style={{ ...S.td, fontSize: 11 }}>
-                    {u.tipos.length > 0 && <div style={{ color: T.text }}>{u.tipos.join(", ")}</div>}
-                    {u.cidades.length > 0 && <div style={{ color: T.muted, marginTop: 2 }}>{u.cidades.join(", ")}</div>}
-                    {u.tipos.length === 0 && u.cidades.length === 0 && <span style={{ color: T.dim }}>—</span>}
-                  </td>
-                  <td style={S.td}>
-                    <span style={S.badge(u.isAtivo ? T.green : T.muted)}>{u.isAtivo ? "Ativo" : "Inativo"}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Tab navigation */}
+      <div style={{ display: "flex", gap: 0, border: `1px solid ${T.border}`, borderRadius: 10, overflow: "hidden", alignSelf: "flex-start" }}>
+        {TABS.map(([id, label]) => (
+          <button key={id} onClick={() => setAdminTab(id)} style={{ background: adminTab === id ? T.goldGlow : T.s2, border: "none", borderRight: `1px solid ${T.border}`, color: adminTab === id ? T.gold : T.muted, fontWeight: adminTab === id ? 700 : 400, fontSize: 13, padding: "9px 20px", cursor: "pointer", fontFamily: "inherit" }}>
+            {label}
+          </button>
+        ))}
       </div>
+
+      {/* USUÁRIOS tab */}
+      {adminTab === "usuarios" && (
+        <div style={S.card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div style={{ color: T.text, fontWeight: 700, fontSize: 15 }}>Usuários ({filtered.length})</div>
+            <input style={{ ...S.input, width: 260 }} placeholder="Buscar por email..." value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={S.th}>Email</th>
+                  <th style={S.th}>Cadastro</th>
+                  <th style={S.th}>Último Acesso</th>
+                  <th style={S.th}>Imóveis</th>
+                  <th style={S.th}>Perfil</th>
+                  <th style={S.th}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(u => (
+                  <tr key={u.id}>
+                    <td style={S.td}>{u.email}</td>
+                    <td style={{ ...S.td, color: T.muted }}>{u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : "—"}</td>
+                    <td style={{ ...S.td, color: T.muted }}>{u.last_seen ? new Date(u.last_seen).toLocaleDateString("pt-BR") : <span style={{ color: T.dim }}>Nunca</span>}</td>
+                    <td style={{ ...S.td, fontWeight: 700, color: u.imoveis_count > 0 ? T.goldBright : T.dim }}>{u.imoveis_count}</td>
+                    <td style={{ ...S.td, fontSize: 11 }}>
+                      {u.tipos.length > 0 && <div style={{ color: T.text }}>{u.tipos.join(", ")}</div>}
+                      {u.cidades.length > 0 && <div style={{ color: T.muted, marginTop: 2 }}>{u.cidades.join(", ")}</div>}
+                      {u.tipos.length === 0 && u.cidades.length === 0 && <span style={{ color: T.dim }}>—</span>}
+                    </td>
+                    <td style={S.td}>
+                      <span style={S.badge(u.isAtivo ? T.green : T.muted)}>{u.isAtivo ? "Ativo" : "Inativo"}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ACESSO tab */}
+      {adminTab === "acesso" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {loadingProfiles && <div style={{ color: T.muted, padding: 24 }}>Carregando...</div>}
+          {!loadingProfiles && (
+            <>
+              <div style={S.card}>
+                <div style={{ color: T.amber, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>
+                  PENDENTES ({profiles.filter(p => p.status === "pending").length})
+                </div>
+                {profiles.filter(p => p.status === "pending").length === 0 ? (
+                  <div style={{ color: T.dim, fontSize: 13, padding: "8px 0" }}>Nenhum usuário aguardando aprovação.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {profiles.filter(p => p.status === "pending").map(p => (
+                      <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", background: T.s2, borderRadius: 10, border: `1px solid ${T.amber}33` }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ color: T.text, fontWeight: 600, fontSize: 14 }}>{p.email}</div>
+                          <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>
+                            {p.nome && <span>{p.nome} · </span>}
+                            Cadastro: {p.criado_em ? new Date(p.criado_em).toLocaleDateString("pt-BR") : "—"}
+                            {p.indicado_por && <span style={{ color: T.gold }}> · Ref: {p.indicado_por}</span>}
+                          </div>
+                        </div>
+                        <button style={{ background: T.green + "22", border: `1px solid ${T.green}55`, color: T.green, borderRadius: 8, padding: "6px 16px", fontSize: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }} onClick={() => aprovar(p.id)}>Aprovar</button>
+                        <button style={{ background: T.red + "22", border: `1px solid ${T.red}55`, color: T.red, borderRadius: 8, padding: "6px 16px", fontSize: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }} onClick={() => bloquear(p.id)}>Bloquear</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={S.card}>
+                <div style={{ color: T.green, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>
+                  ATIVOS ({profiles.filter(p => p.status === "active").length})
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {profiles.filter(p => p.status === "active").map(p => (
+                    <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 14px", background: T.s2, borderRadius: 8 }}>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ color: T.text, fontSize: 13 }}>{p.email}</span>
+                        {p.indicado_por && <span style={{ color: T.gold, fontSize: 11, marginLeft: 8 }}>ref: {p.indicado_por}</span>}
+                      </div>
+                      <span style={S.badge(T.green)}>Ativo</span>
+                      <button style={{ background: T.red + "18", border: `1px solid ${T.red}44`, color: T.red, borderRadius: 7, padding: "4px 12px", fontSize: 11, cursor: "pointer", fontFamily: "inherit" }} onClick={() => bloquear(p.id)}>Bloquear</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {profiles.filter(p => p.status === "blocked").length > 0 && (
+                <div style={S.card}>
+                  <div style={{ color: T.red, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>
+                    BLOQUEADOS ({profiles.filter(p => p.status === "blocked").length})
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {profiles.filter(p => p.status === "blocked").map(p => (
+                      <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 14px", background: T.s2, borderRadius: 8 }}>
+                        <div style={{ flex: 1 }}><span style={{ color: T.text, fontSize: 13 }}>{p.email}</span></div>
+                        <span style={S.badge(T.red)}>Bloqueado</span>
+                        <button style={{ background: T.green + "18", border: `1px solid ${T.green}44`, color: T.green, borderRadius: 7, padding: "4px 12px", fontSize: 11, cursor: "pointer", fontFamily: "inherit" }} onClick={() => aprovar(p.id)}>Reativar</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* PARCEIROS tab */}
+      {adminTab === "parceiros" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={S.card}>
+            <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 16 }}>NOVO PARCEIRO</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+              <div>
+                <div style={S.label}>NOME DA IMOBILIÁRIA *</div>
+                <input style={S.input} placeholder="Ex: Imobiliária Exemplo" value={novoParc.nome} onChange={e => setNovoParc(n => ({ ...n, nome: e.target.value, slug: gerarSlug(e.target.value) }))} />
+              </div>
+              <div>
+                <div style={S.label}>SLUG (link) *</div>
+                <input style={S.input} placeholder="ex: imoveis-exemplo" value={novoParc.slug} onChange={e => setNovoParc(n => ({ ...n, slug: e.target.value }))} />
+              </div>
+              <div>
+                <div style={S.label}>E-MAIL</div>
+                <input style={S.input} type="email" placeholder="contato@imobiliaria.com" value={novoParc.email} onChange={e => setNovoParc(n => ({ ...n, email: e.target.value }))} />
+              </div>
+              <div>
+                <div style={S.label}>TELEFONE</div>
+                <input style={S.input} placeholder="(19) 99999-9999" value={novoParc.telefone} onChange={e => setNovoParc(n => ({ ...n, telefone: e.target.value }))} />
+              </div>
+            </div>
+            {novoParc.slug && (
+              <div style={{ marginBottom: 14, padding: "8px 12px", background: T.s2, borderRadius: 8, fontSize: 12, color: T.muted }}>
+                Link: <span style={{ color: T.gold, fontFamily: "monospace" }}>https://goldbridge-coral.vercel.app/cadastro?ref={novoParc.slug}</span>
+              </div>
+            )}
+            <button style={{ ...S.btn, opacity: (!novoParc.nome || !novoParc.slug || salvandoParc) ? 0.5 : 1 }} disabled={!novoParc.nome || !novoParc.slug || salvandoParc} onClick={salvarParceiro}>
+              {salvandoParc ? "Salvando..." : "+ Adicionar Parceiro"}
+            </button>
+          </div>
+
+          <div style={S.card}>
+            <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 16 }}>PARCEIROS ({parceiros.length})</div>
+            {parceiros.length === 0 ? (
+              <div style={{ color: T.dim, fontSize: 13, padding: "16px 0" }}>Nenhum parceiro cadastrado ainda.</div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th style={S.th}>Nome</th>
+                      <th style={S.th}>Link de Indicação</th>
+                      <th style={S.th}>Indicações</th>
+                      <th style={S.th}>Aprovados</th>
+                      <th style={S.th}>Status</th>
+                      <th style={S.th}>Cadastro</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parceiros.map(p => {
+                      const link = `https://goldbridge-coral.vercel.app/cadastro?ref=${p.slug}`;
+                      const c = parceiroContagens[p.id] || { total: 0, aprovados: 0 };
+                      return (
+                        <tr key={p.id}>
+                          <td style={S.td}>{p.nome}</td>
+                          <td style={S.td}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ color: T.dim, fontSize: 11, fontFamily: "monospace" }}>...?ref={p.slug}</span>
+                              <button style={{ background: T.s2, border: `1px solid ${T.border}`, color: T.muted, borderRadius: 6, padding: "2px 8px", fontSize: 11, cursor: "pointer", fontFamily: "inherit" }} onClick={() => navigator.clipboard.writeText(link)}>Copiar</button>
+                            </div>
+                          </td>
+                          <td style={{ ...S.td, fontWeight: 700, color: c.total > 0 ? T.gold : T.dim }}>{c.total}</td>
+                          <td style={{ ...S.td, fontWeight: 700, color: c.aprovados > 0 ? T.green : T.dim }}>{c.aprovados}</td>
+                          <td style={S.td}><span style={S.badge(p.ativo ? T.green : T.muted)}>{p.ativo ? "Ativo" : "Inativo"}</span></td>
+                          <td style={{ ...S.td, color: T.muted }}>{p.criado_em ? new Date(p.criado_em).toLocaleDateString("pt-BR") : "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -6250,6 +6522,7 @@ function recalcProp(prop, BENCHMARKS) {
 
 export default function App() {
   const [user, setUser] = useState(undefined); // undefined = loading, null = not logged
+  const [userStatus, setUserStatus] = useState(null); // null = not checked, 'active'|'pending'|'blocked'
   const [page, setPage] = useState("dashboard");
   const [selectedProp, setSelectedProp] = useState(null);
   const [highlightPagPropId, setHighlightPagPropId] = useState(null);
@@ -6282,6 +6555,21 @@ export default function App() {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  // Check profile status after login
+  useEffect(() => {
+    if (!user) { setUserStatus(null); return; }
+    (async () => {
+      const { data: profile } = await supabase.from("profiles").select("status").eq("id", user.id).maybeSingle();
+      if (!profile) {
+        // Usuário antigo sem profile — criar como active
+        await supabase.from("profiles").insert({ id: user.id, email: user.email, status: "active" });
+        setUserStatus("active");
+      } else {
+        setUserStatus(profile.status);
+      }
+    })();
+  }, [user?.id]);
 
   // Update last_seen on every authenticated load
   useEffect(() => {
@@ -6509,6 +6797,20 @@ export default function App() {
   );
 
   if (!user) return <Login onLogin={(u) => setUser(u)} />;
+
+  // Verificando status do profile
+  if (userStatus === null) return (
+    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ color:T.gold, fontSize:20, fontWeight:600, letterSpacing:"-0.03em" }}>Rently.</div>
+    </div>
+  );
+
+  if (userStatus === "pending" || userStatus === "blocked") return (
+    <PendingApproval
+      status={userStatus}
+      onLogout={() => { supabase.auth.signOut(); setUser(null); setUserStatus(null); }}
+    />
+  );
 
   if (dbLoading) return (
     <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:12 }}>
