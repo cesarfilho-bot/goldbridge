@@ -4738,7 +4738,17 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
       const aluguelBruto = p.rent - (p.descontoAluguel||0);
       const adminMensal = p.adminRecalc != null ? p.adminRecalc : Math.round(aluguelBruto * ((p.adminPct||8)/100));
 
-      if (p.status === "Ocupado") {
+      // Determine if the property was occupied during this specific month.
+      // Uses vagoDesde (actual key-handover date) when available so that:
+      //   - months before vagoDesde keep their historical aluguel/admin entries
+      //   - months from vagoDesde onwards stop aluguel/admin but keep IPTU/condo/fundo
+      const vagoDesdeDate = p.vagoDesde ? new Date(p.vagoDesde + "T12:00") : null;
+      const mesInicio = new Date(ano, i, 1);
+      const eraOcupado = vagoDesdeDate
+        ? mesInicio < vagoDesdeDate   // month started before actual vacancy date
+        : p.status === "Ocupado";     // no vagoDesde → use current status as-is
+
+      if (eraOcupado) {
         const pag = p.pagamentos?.[chave];
         const isPastDue = dataRef < hoje;
         const semPagamento = pag?.status !== "pago";
@@ -4767,20 +4777,20 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
           if (competencia === ano || !competencia) {
             if (parcelasPagas.includes(i)) {
               saidaIPTU += valorParcela;
-              if (p.status === "Ocupado") entradaIPTU += valorParcela;
+              if (eraOcupado) entradaIPTU += valorParcela; // restitution only when occupied
             }
           }
         } else {
           iptuPrevisto = true;
           if (competencia === ano) {
             if (parcelas === 1) {
-              if (i === 0) { saidaIPTU += iptu; if (p.status === "Ocupado") entradaIPTU += iptu; }
+              if (i === 0) { saidaIPTU += iptu; if (eraOcupado) entradaIPTU += iptu; }
             } else {
-              if (i < parcelas) { saidaIPTU += valorParcela; if (p.status === "Ocupado") entradaIPTU += valorParcela; }
+              if (i < parcelas) { saidaIPTU += valorParcela; if (eraOcupado) entradaIPTU += valorParcela; }
             }
           } else if (!competencia) {
             saidaIPTU += Math.round(iptu / 12);
-            if (p.status === "Ocupado") entradaIPTU += Math.round(iptu / 12);
+            if (eraOcupado) entradaIPTU += Math.round(iptu / 12);
           }
         }
       }
@@ -4790,7 +4800,8 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
         const condoMesesPagos = p.condoMesesPagos || [];
         const temMesesMarcados = condoMesesPagos.length > 0;
         const condoFeeM = p.condoFee || 0;
-        if (p.status === "Ocupado") {
+        if (eraOcupado) {
+          // Occupied: tenant restores condo (entry) and owner pays (exit)
           if (temMesesMarcados) {
             if (condoMesesPagos.includes(i)) {
               entradaCondo += condoFeeM;
@@ -4802,7 +4813,7 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
             saidaCondoPago += condoFeeM;
           }
         } else {
-          // Vago: proprietário paga o condo sem restituição
+          // Vacant: owner pays condo with no restitution
           if (temMesesMarcados) {
             if (condoMesesPagos.includes(i)) saidaCondoPago += condoFeeM;
           } else {
@@ -4812,11 +4823,11 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
         }
       }
 
-      // Fundo/chamada/taxas extras sempre do proprietário (independe de ter condomínio)
+      // Fundo/chamada: always owner's expense regardless of occupancy
       saidaFundoChamada += (p.fundoReserva||0) + (p.chamadaExtra||0);
-      saidaTaxasExtras += (p.taxasExtras||0);
-
-      if (p.status !== "Vago") saidaAdmin += adminMensal;
+      // Taxas extras and admin: only while occupied (tied to active management contract)
+      if (eraOcupado) saidaTaxasExtras += (p.taxasExtras||0);
+      if (eraOcupado) saidaAdmin += adminMensal;
       saidaMaint += p.maintMonthly || 0;
       saidaSeguro += Math.round((p.insurance||0)/12);
     });
