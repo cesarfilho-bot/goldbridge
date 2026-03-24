@@ -865,28 +865,38 @@ function EditModal({ prop, onSave, onClose, userId }) {
               <div><label style={S.label}>ÁREA (m²)</label><input type="number" style={S.input} value={form.size} onChange={e=>set("size",e.target.value)} /></div>
             </div>
           </div>
+          {form.status === "Vago" && (
+            <div style={{ padding: "12px 16px", background: T.amber + "18", border: `1px solid ${T.amber}44`, borderRadius: 10 }}>
+              <div style={{ color: T.amber, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Imóvel vago</div>
+              <div style={{ color: T.muted, fontSize: 12 }}>Dados do último contrato disponíveis no Histórico do imóvel.</div>
+            </div>
+          )}
           <div>
             <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>DADOS FINANCEIROS</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div><label style={S.label}>ALUGUEL MENSAL (R$)</label><input type="number" style={S.input} value={form.rent} onChange={e=>set("rent",e.target.value)} /></div>
-              <div><label style={S.label}>DESCONTO NO ALUGUEL (R$/mês)</label><input type="number" style={S.input} value={form.descontoAluguel} onChange={e=>set("descontoAluguel",e.target.value)} /></div>
+              {form.status !== "Vago" && <div><label style={S.label}>ALUGUEL MENSAL (R$)</label><input type="number" style={S.input} value={form.rent} onChange={e=>set("rent",e.target.value)} /></div>}
+              {form.status !== "Vago" && <div><label style={S.label}>DESCONTO NO ALUGUEL (R$/mês)</label><input type="number" style={S.input} value={form.descontoAluguel} onChange={e=>set("descontoAluguel",e.target.value)} /></div>}
               <div><label style={S.label}>IPTU ANUAL (R$)</label><input type="number" style={S.input} value={form.iptu} onChange={e=>set("iptu",e.target.value)} /></div>
               <div><label style={S.label}>MANUTENÇÃO MENSAL (R$)</label><input type="number" style={S.input} value={form.maintMonthly} onChange={e=>set("maintMonthly",e.target.value)} /></div>
               <div><label style={S.label}>SEGURO ANUAL (R$)</label><input type="number" style={S.input} value={form.insurance} onChange={e=>set("insurance",e.target.value)} /></div>
-              <div>
-                <label style={S.label}>TAXA ADM. (%)</label>
-                <div style={{ position: "relative" }}>
-                  <input type="number" style={{ ...S.input, paddingRight: 32 }} value={form.adminPct} placeholder="8" min="0" max="20" step="0.5" onChange={e=>{ set("adminPct",e.target.value); set("admin", Math.round((parseFloat(form.rent)||0)*(parseFloat(e.target.value)||0)/100)); }} />
-                  <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: T.muted, fontSize: 14, fontWeight: 700 }}>%</span>
+              {form.status !== "Vago" && (
+                <div>
+                  <label style={S.label}>TAXA ADM. (%)</label>
+                  <div style={{ position: "relative" }}>
+                    <input type="number" style={{ ...S.input, paddingRight: 32 }} value={form.adminPct} placeholder="8" min="0" max="20" step="0.5" onChange={e=>{ set("adminPct",e.target.value); set("admin", Math.round((parseFloat(form.rent)||0)*(parseFloat(e.target.value)||0)/100)); }} />
+                    <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: T.muted, fontSize: 14, fontWeight: 700 }}>%</span>
+                  </div>
+                  {form.rent && <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>= {new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Math.round((parseFloat(form.rent)||0)*(parseFloat(form.adminPct)||0)/100))}/mês</div>}
                 </div>
-                {form.rent && <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>= {new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Math.round((parseFloat(form.rent)||0)*(parseFloat(form.adminPct)||0)/100))}/mês</div>}
-              </div>
-              <div><label style={S.label}>DIAS DE VACÂNCIA/ANO</label><input type="number" style={S.input} value={form.vacancyDays} onChange={e=>set("vacancyDays",e.target.value)} /></div>
-              <div style={{ gridColumn: "1 / -1" }}>
-                <label style={S.label}>TAXAS EXTRAS (R$/mês)</label>
-                <input type="number" style={S.input} value={form.taxasExtras} onChange={e=>set("taxasExtras",e.target.value)} placeholder="Ex: taxa do boleto, repasse" />
-                <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Taxa do boleto, repasse, etc. — custos repassados pela imobiliária (sempre do proprietário)</div>
-              </div>
+              )}
+              {form.status !== "Vago" && <div><label style={S.label}>DIAS DE VACÂNCIA/ANO</label><input type="number" style={S.input} value={form.vacancyDays} onChange={e=>set("vacancyDays",e.target.value)} /></div>}
+              {form.status !== "Vago" && (
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={S.label}>TAXAS EXTRAS (R$/mês)</label>
+                  <input type="number" style={S.input} value={form.taxasExtras} onChange={e=>set("taxasExtras",e.target.value)} placeholder="Ex: taxa do boleto, repasse" />
+                  <div style={{ color:T.dim, fontSize:10, marginTop:3 }}>Taxa do boleto, repasse, etc. — custos repassados pela imobiliária (sempre do proprietário)</div>
+                </div>
+              )}
             </div>
           </div>
           <div>
@@ -964,7 +974,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
               ))}
             </div>
           </div>
-          <div>
+          {form.status !== "Vago" && <div>
             <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>CONTRATO</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div><label style={S.label}>DURAÇÃO DO CONTRATO (meses)</label><input type="number" style={S.input} value={form.contratoAnos} onChange={e=>set("contratoAnos",e.target.value)} /></div>
@@ -999,8 +1009,8 @@ function EditModal({ prop, onSave, onClose, userId }) {
                 </span> · Normalmente pelo IGPM acumulado
               </div>
             )}
-          </div>
-          <div>
+          </div>}
+          {form.status !== "Vago" && <div>
             <div style={{ color: T.gold, fontSize: 12, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>
               LOCATÁRIO <span style={{ color: T.dim, fontWeight: 400, fontSize: 11, textTransform: "none", letterSpacing: 0 }}>{form.viaImobiliaria ? "(opcional)" : "(recomendado)"}</span>
             </div>
@@ -1033,7 +1043,7 @@ function EditModal({ prop, onSave, onClose, userId }) {
               <div style={{ gridColumn: "1/-1" }}><label style={S.label}>EMAIL</label><input style={S.input} value={form.locatarioEmail} placeholder="email@exemplo.com" onChange={e=>set("locatarioEmail",e.target.value)} /></div>
               <div><label style={S.label}>GARANTIA</label><select style={S.sel} value={form.locatarioGarantia} onChange={e=>set("locatarioGarantia",e.target.value)}>{["Fiador","Seguro Fiança","Caução","Título de Capitalização","Sem garantia"].map(o=><option key={o}>{o}</option>)}</select></div>
             </div>
-          </div>
+          </div>}
         </div>
         )} {/* end editTab === dados */}
 
@@ -2779,39 +2789,61 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
         <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ color: T.muted, fontSize: 11, marginBottom: 4 }}>LEAKAGE</div><div style={{ color: prop.leakage > 60 ? T.red : prop.leakage > 30 ? T.amber : T.green, fontSize: 40, fontWeight: 900, ...S.mono, lineHeight: 1 }}>{prop.leakage}</div></div>
       </div>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-        {/* RECEITA 12M */}
-        <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
-          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Receita 12m</div>
-          <div style={{ color: T.gold, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{fmt.brlK(prop.totalIncome)}</div>
-          {prop.status === "Vago" && <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>histórico</div>}
-        </div>
-        {/* DESPESAS 12M */}
-        <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
-          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Despesas 12m</div>
-          <div style={{ color: T.red, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{fmt.brlK(prop.totalExpenses)}</div>
-          {prop.ir > 0 && (
-            <div style={{ color: T.red, fontSize: 11, marginTop: 8, opacity: 0.85 }}>
-              IR ({prop.regimeFiscal || "PF"}): {fmt.brl(prop.ir)}
-            </div>
-          )}
-          {prop.status === "Vago" && (() => {
-            const iptuMensal = Math.round((prop.iptu || 0) / 12);
-            const condoMensal = prop.hasCondominio ? (prop.condoFee || 0) : 0;
-            const custoMensal = iptuMensal + condoMensal;
-            return custoMensal > 0 ? (
-              <div style={{ color: T.red, fontSize: 11, marginTop: 8, opacity: 0.9 }}>
-                Custo mensal sem inquilino: {fmt.brl(custoMensal)}
+        {prop.status === "Vago" ? (() => {
+          const iptuMensal = Math.round((prop.iptu || 0) / 12);
+          const condoMensal = prop.hasCondominio ? (prop.condoFee || 0) : 0;
+          const fundoMensal = (prop.fundoReserva || 0) + (prop.chamadaExtra || 0);
+          const custoMensal = iptuMensal + condoMensal + fundoMensal;
+          return (
+            <>
+              {/* RECEITA MENSAL - Vago */}
+              <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
+                <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Receita Mensal</div>
+                <div style={{ color: T.dim, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>R$ 0</div>
+                <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>Histórico 12m: <span style={{ color: T.muted, fontWeight: 600 }}>{fmt.brlK(prop.totalIncome)}</span></div>
               </div>
-            ) : null;
-          })()}
-        </div>
-        {/* LUCRO LÍQUIDO 12M */}
-        <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
-          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Lucro Líquido 12m</div>
-          <div style={{ color: prop.noi > 0 ? T.green : T.red, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{fmt.brlK(prop.noi)}</div>
-          {prop.ir > 0 && <div style={{ color: T.dim, fontSize: 12, marginTop: 4 }}>Após IR: {fmt.brl(prop.lucroLiquido)}</div>}
-          <div style={{ color: T.dim, fontSize: 12, marginTop: prop.ir > 0 ? 2 : 6 }}>Margem: {fmt.pct(prop.lucroLiquidoPct || prop.noiPct)}</div>
-        </div>
+              {/* DESPESAS MENSAIS - Vago */}
+              <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
+                <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Despesas Mensais</div>
+                <div style={{ color: T.red, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{fmt.brl(custoMensal)}</div>
+                <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>
+                  {[iptuMensal > 0 && `IPTU ${fmt.brl(iptuMensal)}`, condoMensal > 0 && `Condo ${fmt.brl(condoMensal)}`, fundoMensal > 0 && `Fundo/Extra ${fmt.brl(fundoMensal)}`].filter(Boolean).join(" · ")||"Sem despesas fixas"}
+                </div>
+              </div>
+              {/* RESULTADO MENSAL - Vago */}
+              <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
+                <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Resultado Mensal</div>
+                <div style={{ color: T.red, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>−{fmt.brl(custoMensal)}</div>
+                <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>Sem receita de aluguel</div>
+              </div>
+            </>
+          );
+        })() : (
+          <>
+            {/* RECEITA 12M */}
+            <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
+              <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Receita 12m</div>
+              <div style={{ color: T.gold, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{fmt.brlK(prop.totalIncome)}</div>
+            </div>
+            {/* DESPESAS 12M */}
+            <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
+              <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Despesas 12m</div>
+              <div style={{ color: T.red, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{fmt.brlK(prop.totalExpenses)}</div>
+              {prop.ir > 0 && (
+                <div style={{ color: T.red, fontSize: 11, marginTop: 8, opacity: 0.85 }}>
+                  IR ({prop.regimeFiscal || "PF"}): {fmt.brl(prop.ir)}
+                </div>
+              )}
+            </div>
+            {/* LUCRO LÍQUIDO 12M */}
+            <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
+              <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Lucro Líquido 12m</div>
+              <div style={{ color: prop.noi > 0 ? T.green : T.red, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{fmt.brlK(prop.noi)}</div>
+              {prop.ir > 0 && <div style={{ color: T.dim, fontSize: 12, marginTop: 4 }}>Após IR: {fmt.brl(prop.lucroLiquido)}</div>}
+              <div style={{ color: T.dim, fontSize: 12, marginTop: prop.ir > 0 ? 2 : 6 }}>Margem: {fmt.pct(prop.lucroLiquidoPct || prop.noiPct)}</div>
+            </div>
+          </>
+        )}
         {/* VACÂNCIA */}
         {(() => {
           const iptuMensal = Math.round((prop.iptu || 0) / 12);
@@ -6735,7 +6767,13 @@ export default function App() {
     const isDesocupando = prop.status === "Em desocupação";
     const novoStatus = isDesocupando ? "Vago" : "Em desocupação";
     const eventoHistorico = isDesocupando
-      ? { id: Date.now(), tipo: "Rescisão de Contrato", data: dataEntrega || new Date().toISOString().split("T")[0], titulo: "Entrega das chaves", descricao: `Vistoria concluída. Imóvel desocupado.`, valor: 0 }
+      ? { id: Date.now(), tipo: "Rescisão de Contrato", data: dataEntrega || new Date().toISOString().split("T")[0], titulo: "Entrega das chaves", descricao: [
+          "Vistoria concluída. Imóvel desocupado.",
+          `Último contrato: aluguel ${fmt.brl(prop.rent)}${prop.descontoAluguel > 0 ? ` (desconto ${fmt.brl(prop.descontoAluguel)}/mês)` : ""}`,
+          prop.locatarioNome ? `Inquilino: ${prop.locatarioNome}${prop.locatarioCPF ? ` · CPF ${prop.locatarioCPF}` : ""}` : null,
+          prop.adminPct ? `Taxa adm: ${prop.adminPct}%` : null,
+          prop.taxasExtras > 0 ? `Taxa extra: ${fmt.brl(prop.taxasExtras)}/mês` : null,
+        ].filter(Boolean).join(" | "), valor: 0 }
       : { id: Date.now(), tipo: "Rescisão de Contrato", data: new Date().toISOString().split("T")[0], titulo: "Cancelamento de contrato", descricao: `Multa: ${multaMeses} meses (${fmt.brl(multaValor)}). Entrega prevista: ${dataEntrega || "a definir"}.`, valor: multaValor };
     const updated = {
       ...prop,
