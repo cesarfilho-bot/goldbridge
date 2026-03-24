@@ -26,8 +26,11 @@ export async function GET(req) {
   // Fetch user activity (last_seen per user)
   const { data: activity } = await adminSupabase.from("user_activity").select("user_id, last_seen");
 
-  // Fetch all imoveis (user_id + type + city only)
+  // Fetch all imoveis (user_id + type + city only) — for per-user breakdown
   const { data: imoveis } = await adminSupabase.from("imoveis").select("user_id, type, city");
+
+  // COUNT direto para total real em tempo real
+  const { count: totalImoveisCount } = await adminSupabase.from("imoveis").select("*", { count: "exact", head: true });
 
   // Build lookup maps
   const activityMap = {};
@@ -79,7 +82,7 @@ export async function GET(req) {
     summary: {
       totalUsers: users.length,
       activeUsers: enrichedUsers.filter(u => u.isAtivo).length,
-      totalImoveis: (imoveis || []).length,
+      totalImoveis: totalImoveisCount ?? (imoveis || []).length,
       usersThisMonth,
       usersPrevMonth,
     },

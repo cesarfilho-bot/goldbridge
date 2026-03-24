@@ -5037,7 +5037,7 @@ function PageAdmin({ user }) {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const res = await fetch("/api/admin", { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch("/api/admin", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
       const json = await res.json();
       if (json.error) { setError(json.error); setLoading(false); return; }
       setData(json);
@@ -6819,7 +6819,8 @@ export default function App() {
     </div>
   );
 
-  const nav = (p) => { setPage(p); if (p !== "detail") setSelectedProp(null); if (p !== "pagamentos") setHighlightPagPropId(null); };
+  const [adminKey, setAdminKey] = useState(0);
+  const nav = (p) => { setPage(p); if (p !== "detail") setSelectedProp(null); if (p !== "pagamentos") setHighlightPagPropId(null); if (p === "admin") setAdminKey(k => k + 1); };
   const handleEdit = (prop) => setEditingProp(props.find(p => p.id === prop.id) || prop);
   const nextId = props.length > 0 ? Math.max(...props.map(p => p.id)) + 1 : 1;
 
@@ -6838,7 +6839,7 @@ export default function App() {
     fluxo:     <PageFluxoCaixa PROPS={props} lancamentos={lancamentos} />,
     locatarios: <PageLocatarios PROPS={props} onUpdateProps={handleUpdateProps} />,
     historico:  <PageHistorico PROPS={props} onUpdateProps={handleUpdateProps} />,
-    admin:      <PageAdmin user={user} />,
+    admin:      <PageAdmin key={adminKey} user={user} />,
   }[page] || <PageDashboard PROPS={props} onNav={nav} onProp={setSelectedProp} onAdd={() => setAddingImovel(true)} />;
 
   return (
