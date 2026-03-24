@@ -2789,8 +2789,28 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
             </div>
           )}
         </div>
-        <KPI label="Lucro Líquido 12m" value={fmt.brlK(prop.lucroLiquido||prop.noi)} sub={`Margem líq.: ${fmt.pct(prop.lucroLiquidoPct||prop.noiPct)}`} color={(prop.lucroLiquido||prop.noi) > 0 ? T.green : T.red} size="md" />
-        <KPI label="Vacância" value={`${prop.vacancyDays}d`} sub={`Benchmark: ${prop.vacancyBenchmark}d`} color={prop.vacancyDays > prop.vacancyBenchmark ? T.amber : T.muted} size="md" warn={prop.vacancyDays > prop.vacancyBenchmark} />
+        <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Lucro Líquido 12m</div>
+          <div style={{ color: prop.noi > 0 ? T.green : T.red, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{fmt.brlK(prop.noi)}</div>
+          {prop.ir > 0 && <div style={{ color: T.dim, fontSize: 12, marginTop: 4 }}>Após IR: {fmt.brl(prop.lucroLiquido)}</div>}
+          <div style={{ color: T.dim, fontSize: 12, marginTop: prop.ir > 0 ? 2 : 6 }}>Margem: {fmt.pct(prop.lucroLiquidoPct || prop.noiPct)}</div>
+        </div>
+        {(() => {
+          const iptuMensal = Math.round((prop.iptu || 0) / 12);
+          const condoMensal = prop.hasCondominio ? (prop.condoFee || 0) : 0;
+          const fundo = prop.fundoReserva || 0;
+          const custoVacancia = Math.round((prop.vacancyDays || 0) * (iptuMensal + condoMensal + fundo) / 30);
+          const acimaBm = prop.vacancyDays > prop.vacancyBenchmark;
+          return (
+            <div style={{ ...S.card, flex: 1, minWidth: 150, position: "relative", overflow: "hidden" }}>
+              {acimaBm && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${T.red}, ${T.amber})` }} />}
+              <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Vacância</div>
+              <div style={{ color: acimaBm ? T.amber : T.muted, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{prop.vacancyDays}d</div>
+              {custoVacancia > 0 && <div style={{ color: T.red, fontSize: 12, marginTop: 4, opacity: 0.85 }}>Custo: {fmt.brl(custoVacancia)}</div>}
+              <div style={{ color: T.dim, fontSize: 12, marginTop: custoVacancia > 0 ? 2 : 6 }}>Benchmark: {prop.vacancyBenchmark}d</div>
+            </div>
+          );
+        })()}
       </div>
       {prop.hasCondominio && (prop.chamadaExtra > 0 || prop.fundoReserva > 0) && (
         <div style={{ ...S.card, border: `1px solid ${T.amber}30` }}>
