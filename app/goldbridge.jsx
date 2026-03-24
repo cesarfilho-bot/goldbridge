@@ -6541,6 +6541,7 @@ export default function App() {
     return false;
   });
   const [themeKey, setThemeKey] = useState(0);
+  const [adminKey, setAdminKey] = useState(0);
   // Apply theme globally on every render
   Object.assign(T, darkMode ? DARK_T : LIGHT_T);
   useEffect(() => { applyTheme(darkMode ? DARK_T : LIGHT_T); }, [darkMode]);
@@ -6819,7 +6820,6 @@ export default function App() {
     </div>
   );
 
-  const [adminKey, setAdminKey] = useState(0);
   const nav = (p) => { setPage(p); if (p !== "detail") setSelectedProp(null); if (p !== "pagamentos") setHighlightPagPropId(null); if (p === "admin") setAdminKey(k => k + 1); };
   const handleEdit = (prop) => setEditingProp(props.find(p => p.id === prop.id) || prop);
   const nextId = props.length > 0 ? Math.max(...props.map(p => p.id)) + 1 : 1;
