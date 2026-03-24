@@ -3929,7 +3929,25 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
     onUpdateProps(PROPS.map(p => p.id === prop.id ? updated : p));
   };
 
-  const imovelOcupado = PROPS.filter(p => p.status === "Ocupado");
+  const mesInicioSel = new Date(anoSel, mesSel, 1);
+  const mesInicioAtual = new Date(anoAtual, mesAtual, 1);
+  const isMesPassado = mesInicioSel < mesInicioAtual;
+
+  // For past months: also include Vago properties that were still occupied during that month.
+  // For the current/future month: only currently Occupied properties.
+  const imovelOcupado = PROPS.filter(p => {
+    if (p.status === "Ocupado") return true;
+    if (p.status === "Vago" && p.vagoDesde && isMesPassado) {
+      const vagoDate = new Date(p.vagoDesde + "T12:00");
+      return mesInicioSel < vagoDate;
+    }
+    return false;
+  });
+
+  // Vago properties with fixed ongoing expenses (for current-month display only)
+  const imoveisVagosComDespesa = !isMesPassado ? PROPS.filter(p =>
+    p.status === "Vago" && ((p.iptu||0) > 0 || (p.hasCondominio && (p.condoFee||0) > 0) || (p.fundoReserva||0) > 0 || (p.chamadaExtra||0) > 0)
+  ) : [];
 
   // Alertas de vencimento de contrato (próximos 90 dias)
   const alertasContrato = PROPS.filter(p => {
@@ -4151,7 +4169,7 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
       {/* Lista de imóveis com controle de pagamento */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>IMÓVEIS OCUPADOS — {MESES_FULL[mesSel].toUpperCase()} {anoSel}</div>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>{isMesPassado ? "HISTÓRICO" : "IMÓVEIS OCUPADOS"} — {MESES_FULL[mesSel].toUpperCase()} {anoSel}</div>
           <input
             style={{ ...S.input, flex:1, fontSize:13, padding:"8px 14px" }}
             placeholder="Buscar por nome, endereço, bairro ou locatário..."
@@ -4393,6 +4411,46 @@ function PagePagamentos({ PROPS, onUpdateProps, highlightPropId, lancamentos = [
           );
         })}
       </div>
+
+      {/* Despesas fixas — imóveis vagos (somente mês atual) */}
+      {imoveisVagosComDespesa.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>IMÓVEIS VAGOS — DESPESAS FIXAS {MESES_FULL[mesSel].toUpperCase()} {anoSel}</div>
+          {imoveisVagosComDespesa.map(p => {
+            const iptuMensal = Math.round((p.iptu||0) / 12);
+            const condoMensal = p.hasCondominio ? (p.condoFee||0) : 0;
+            const fundoMensal = (p.fundoReserva||0) + (p.chamadaExtra||0);
+            const totalDespesa = iptuMensal + condoMensal + fundoMensal;
+            const diasVagos = p.vagoDesde
+              ? Math.max(0, Math.round((new Date() - new Date(p.vagoDesde + "T12:00")) / (1000 * 60 * 60 * 24)))
+              : null;
+            return (
+              <div key={p.id} style={{ background: T.s1, border: `1px solid ${T.red}30`, borderRadius: 14, padding: "14px 18px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                  <div style={{ flex: 1, minWidth: 180 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ color: T.muted, fontWeight: 700, fontSize: 14 }}>{p.name}</div>
+                      <span style={S.badge(T.red)}>Vago</span>
+                    </div>
+                    <div style={{ color: T.dim, fontSize: 12, marginTop: 2 }}>
+                      {p.neighborhood}{diasVagos !== null && ` · ${diasVagos}d vago`}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    {iptuMensal > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>IPTU </span><span style={{ color: T.red, fontSize: 12, fontWeight: 700 }}>{fmt.brl(iptuMensal)}</span></div>}
+                    {condoMensal > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>Condo </span><span style={{ color: T.red, fontSize: 12, fontWeight: 700 }}>{fmt.brl(condoMensal)}</span></div>}
+                    {fundoMensal > 0 && <div style={{ background: T.s2, borderRadius: 6, padding: "3px 9px" }}><span style={{ color: T.dim, fontSize: 10 }}>Fundo </span><span style={{ color: T.red, fontSize: 12, fontWeight: 700 }}>{fmt.brl(fundoMensal)}</span></div>}
+                    <div style={{ background: T.red+"18", borderRadius: 6, padding: "4px 12px", border: `1px solid ${T.red}40`, marginLeft: 4 }}>
+                      <span style={{ color: T.dim, fontSize: 10 }}>Total </span>
+                      <span style={{ color: T.red, fontSize: 13, fontWeight: 800, ...S.mono }}>{fmt.brl(totalDespesa)}/mês</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Modal de data de pagamento */}
       {pagDataModal && (
