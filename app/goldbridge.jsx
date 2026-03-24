@@ -6795,10 +6795,16 @@ export default function App() {
   };
 
   const confirmDelete = async () => {
-    await supabase.from("imoveis").delete().eq("id", deletingProp.id).eq("user_id", user.id);
-    setPropsRaw(prev => prev.filter(p => p.id !== deletingProp.id));
+    const id = deletingProp.id;
+    // Delete related lancamentos_avulsos first (orphan cleanup)
+    await supabase.from("lancamentos_avulsos").delete().eq("imovel_id", String(id)).eq("user_id", user.id);
+    // Delete the imovel
+    const { error } = await supabase.from("imoveis").delete().eq("id", id).eq("user_id", user.id);
+    if (error) { console.error("[DELETE] erro Supabase:", error); alert("Erro ao remover imóvel: " + error.message); return; }
+    setPropsRaw(prev => prev.filter(p => p.id !== id));
+    setLancamentos(prev => prev.filter(l => String(l.imovel_id) !== String(id)));
     setDeletingProp(null);
-    if (selectedProp?.id === deletingProp.id) { setSelectedProp(null); setPage("noi"); }
+    if (selectedProp?.id === id) { setSelectedProp(null); setPage("noi"); }
   };
 
   const handleSaveEdit = async (updatedProp) => {
