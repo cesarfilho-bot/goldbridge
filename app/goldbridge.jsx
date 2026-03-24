@@ -2779,7 +2779,13 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
         <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ color: T.muted, fontSize: 11, marginBottom: 4 }}>LEAKAGE</div><div style={{ color: prop.leakage > 60 ? T.red : prop.leakage > 30 ? T.amber : T.green, fontSize: 40, fontWeight: 900, ...S.mono, lineHeight: 1 }}>{prop.leakage}</div></div>
       </div>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-        <KPI label="Receita 12m" value={fmt.brlK(prop.totalIncome)} size="md" />
+        {/* RECEITA 12M */}
+        <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Receita 12m</div>
+          <div style={{ color: T.gold, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{fmt.brlK(prop.totalIncome)}</div>
+          {prop.status === "Vago" && <div style={{ color: T.dim, fontSize: 11, marginTop: 4 }}>histórico</div>}
+        </div>
+        {/* DESPESAS 12M */}
         <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
           <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Despesas 12m</div>
           <div style={{ color: T.red, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{fmt.brlK(prop.totalExpenses)}</div>
@@ -2788,26 +2794,47 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
               IR ({prop.regimeFiscal || "PF"}): {fmt.brl(prop.ir)}
             </div>
           )}
+          {prop.status === "Vago" && (() => {
+            const iptuMensal = Math.round((prop.iptu || 0) / 12);
+            const condoMensal = prop.hasCondominio ? (prop.condoFee || 0) : 0;
+            const custoMensal = iptuMensal + condoMensal;
+            return custoMensal > 0 ? (
+              <div style={{ color: T.red, fontSize: 11, marginTop: 8, opacity: 0.9 }}>
+                Custo mensal sem inquilino: {fmt.brl(custoMensal)}
+              </div>
+            ) : null;
+          })()}
         </div>
+        {/* LUCRO LÍQUIDO 12M */}
         <div style={{ ...S.card, flex: 1, minWidth: 150 }}>
           <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Lucro Líquido 12m</div>
           <div style={{ color: prop.noi > 0 ? T.green : T.red, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{fmt.brlK(prop.noi)}</div>
           {prop.ir > 0 && <div style={{ color: T.dim, fontSize: 12, marginTop: 4 }}>Após IR: {fmt.brl(prop.lucroLiquido)}</div>}
           <div style={{ color: T.dim, fontSize: 12, marginTop: prop.ir > 0 ? 2 : 6 }}>Margem: {fmt.pct(prop.lucroLiquidoPct || prop.noiPct)}</div>
         </div>
+        {/* VACÂNCIA */}
         {(() => {
           const iptuMensal = Math.round((prop.iptu || 0) / 12);
           const condoMensal = prop.hasCondominio ? (prop.condoFee || 0) : 0;
-          const fundo = prop.fundoReserva || 0;
-          const custoVacancia = Math.round((prop.vacancyDays || 0) * (iptuMensal + condoMensal + fundo) / 30);
-          const acimaBm = prop.vacancyDays > prop.vacancyBenchmark;
+          const isVago = prop.status === "Vago";
+          let diasVagos = prop.vacancyDays || 0;
+          if (isVago && prop.vagoDesde) {
+            const desde = new Date(prop.vagoDesde + "T12:00");
+            const hoje = new Date();
+            diasVagos = Math.max(0, Math.round((hoje - desde) / (1000 * 60 * 60 * 24)));
+          }
+          const custoAcumulado = isVago
+            ? Math.round(diasVagos * (iptuMensal + condoMensal) / 30)
+            : Math.round(diasVagos * (iptuMensal + condoMensal + (prop.fundoReserva || 0)) / 30);
+          const acimaBm = diasVagos > prop.vacancyBenchmark;
           return (
             <div style={{ ...S.card, flex: 1, minWidth: 150, position: "relative", overflow: "hidden" }}>
               {acimaBm && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${T.red}, ${T.amber})` }} />}
               <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Vacância</div>
-              <div style={{ color: acimaBm ? T.amber : T.muted, fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{prop.vacancyDays}d</div>
-              {custoVacancia > 0 && <div style={{ color: T.red, fontSize: 12, marginTop: 4, opacity: 0.85 }}>Custo: {fmt.brl(custoVacancia)}</div>}
-              <div style={{ color: T.dim, fontSize: 12, marginTop: custoVacancia > 0 ? 2 : 6 }}>Benchmark: {prop.vacancyBenchmark}d</div>
+              <div style={{ color: isVago ? T.red : (acimaBm ? T.amber : T.muted), fontSize: 22, fontWeight: 800, ...S.mono, marginBottom: 4, lineHeight: 1 }}>{diasVagos}d</div>
+              {custoAcumulado > 0 && <div style={{ color: T.red, fontSize: 12, marginTop: 4, opacity: 0.85 }}>{isVago ? "Custo acumulado" : "Custo"}: {fmt.brl(custoAcumulado)}</div>}
+              {isVago && prop.vagoDesde && <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>desde {new Date(prop.vagoDesde + "T12:00").toLocaleDateString("pt-BR")}</div>}
+              {!isVago && <div style={{ color: T.dim, fontSize: 12, marginTop: custoAcumulado > 0 ? 2 : 6 }}>Benchmark: {prop.vacancyBenchmark}d</div>}
             </div>
           );
         })()}
@@ -2892,7 +2919,7 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
           </div>
         </div>
       )}
-      {prop.contratoVencimento && (() => {
+      {prop.contratoVencimento && prop.status !== "Vago" && (() => {
         const hoje = new Date();
         const venc = new Date(prop.contratoVencimento+"T12:00");
         const mesesRestantes = Math.max(0, Math.round((venc - hoje) / (1000 * 60 * 60 * 24 * 30.44)));
@@ -2914,6 +2941,7 @@ function PageDetail({ prop, onBack, onEdit, onObras, onDelete, onCancelarContrat
           multa = Math.round(3 * aluguel * (mesesRestantes / 36));
           multaDesc = "3 aluguéis × meses restantes / 36 (locatário < 12 meses)";
         }
+        if (multa === 0) return null;
         const jaVenceu = venc < hoje;
         return (
           <div style={{ ...S.card, border:`1px solid ${T.amber}40` }}>
@@ -4756,7 +4784,7 @@ function PageFluxoCaixa({ PROPS, lancamentos = [] }) {
       saidaFundoChamada += (p.fundoReserva||0) + (p.chamadaExtra||0);
       saidaTaxasExtras += (p.taxasExtras||0);
 
-      saidaAdmin += adminMensal;
+      if (p.status !== "Vago") saidaAdmin += adminMensal;
       saidaMaint += p.maintMonthly || 0;
       saidaSeguro += Math.round((p.insurance||0)/12);
     });
@@ -6643,6 +6671,7 @@ export default function App() {
           locatarios: r.locatarios||[], historico: r.historico||[],
           iptuVencimento: r.iptu_vencimento||"", iptuParcelas: r.iptu_parcelas||10, indiceReajuste: r.indice_reajuste||"IGPM", adminPct: r.admin_pct != null ? r.admin_pct : 8,
           iptuParcelasPagas: r.iptu_parcelas_pagas||[], condoMesesPagos: r.condo_meses_pagos||[],
+          vagoDesde: r.vago_desde||null,
           avaliacoes: r.avaliacoes||[], documentos: r.documentos||[], viaImobiliaria: r.via_imobiliaria||false, imobiliariaPossuiSeguro: r.imobiliaria_possui_seguro||false, locatarioNome: r.locatario_nome||"", locatarioCPF: r.locatario_cpf||"", locatarioTelefone: r.locatario_telefone||"", locatarioEmail: r.locatario_email||"", locatarioGarantia: r.locatario_garantia||"Fiador",
         }, BENCHMARKS));
         setPropsRaw(mapped);
@@ -6674,6 +6703,7 @@ export default function App() {
     avaliacoes: prop.avaliacoes||[], documentos: prop.documentos||[], via_imobiliaria: prop.viaImobiliaria||false, imobiliaria_possui_seguro: prop.imobiliariaPossuiSeguro||false, locatario_nome: prop.locatarioNome||"", locatario_cpf: prop.locatarioCPF||"", locatario_telefone: prop.locatarioTelefone||"", locatario_email: prop.locatarioEmail||"", locatario_garantia: prop.locatarioGarantia||"Fiador",
     locatarios: prop.locatarios||[], historico: prop.historico||[],
     iptu_parcelas_pagas: prop.iptuParcelasPagas||[], condo_meses_pagos: prop.condoMesesPagos||[],
+    vago_desde: prop.vagoDesde||null,
   });
 
   const setProps = useCallback((updater) => {
@@ -6713,7 +6743,10 @@ export default function App() {
       desocupacaoDataEntrega: isDesocupando ? (dataEntrega || new Date().toISOString().split("T")[0]) : dataEntrega,
       desocupacaoVistoria: vistoria,
       historico: [...(prop.historico || []), eventoHistorico],
-      ...(isDesocupando ? { locatarioNome: "", locatarioCPF: "", locatarioTelefone: "", locatarioEmail: "" } : {}),
+      ...(isDesocupando ? {
+        locatarioNome: "", locatarioCPF: "", locatarioTelefone: "", locatarioEmail: "",
+        vagoDesde: dataEntrega || new Date().toISOString().split("T")[0],
+      } : {}),
     };
     await handleUpdateProps(props.map(p => p.id === prop.id ? updated : p));
     setCancelandoProp(null);
