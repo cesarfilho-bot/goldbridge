@@ -6748,7 +6748,10 @@ export default function App() {
         vagoDesde: dataEntrega || new Date().toISOString().split("T")[0],
       } : {}),
     };
-    await handleUpdateProps(props.map(p => p.id === prop.id ? updated : p));
+    const recalced = recalcProp(updated, BENCHMARKS);
+    const { error: saveErr } = await supabase.from("imoveis").update(toDB(recalced)).eq("id", recalced.id).eq("user_id", user.id);
+    if (saveErr) { console.error("[cancelar contrato] erro Supabase:", saveErr); alert("Erro ao salvar: " + saveErr.message); return; }
+    setPropsRaw(prev => prev.map(p => p.id === recalced.id ? recalced : p));
     setCancelandoProp(null);
     if (isDesocupando) nav("noi");
   };
@@ -6783,8 +6786,8 @@ export default function App() {
 
   const handleUpdateProps = async (newPropsOrUpdater) => {
     const newProps = typeof newPropsOrUpdater === "function" ? newPropsOrUpdater(props) : newPropsOrUpdater;
-    // Find changed props and save to Supabase
-    newProps.forEach(async np => {
+    // Find changed props and save to Supabase — await all writes before updating state
+    await Promise.all(newProps.map(async np => {
       const old = props.find(p => p.id === np.id);
       if (!old) return;
       if (JSON.stringify(old.pagamentos) !== JSON.stringify(np.pagamentos)) {
@@ -6805,7 +6808,7 @@ export default function App() {
           JSON.stringify(old.condoMesesPagos) !== JSON.stringify(np.condoMesesPagos)) {
         await supabase.from("imoveis").update({ iptu_parcelas_pagas: np.iptuParcelasPagas||[], condo_meses_pagos: np.condoMesesPagos||[] }).eq("id", np.id).eq("user_id", user.id);
       }
-    });
+    }));
     setPropsRaw(newProps);
   };
 
