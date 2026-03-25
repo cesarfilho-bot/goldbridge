@@ -5357,7 +5357,10 @@ function PageAdmin({ user }) {
                       {u.tipos.length === 0 && u.cidades.length === 0 && <span style={{ color: T.dim }}>—</span>}
                     </td>
                     <td style={S.td}>
-                      <span style={S.badge(u.isAtivo ? T.green : T.muted)}>{u.isAtivo ? "Ativo" : "Inativo"}</span>
+                      {u.profileStatus === "active" && <span style={S.badge(T.green)}>Ativo</span>}
+                      {u.profileStatus === "pending" && <span style={S.badge(T.amber)}>Pendente</span>}
+                      {u.profileStatus === "blocked" && <span style={S.badge(T.red)}>Bloqueado</span>}
+                      {!u.profileStatus && <span style={S.badge(T.muted)}>—</span>}
                     </td>
                   </tr>
                 ))}

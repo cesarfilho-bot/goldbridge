@@ -26,6 +26,9 @@ export async function GET(req) {
   // Fetch user activity (last_seen per user)
   const { data: activity } = await adminSupabase.from("user_activity").select("user_id, last_seen");
 
+  // Fetch profile statuses (active / pending / blocked)
+  const { data: profileRows } = await adminSupabase.from("profiles").select("id, status");
+
   // Fetch all imoveis (user_id + type + city only) — for per-user breakdown
   const { data: imoveis } = await adminSupabase.from("imoveis").select("user_id, type, city");
 
@@ -35,6 +38,9 @@ export async function GET(req) {
   // Build lookup maps
   const activityMap = {};
   (activity || []).forEach(a => { activityMap[a.user_id] = a.last_seen; });
+
+  const profileStatusMap = {};
+  (profileRows || []).forEach(p => { profileStatusMap[p.id] = p.status; });
 
   const imoveisMap = {};
   (imoveis || []).forEach(im => {
@@ -59,6 +65,7 @@ export async function GET(req) {
       cidades,
       tipos,
       isAtivo: lastSeen && lastSeen > thirtyDaysAgo,
+      profileStatus: profileStatusMap[u.id] || null,
     };
   }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
