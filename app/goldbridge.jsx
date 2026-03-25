@@ -3504,9 +3504,15 @@ function Login({ onLogin }) {
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
     if (error) { setError(error.message); setLoading(false); return; }
     if (data.user) {
-      await supabase.from("profiles").insert({ id: data.user.id, email: data.user.email, nome: name, status: "pending", indicado_por: ref });
+      // Inserir profile como pending ANTES de qualquer redirecionamento
+      await supabase.from("profiles").upsert(
+        { id: data.user.id, email: data.user.email, nome: name, status: "pending", indicado_por: ref },
+        { onConflict: "id", ignoreDuplicates: false }
+      );
       if (ref) localStorage.removeItem("rently_ref");
-      onLogin(data.user);
+      // Fazer sign out imediato — usuário precisa aguardar aprovação do admin
+      await supabase.auth.signOut();
+      setMode("pending");
     }
     setLoading(false);
   };
@@ -3517,6 +3523,28 @@ function Login({ onLogin }) {
     else setSuccess("Email de recuperação enviado!");
     setLoading(false);
   };
+
+  // Tela de aguardando aprovação (após cadastro bem-sucedido)
+  if (mode === "pending") return (
+    <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", position:"relative", overflow:"hidden", padding:24 }}>
+      <div style={{ position:"absolute", inset:0, background:`radial-gradient(ellipse at 30% 50%, ${T.goldGlow} 0%, transparent 60%)` }} />
+      <div style={{ width:"100%", maxWidth:420, position:"relative", zIndex:1, textAlign:"center" }}>
+        <div style={{ color:T.gold, fontSize:32, fontWeight:900, letterSpacing:-1, marginBottom:32 }}>RENTLY</div>
+        <div style={{ background:T.s1, border:`1px solid ${T.borderMid}`, borderRadius:18, padding:"40px 32px" }}>
+          <div style={{ fontSize:40, marginBottom:16 }}>⏳</div>
+          <div style={{ color:T.text, fontWeight:800, fontSize:20, marginBottom:12 }}>Cadastro recebido!</div>
+          <div style={{ color:T.muted, fontSize:14, lineHeight:1.7, marginBottom:24 }}>
+            Sua conta está em análise.<br />
+            Você receberá um contato assim que o acesso for liberado.<br />
+            <span style={{ color:T.dim, fontSize:12 }}>Tempo médio: até 24 horas.</span>
+          </div>
+          <button style={{ background:"none", border:"none", color:T.dim, fontSize:13, cursor:"pointer", fontFamily:"inherit" }} onClick={()=>{setMode("login");setError("");setSuccess("");}}>
+            ← Voltar para login
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ minHeight:"100vh", background:T.bg, display:"flex", alignItems:"center", justifyContent:"center", position:"relative", overflow:"hidden", padding:24 }}>
@@ -6712,9 +6740,12 @@ export default function App() {
     (async () => {
       const { data: profile } = await supabase.from("profiles").select("status").eq("id", user.id).maybeSingle();
       if (!profile) {
-        // Usuário antigo sem profile — criar como active
-        await supabase.from("profiles").insert({ id: user.id, email: user.email, status: "active" });
-        setUserStatus("active");
+        // Se conta foi criada há mais de 1 hora é usuário legado (antes do sistema de aprovação)
+        const accountAgeMs = Date.now() - new Date(user.created_at).getTime();
+        const isLegacy = accountAgeMs > 60 * 60 * 1000;
+        const defaultStatus = isLegacy ? "active" : "pending";
+        await supabase.from("profiles").insert({ id: user.id, email: user.email, status: defaultStatus });
+        setUserStatus(defaultStatus);
       } else {
         setUserStatus(profile.status);
       }
