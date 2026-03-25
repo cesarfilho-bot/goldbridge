@@ -5208,27 +5208,39 @@ function PageAdmin({ user }) {
   const [novoParc, setNovoParc] = useState({ nome: "", email: "", telefone: "", slug: "" });
   const [salvandoParc, setSalvandoParc] = useState(false);
 
-  // Load main admin data
+  // Helper: fetch com service role via API (bypassa RLS)
+  const adminFetch = async (method, body) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    return fetch("/api/admin", {
+      method,
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      cache: "no-store",
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    }).then(r => r.json());
+  };
+
+  // Load main admin data (inclui profiles via service role)
   useEffect(() => {
     if (!user || user.email !== ADMIN_EMAIL) return;
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      const res = await fetch("/api/admin", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
-      const json = await res.json();
+      const json = await adminFetch("GET");
       if (json.error) { setError(json.error); setLoading(false); return; }
       setData(json);
+      setProfiles(json.profiles || []);
       setLoading(false);
     })();
   }, [user]);
 
-  // Load profiles for Acesso tab
+  // Recarregar profiles quando mudar para aba Acesso (dados já carregados no mount, mas refresca)
   useEffect(() => {
-    if (adminTab !== "acesso" || !user || user.email !== ADMIN_EMAIL) return;
+    if (adminTab !== "acesso" || !user || user.email !== ADMIN_EMAIL || !data) return;
     setLoadingProfiles(true);
-    supabase.from("profiles").select("*").order("criado_em", { ascending: false })
-      .then(({ data: p }) => { setProfiles(p || []); setLoadingProfiles(false); });
-  }, [adminTab, user]);
+    adminFetch("GET").then(json => {
+      if (!json.error) setProfiles(json.profiles || []);
+      setLoadingProfiles(false);
+    });
+  }, [adminTab]);
 
   // Load parceiros for Parceiros tab
   useEffect(() => {
@@ -5237,6 +5249,7 @@ function PageAdmin({ user }) {
       .then(async ({ data: ps }) => {
         const ps2 = ps || [];
         setParceiros(ps2);
+        // Contagens de indicados — parceiros não têm restrição de RLS relevante aqui
         const counts = {};
         await Promise.all(ps2.map(async (p) => {
           const [{ count: total }, { count: aprovados }] = await Promise.all([
@@ -5250,12 +5263,12 @@ function PageAdmin({ user }) {
   }, [adminTab, user]);
 
   const aprovar = async (profileId) => {
-    await supabase.from("profiles").update({ status: "active", aprovado_em: new Date().toISOString() }).eq("id", profileId);
+    await adminFetch("POST", { action: "aprovar", profileId });
     setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, status: "active" } : p));
   };
 
   const bloquear = async (profileId) => {
-    await supabase.from("profiles").update({ status: "blocked" }).eq("id", profileId);
+    await adminFetch("POST", { action: "bloquear", profileId });
     setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, status: "blocked" } : p));
   };
 

@@ -8,32 +8,35 @@ const adminSupabase = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
-export async function GET(req) {
-  // Verify caller is the admin via their JWT
+async function verifyAdmin(req) {
   const authHeader = req.headers.get("authorization");
-  if (!authHeader) return Response.json({ error: "Unauthorized" }, { status: 401 });
-
+  if (!authHeader) return null;
   const token = authHeader.replace("Bearer ", "");
-  const { data: { user: caller }, error: callerErr } = await adminSupabase.auth.getUser(token);
-  if (callerErr || !caller || caller.email !== ADMIN_EMAIL) {
-    return Response.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const { data: { user }, error } = await adminSupabase.auth.getUser(token);
+  if (error || !user || user.email !== ADMIN_EMAIL) return null;
+  return user;
+}
+
+export async function GET(req) {
+  const caller = await verifyAdmin(req);
+  if (!caller) return Response.json({ error: "Forbidden" }, { status: 403 });
 
   // Fetch all auth users
   const { data: { users }, error: usersErr } = await adminSupabase.auth.admin.listUsers({ perPage: 1000 });
   if (usersErr) return Response.json({ error: usersErr.message }, { status: 500 });
 
-  // Fetch user activity (last_seen per user)
-  const { data: activity } = await adminSupabase.from("user_activity").select("user_id, last_seen");
-
-  // Fetch profile statuses (active / pending / blocked)
-  const { data: profileRows } = await adminSupabase.from("profiles").select("id, status");
-
-  // Fetch all imoveis (user_id + type + city only) — for per-user breakdown
-  const { data: imoveis } = await adminSupabase.from("imoveis").select("user_id, type, city");
-
-  // COUNT direto para total real em tempo real
-  const { count: totalImoveisCount } = await adminSupabase.from("imoveis").select("*", { count: "exact", head: true });
+  // Fetch all data in parallel
+  const [
+    { data: activity },
+    { data: profileRows },
+    { data: imoveis },
+    { count: totalImoveisCount },
+  ] = await Promise.all([
+    adminSupabase.from("user_activity").select("user_id, last_seen"),
+    adminSupabase.from("profiles").select("*").order("criado_em", { ascending: false }),
+    adminSupabase.from("imoveis").select("user_id, type, city"),
+    adminSupabase.from("imoveis").select("*", { count: "exact", head: true }),
+  ]);
 
   // Build lookup maps
   const activityMap = {};
@@ -75,23 +78,48 @@ export async function GET(req) {
   const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
   const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
-  const usersThisMonth = users.filter(u => {
-    const d = new Date(u.created_at);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-  }).length;
-  const usersPrevMonth = users.filter(u => {
-    const d = new Date(u.created_at);
-    return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
-  }).length;
-
   return Response.json({
     users: enrichedUsers,
+    profiles: profileRows || [],
     summary: {
       totalUsers: users.length,
       activeUsers: enrichedUsers.filter(u => u.isAtivo).length,
       totalImoveis: totalImoveisCount ?? (imoveis || []).length,
-      usersThisMonth,
-      usersPrevMonth,
+      usersThisMonth: users.filter(u => {
+        const d = new Date(u.created_at);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      }).length,
+      usersPrevMonth: users.filter(u => {
+        const d = new Date(u.created_at);
+        return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
+      }).length,
     },
   });
+}
+
+export async function POST(req) {
+  const caller = await verifyAdmin(req);
+  if (!caller) return Response.json({ error: "Forbidden" }, { status: 403 });
+
+  const { action, profileId } = await req.json();
+
+  if (action === "aprovar") {
+    const { error } = await adminSupabase
+      .from("profiles")
+      .update({ status: "active", aprovado_em: new Date().toISOString() })
+      .eq("id", profileId);
+    if (error) return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ ok: true });
+  }
+
+  if (action === "bloquear") {
+    const { error } = await adminSupabase
+      .from("profiles")
+      .update({ status: "blocked" })
+      .eq("id", profileId);
+    if (error) return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ ok: true });
+  }
+
+  return Response.json({ error: "Unknown action" }, { status: 400 });
 }
