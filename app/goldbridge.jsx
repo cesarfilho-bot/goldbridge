@@ -2095,7 +2095,7 @@ function PageDashboard({ PROPS, onNav, onProp, onAdd }) {
 }
 
 // ─── NOI PAGE ─────────────────────────────────────────────────────────────────
-function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd, onDocs }) {
+function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd, onDocs, onImport }) {
   const [sortCol, setSortCol] = useState("aluguelLiquido");
   const [sortDir, setSortDir] = useState(-1);
   const [filterType, setFilterType] = useState("");
@@ -2174,7 +2174,10 @@ function PageNOI({ PROPS, onProp, onNav, onEdit, onObras, onDelete, onAdd, onDoc
           <div style={{ color: T.muted, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>Análise</div>
           <h1 style={{ color: T.text, fontSize: 20, fontWeight: 600, margin: 0, letterSpacing: "-0.02em" }}>Imóveis</h1>
         </div>
-        <button style={{ ...S.btn, display: "flex", alignItems: "center", gap: 6 }} onClick={onAdd}>+ Adicionar Imóvel</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={{ ...S.btnGhost, display: "flex", alignItems: "center", gap: 6 }} onClick={onImport}>↑ Importar Planilha</button>
+          <button style={{ ...S.btn, display: "flex", alignItems: "center", gap: 6 }} onClick={onAdd}>+ Adicionar Imóvel</button>
+        </div>
       </div>
 
       {/* Filters + Toggle */}
@@ -5709,6 +5712,303 @@ function PageHistorico({ PROPS, onUpdateProps }) {
 }
 
 
+// ─── IMPORTAR PLANILHA MODAL ──────────────────────────────────────────────────
+function ImportarPlanilhaModal({ onClose, onImport }) {
+  const [step, setStep] = useState("upload"); // "upload" | "processing" | "preview" | "importing"
+  const [error, setError] = useState(null);
+  const [resultData, setResultData] = useState(null);
+  const [imoveis, setImoveis] = useState([]);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const TIPOS = ["Apartamento","Casa","Casa de Condomínio","Sala Comercial","Industrial","Loja","Galpão","Salão Comercial","Terreno"];
+  const STATUSES = ["Ocupado","Vago","Em desocupação"];
+
+  const lerPlanilha = async (arquivo) => {
+    const XLSX = await import("xlsx");
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const workbook = XLSX.read(e.target.result, { type: "binary" });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          resolve(XLSX.utils.sheet_to_csv(sheet));
+        } catch (err) { reject(err); }
+      };
+      reader.onerror = reject;
+      reader.readAsBinaryString(arquivo);
+    });
+  };
+
+  const processarArquivo = async (arquivo) => {
+    if (!arquivo) return;
+    const ext = arquivo.name.toLowerCase().split(".").pop();
+    if (!["xlsx","xls","csv"].includes(ext)) {
+      setError("Formato inválido. Use .xlsx, .xls ou .csv");
+      return;
+    }
+    setStep("processing");
+    setError(null);
+    try {
+      let conteudo;
+      if (ext === "csv") {
+        conteudo = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.onerror = reject;
+          reader.readAsText(arquivo, "UTF-8");
+        });
+      } else {
+        conteudo = await lerPlanilha(arquivo);
+      }
+
+      if (!conteudo || conteudo.trim().length < 10) {
+        setError("Planilha vazia ou sem dados.");
+        setStep("upload");
+        return;
+      }
+
+      const conteudoTrimmed = conteudo.length > 20000 ? conteudo.slice(0, 20000) + "\n... (truncado)" : conteudo;
+
+      const res = await fetch("/api/import-planilha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conteudo: conteudoTrimmed }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        setError("Erro na API: " + (data.error?.message || JSON.stringify(data.error)));
+        setStep("upload");
+        return;
+      }
+
+      const text = data.content?.[0]?.text || "";
+      const clean = text.replace(/```json|```/g, "").trim();
+      let parsed;
+      try { parsed = JSON.parse(clean); }
+      catch { setError("Não foi possível interpretar a resposta da IA. Tente novamente."); setStep("upload"); return; }
+
+      if (!parsed.imoveis || parsed.imoveis.length === 0) {
+        setError("Nenhum imóvel encontrado na planilha.");
+        setStep("upload");
+        return;
+      }
+
+      setResultData(parsed);
+      setImoveis(parsed.imoveis.map((im, idx) => ({
+        _id: idx,
+        endereco: im.endereco || "",
+        tipo: TIPOS.includes(im.tipo) ? im.tipo : "Apartamento",
+        aluguel: im.aluguel != null ? String(im.aluguel) : "",
+        iptu: im.iptu != null ? String(im.iptu) : "",
+        status: im.status === "vago" ? "Vago" : "Ocupado",
+        valorCompra: im.valor_compra != null ? String(im.valor_compra) : "",
+        condominio: im.condominio != null ? String(im.condominio) : "",
+        inquilino: im.inquilino || "",
+        taxaAdm: im.taxa_administracao != null ? String(im.taxa_administracao) : "",
+        areaM2: im.area_m2 != null ? String(im.area_m2) : "",
+      })));
+      setStep("preview");
+    } catch (err) {
+      setError("Erro ao processar arquivo: " + err.message);
+      setStep("upload");
+    }
+  };
+
+  const setImovel = (id, key, val) => setImoveis(prev => prev.map(im => im._id === id ? { ...im, [key]: val } : im));
+  const removeImovel = (id) => setImoveis(prev => prev.filter(im => im._id !== id));
+  const isValid = (im) => im.endereco.trim() && im.tipo && im.aluguel !== "" && im.iptu !== "";
+  const allValid = imoveis.length > 0 && imoveis.every(isValid);
+
+  const handleImport = async () => {
+    setStep("importing");
+    const toImport = imoveis.map(im => ({
+      name: im.endereco.trim(),
+      type: im.tipo || "Apartamento",
+      rent: parseFloat(im.aluguel) || 0,
+      iptu: parseFloat(im.iptu) || 0,
+      status: im.status || "Ocupado",
+      valorCompra: parseFloat(im.valorCompra) || 0,
+      condoFee: parseFloat(im.condominio) || 0,
+      hasCondominio: (parseFloat(im.condominio) || 0) > 0,
+      locatarioNome: im.inquilino || "",
+      adminPct: parseFloat(im.taxaAdm) || 8,
+      size: parseFloat(im.areaM2) || 0,
+    }));
+    await onImport(toImport);
+    onClose();
+  };
+
+  const overlay = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 };
+  const box = { background: T.s1, border: `1px solid ${T.borderMid}`, borderRadius: 16, width: "100%", maxWidth: 760, maxHeight: "90vh", overflow: "auto", padding: 28 };
+
+  if (step === "upload" || step === "processing") return (
+    <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ ...box, maxWidth: 520 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div>
+            <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>Portfólio</div>
+            <div style={{ color: T.text, fontSize: 18, fontWeight: 600 }}>Importar Planilha</div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 22, lineHeight: 1, padding: "2px 6px" }}>×</button>
+        </div>
+
+        {step === "processing" ? (
+          <div style={{ textAlign: "center", padding: "60px 20px" }}>
+            <div style={{ color: T.gold, fontSize: 32, marginBottom: 16, display: "inline-block", animation: "gbSpin 1.5s linear infinite" }}>◎</div>
+            <div style={{ color: T.text, fontSize: 15, fontWeight: 500, marginBottom: 8 }}>Analisando planilha...</div>
+            <div style={{ color: T.muted, fontSize: 13 }}>Claude está mapeando os campos automaticamente</div>
+          </div>
+        ) : (
+          <>
+            <div
+              style={{ border: `2px dashed ${dragOver ? T.gold : T.border}`, borderRadius: 12, padding: "48px 24px", textAlign: "center", cursor: "pointer", transition: "border-color 0.15s", background: dragOver ? T.goldGlow : "transparent", marginBottom: 16 }}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) processarArquivo(f); }}
+            >
+              <div style={{ fontSize: 32, marginBottom: 12 }}>📊</div>
+              <div style={{ color: T.text, fontSize: 15, fontWeight: 500, marginBottom: 6 }}>Arraste sua planilha aqui</div>
+              <div style={{ color: T.muted, fontSize: 13, marginBottom: 16 }}>ou clique para selecionar o arquivo</div>
+              <div style={{ color: T.dim, fontSize: 11 }}>Suporta .xlsx, .xls e .csv</div>
+              <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) processarArquivo(f); e.target.value = ""; }} />
+            </div>
+
+            {error && (
+              <div style={{ background: T.redDim, border: `1px solid ${T.red}40`, borderRadius: 8, padding: "10px 14px", color: T.red, fontSize: 13, marginBottom: 12 }}>
+                {error}
+              </div>
+            )}
+            <div style={{ color: T.dim, fontSize: 12, lineHeight: 1.6 }}>
+              A IA identifica automaticamente as colunas da sua planilha e mapeia os dados dos imóveis, independente do formato.
+            </div>
+          </>
+        )}
+      </div>
+      <style>{`@keyframes gbSpin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
+    </div>
+  );
+
+  if (step === "importing") return (
+    <div style={overlay}>
+      <div style={{ ...box, maxWidth: 380, textAlign: "center", padding: "60px 28px" }}>
+        <div style={{ color: T.gold, fontSize: 32, marginBottom: 16, display: "inline-block", animation: "gbSpin 1.5s linear infinite" }}>◎</div>
+        <div style={{ color: T.text, fontSize: 15, fontWeight: 500, marginBottom: 8 }}>Importando imóveis...</div>
+        <div style={{ color: T.muted, fontSize: 13 }}>Salvando no Supabase</div>
+        <style>{`@keyframes gbSpin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
+      </div>
+    </div>
+  );
+
+  // Preview
+  return (
+    <div style={overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={box}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+          <div>
+            <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>Importar Planilha</div>
+            <div style={{ color: T.text, fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
+              {resultData?.total_encontrados || imoveis.length} imóveis encontrados
+            </div>
+            {resultData?.campos_identificados?.length > 0 && (
+              <div style={{ color: T.muted, fontSize: 12 }}>Campos mapeados: {resultData.campos_identificados.join(", ")}</div>
+            )}
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 22, lineHeight: 1, padding: "2px 6px" }}>×</button>
+        </div>
+
+        {resultData?.avisos?.length > 0 && (
+          <div style={{ background: T.amberDim, border: `1px solid ${T.amber}40`, borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>
+            <div style={{ color: T.amber, fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Avisos</div>
+            {resultData.avisos.map((a, i) => <div key={i} style={{ color: T.amber, fontSize: 12 }}>• {a}</div>)}
+          </div>
+        )}
+
+        {resultData?.campos_nao_mapeados?.length > 0 && (
+          <div style={{ color: T.dim, fontSize: 12, marginBottom: 16 }}>
+            Não mapeados: {resultData.campos_nao_mapeados.join(", ")}
+          </div>
+        )}
+
+        <div style={{ overflowX: "auto", marginBottom: 16 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${T.border}` }}>
+                {["Endereço *","Tipo *","Aluguel (R$/mês) *","IPTU (R$/ano) *","Status *","V. Compra","Condo/mês","Inquilino",""].map((h, i) => (
+                  <th key={i} style={{ color: T.muted, fontSize: 11, fontWeight: 600, textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {imoveis.map((im) => {
+                const missingEnd = !im.endereco.trim();
+                const missingAlug = im.aluguel === "";
+                const missingIPTU = im.iptu === "";
+                const inp = (missing) => ({
+                  background: missing ? T.amberDim : T.s2,
+                  border: `1px solid ${missing ? T.amber+"88" : T.border}`,
+                  borderRadius: 6, color: T.text, fontSize: 12,
+                  padding: "4px 6px", fontFamily: "inherit", width: "100%",
+                });
+                return (
+                  <tr key={im._id} style={{ borderBottom: `1px solid ${T.border}` }}>
+                    <td style={{ padding: "6px 8px", minWidth: 160 }}>
+                      <input value={im.endereco} onChange={e => setImovel(im._id, "endereco", e.target.value)} style={inp(missingEnd)} placeholder="Endereço..." />
+                    </td>
+                    <td style={{ padding: "6px 8px", minWidth: 130 }}>
+                      <select value={im.tipo} onChange={e => setImovel(im._id, "tipo", e.target.value)} style={{ ...inp(false), cursor: "pointer" }}>
+                        {TIPOS.map(t => <option key={t}>{t}</option>)}
+                      </select>
+                    </td>
+                    <td style={{ padding: "6px 8px", minWidth: 90 }}>
+                      <input value={im.aluguel} onChange={e => setImovel(im._id, "aluguel", e.target.value)} style={inp(missingAlug)} placeholder="0" />
+                    </td>
+                    <td style={{ padding: "6px 8px", minWidth: 90 }}>
+                      <input value={im.iptu} onChange={e => setImovel(im._id, "iptu", e.target.value)} style={inp(missingIPTU)} placeholder="0" />
+                    </td>
+                    <td style={{ padding: "6px 8px", minWidth: 120 }}>
+                      <select value={im.status} onChange={e => setImovel(im._id, "status", e.target.value)} style={{ ...inp(false), cursor: "pointer" }}>
+                        {STATUSES.map(s => <option key={s}>{s}</option>)}
+                      </select>
+                    </td>
+                    <td style={{ padding: "6px 8px", minWidth: 80 }}>
+                      <input value={im.valorCompra} onChange={e => setImovel(im._id, "valorCompra", e.target.value)} style={inp(false)} placeholder="—" />
+                    </td>
+                    <td style={{ padding: "6px 8px", minWidth: 80 }}>
+                      <input value={im.condominio} onChange={e => setImovel(im._id, "condominio", e.target.value)} style={inp(false)} placeholder="—" />
+                    </td>
+                    <td style={{ padding: "6px 8px", minWidth: 120 }}>
+                      <input value={im.inquilino} onChange={e => setImovel(im._id, "inquilino", e.target.value)} style={inp(false)} placeholder="—" />
+                    </td>
+                    <td style={{ padding: "6px 4px" }}>
+                      <button onClick={() => removeImovel(im._id)} style={{ background: "none", border: "none", color: T.dim, cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "0 4px" }} title="Remover">×</button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div style={{ color: T.dim, fontSize: 11, marginBottom: 20 }}>* Campos obrigatórios — campos destacados em âmbar precisam ser preenchidos antes de importar.</div>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button style={S.btnGhost} onClick={onClose}>Cancelar</button>
+          <button
+            style={{ ...S.btn, opacity: allValid ? 1 : 0.45, cursor: allValid ? "pointer" : "not-allowed" }}
+            onClick={allValid ? handleImport : undefined}
+            disabled={!allValid}
+          >
+            Importar {imoveis.length} imóvel{imoveis.length !== 1 ? "is" : ""}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── ADD IMOVEL MODAL ─────────────────────────────────────────────────────────
 function AddImovelModal({ onSave, onClose, nextId, userId }) {
   const NEIGHBORHOODS = Object.keys(FIPEZAP_M2).filter(k => !k.startsWith("_default")).sort((a,b) => a.localeCompare(b, "pt-BR"));
@@ -6725,6 +7025,7 @@ export default function App() {
   const [editingProp, setEditingProp] = useState(null);
   const [obrasProps, setObrasProps] = useState(null);
   const [addingImovel, setAddingImovel] = useState(false);
+  const [importingPlanilha, setImportingPlanilha] = useState(false);
   const [deletingProp, setDeletingProp] = useState(null);
   const [cancelandoProp, setCancelandoProp] = useState(null);
   const [lancamentos, setLancamentos] = useState([]);
@@ -6872,6 +7173,19 @@ export default function App() {
       setPropsRaw(prev => [...prev, withId]);
     }
     setAddingImovel(false);
+  };
+
+  const handleImportImoveis = async (imoveisToImport) => {
+    if (!portfolioId || !user) return;
+    const inserted = [];
+    for (const newProp of imoveisToImport) {
+      const base = { ...newProp, maintMonthly: 0, insurance: 0, admin: 0, vacancyDays: 0, obras: [], prestadores: [], pagamentos: {}, monthlyData: [], diaVencimento: 10, contratoAnos: 1, contratoInicio: "", regimeFiscal: "PF", indiceReajuste: "IGPM", iptuParcelas: 10, avaliacoes: [], documentos: [], locatarios: [], historico: [] };
+      const dbData = toDB(base);
+      const { data, error } = await supabase.from("imoveis").insert(dbData).select().single();
+      if (error) { console.error("[import] erro ao inserir:", error); continue; }
+      if (data) inserted.push(recalcProp({ ...base, id: data.id }, BENCHMARKS));
+    }
+    if (inserted.length > 0) setPropsRaw(prev => [...prev, ...inserted]);
   };
 
   const handleDeleteImovel = (prop) => setDeletingProp(prop);
@@ -7042,7 +7356,7 @@ export default function App() {
 
   const content = {
     dashboard: <PageDashboard PROPS={props} onNav={nav} onProp={setSelectedProp} onAdd={() => setAddingImovel(true)} />,
-    noi:       <PageNOI PROPS={props} onProp={setSelectedProp} onNav={nav} onEdit={handleEdit} onObras={(prop) => setObrasProps(props.find(p => p.id === prop.id) || prop)} onDelete={handleDeleteImovel} onAdd={() => setAddingImovel(true)} onDocs={(prop) => setDocsProp(props.find(p => p.id === prop.id) || prop)} />,
+    noi:       <PageNOI PROPS={props} onProp={setSelectedProp} onNav={nav} onEdit={handleEdit} onObras={(prop) => setObrasProps(props.find(p => p.id === prop.id) || prop)} onDelete={handleDeleteImovel} onAdd={() => setAddingImovel(true)} onDocs={(prop) => setDocsProp(props.find(p => p.id === prop.id) || prop)} onImport={() => setImportingPlanilha(true)} />,
     obras:     <PageObras PROPS={props} onUpdateProps={handleUpdateProps} />,
     mercado:   <PageValorMercado PROPS={props} onUpdateProps={handleUpdateProps} />,
     leakage:   <PageLeakage PROPS={props} onNavPagamentos={(propId) => { setHighlightPagPropId(propId); nav("pagamentos"); }} />,
@@ -7075,6 +7389,7 @@ export default function App() {
       {editingProp && <EditModal prop={editingProp} onSave={handleSaveEdit} onClose={() => setEditingProp(null)} userId={user?.id} />}
       {obrasProps && <ObrasModal prop={obrasProps} onSave={handleSaveObras} onClose={() => setObrasProps(null)} />}
       {addingImovel && <AddImovelModal nextId={nextId} onSave={handleAddImovel} onClose={() => setAddingImovel(false)} userId={user?.id} />}
+      {importingPlanilha && <ImportarPlanilhaModal onClose={() => setImportingPlanilha(false)} onImport={handleImportImoveis} />}
       {deletingProp && <DeleteConfirmModal prop={deletingProp} onConfirm={confirmDelete} onClose={() => setDeletingProp(null)} />}
       {cancelandoProp && <CancelarContratoModal prop={cancelandoProp} onConfirm={confirmCancelarContrato} onClose={() => setCancelandoProp(null)} />}
       {docsProp && <DocumentosModal prop={docsProp} onClose={() => setDocsProp(null)} onUpdateDocs={(newDocs) => handleUpdatePropDocs(docsProp.id, newDocs)} onApplyAiData={(updates) => handleApplyDocAiData(docsProp.id, updates)} userId={user?.id} />}
