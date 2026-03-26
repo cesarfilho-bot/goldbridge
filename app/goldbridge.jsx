@@ -5539,6 +5539,382 @@ function PageAdmin({ user }) {
 }
 
 // ─── NAV ──────────────────────────────────────────────────────────────────────
+// ─── PAGE ÍNDICES DE MERCADO ──────────────────────────────────────────────────
+function PageIndices({ PROPS }) {
+  const [indices, setIndices] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [cacheTs, setCacheTs] = useState(null);
+
+  const parseNum = (v) => parseFloat(String(v || "0").replace(",", ".")) || 0;
+
+  const getMonthKey = (dateStr) => {
+    const parts = (dateStr || "").split("/");
+    if (parts.length !== 3) return null;
+    return `${parts[2]}-${parts[1].padStart(2, "0")}`;
+  };
+
+  const buildMonthLabel = (key) => {
+    if (!key) return "";
+    const [y, m] = key.split("-");
+    return `${m}/${y.slice(2)}`;
+  };
+
+  const processCDI = (rows) => {
+    if (!rows?.length) return null;
+    const byMonth = {};
+    const monthOrder = [];
+    rows.forEach((r) => {
+      const key = getMonthKey(r.data);
+      if (!key) return;
+      if (!byMonth[key]) { byMonth[key] = 1; monthOrder.push(key); }
+      byMonth[key] *= (1 + parseNum(r.valor) / 100);
+    });
+    const sorted = [...new Set(monthOrder)].sort();
+    const last13 = sorted.slice(-13);
+    if (last13.length < 12) return null;
+    const last12 = last13.slice(-12);
+    const cdi12m = (last12.reduce((acc, key) => acc * byMonth[key], 1) - 1) * 100;
+    let cum = 0;
+    const chartPoints = last12.map((key) => {
+      cum += (byMonth[key] - 1) * 100;
+      return { month: buildMonthLabel(key), val: parseFloat(cum.toFixed(2)) };
+    });
+    return { total: cdi12m, chartPoints };
+  };
+
+  const processINCC = (rows) => {
+    if (!rows?.length) return null;
+    const last12 = rows.slice(-12);
+    let cum = 0;
+    const chartPoints = last12.map((r) => {
+      cum += parseNum(r.valor);
+      return { month: buildMonthLabel(getMonthKey(r.data)), val: parseFloat(cum.toFixed(2)) };
+    });
+    const incc12m = (last12.reduce((acc, r) => acc * (1 + parseNum(r.valor) / 100), 1) - 1) * 100;
+    return { total: incc12m, chartPoints };
+  };
+
+  const processDolar = (rows) => {
+    if (!rows?.length) return null;
+    const byMonth = {};
+    const monthOrder = [];
+    rows.forEach((r) => {
+      const key = getMonthKey(r.data);
+      if (!key) return;
+      if (!byMonth[key]) monthOrder.push(key);
+      byMonth[key] = parseNum(r.valor);
+    });
+    const sorted = [...new Set(monthOrder)].sort();
+    const last13 = sorted.slice(-13);
+    if (last13.length < 2) return null;
+    const base = byMonth[last13[0]];
+    const last12 = last13.slice(1);
+    const dolar12m = ((byMonth[last13[last13.length - 1]] / base) - 1) * 100;
+    const chartPoints = last12.map((key) => ({
+      month: buildMonthLabel(key),
+      val: parseFloat(((byMonth[key] / base - 1) * 100).toFixed(2)),
+    }));
+    return { total: dolar12m, chartPoints };
+  };
+
+  const processIFIX = (apiData) => {
+    try {
+      const q = apiData?.results?.[0];
+      if (!q) return null;
+      const hist = (q.historicalDataPrice || []).filter(h => h.close > 0);
+      if (hist.length < 2) return null;
+      const base = hist[0].close;
+      const ifix12m = ((hist[hist.length - 1].close / base) - 1) * 100;
+      const chartPoints = hist.slice(1).map((h) => {
+        const d = new Date(h.date * 1000);
+        return {
+          month: `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(2)}`,
+          val: parseFloat(((h.close / base - 1) * 100).toFixed(2)),
+        };
+      });
+      return { total: ifix12m, chartPoints };
+    } catch { return null; }
+  };
+
+  const loadIndices = async () => {
+    const CACHE_KEY = "rently_indices_v2";
+    const CACHE_TTL = 24 * 60 * 60 * 1000;
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const cached = JSON.parse(raw);
+        if (Date.now() - cached.ts < CACHE_TTL) {
+          setIndices(cached.data);
+          setCacheTs(cached.ts);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch {}
+
+    setLoading(true);
+    const [cdiRes, selicRes, inccRes, dolarRes, ifixRes] = await Promise.allSettled([
+      fetch("https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados/ultimos/252?formato=json").then((r) => r.json()),
+      fetch("https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json").then((r) => r.json()),
+      fetch("https://api.bcb.gov.br/dados/serie/bcdata.sgs.192/dados/ultimos/12?formato=json").then((r) => r.json()),
+      fetch("https://api.bcb.gov.br/dados/serie/bcdata.sgs.1/dados/ultimos/252?formato=json").then((r) => r.json()),
+      fetch("https://brapi.dev/api/quote/IFIX?range=1y&interval=1mo&fundamental=false").then((r) => r.json()),
+    ]);
+
+    const cdiData  = cdiRes.status  === "fulfilled" ? processCDI(cdiRes.value)   : null;
+    const inccData = inccRes.status === "fulfilled" ? processINCC(inccRes.value)  : null;
+    const dolarData= dolarRes.status=== "fulfilled" ? processDolar(dolarRes.value): null;
+    const ifixData = ifixRes.status === "fulfilled" ? processIFIX(ifixRes.value)  : null;
+    let selicRate  = null;
+    if (selicRes.status === "fulfilled" && selicRes.value?.length > 0)
+      selicRate = parseNum(selicRes.value[0].valor);
+
+    const result = { cdiData, selicRate, inccData, dolarData, ifixData };
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: result })); } catch {}
+    setIndices(result);
+    setCacheTs(Date.now());
+    setLoading(false);
+  };
+
+  useEffect(() => { loadIndices(); }, []);
+
+  // Portfolio metrics
+  const totalVM       = PROPS.reduce((s, p) => s + (p.valorMercado || 0), 0);
+  const totalNOIAnual = PROPS.reduce((s, p) => s + ((p.noi || 0) * 12), 0);
+  const portYield12m  = totalVM > 0 ? (totalNOIAnual / totalVM) * 100 : null;
+
+  const cdi12m   = indices?.cdiData?.total   ?? null;
+  const selicRate= indices?.selicRate        ?? null;
+  const incc12m  = indices?.inccData?.total  ?? null;
+  const dolar12m = indices?.dolarData?.total ?? null;
+  const ifix12m  = indices?.ifixData?.total  ?? null;
+
+  // Merge chart series using CDI months as the backbone
+  const buildChartData = () => {
+    const cdiPts = indices?.cdiData?.chartPoints || [];
+    if (!cdiPts.length) return [];
+    return cdiPts.map((pt, i) => {
+      const obj = { month: pt.month, CDI: pt.val };
+      if (selicRate != null)
+        obj["Selic"] = parseFloat(((selicRate / 12) * (i + 1)).toFixed(2));
+      const ip = indices?.inccData?.chartPoints[i];
+      if (ip) obj["INCC"] = ip.val;
+      const dp = indices?.dolarData?.chartPoints[i];
+      if (dp) obj["Dólar"] = dp.val;
+      const fp = indices?.ifixData?.chartPoints[i];
+      if (fp) obj["IFIX"] = fp.val;
+      if (portYield12m != null)
+        obj["Portfólio"] = parseFloat(((portYield12m / 12) * (i + 1)).toFixed(2));
+      return obj;
+    });
+  };
+
+  const chartData = buildChartData();
+
+  const pctFmt = (v) => v != null ? `${v.toFixed(1)}%` : "—";
+  const DiffBadge = ({ pp }) => {
+    if (pp == null) return <span style={{ color: T.dim }}>—</span>;
+    const color = pp >= 0 ? T.green : T.red;
+    return <span style={{ color, fontWeight: 600 }}>{pp >= 0 ? "+" : ""}{pp.toFixed(1)}pp</span>;
+  };
+
+  const compRows = [
+    { label: "Seu portfólio", yield12m: portYield12m, mensal: portYield12m != null ? portYield12m / 12 : null, isPort: true },
+    { label: "CDI",   yield12m: cdi12m,   mensal: cdi12m   != null ? cdi12m   / 12 : null },
+    { label: "Selic", yield12m: selicRate, mensal: selicRate!= null ? selicRate/ 12 : null },
+    { label: "IFIX",  yield12m: ifix12m,  mensal: ifix12m  != null ? ifix12m  / 12 : null },
+    { label: "INCC",  yield12m: incc12m,  mensal: incc12m  != null ? incc12m  / 12 : null },
+    { label: "Dólar", yield12m: dolar12m, mensal: dolar12m != null ? dolar12m / 12 : null },
+  ];
+
+  const CHART_LINES = [
+    { key: "Portfólio", color: "#FF6B6B",  dash: "6 3" },
+    { key: "CDI",       color: T.green,    dash: undefined },
+    { key: "Selic",     color: T.blue,     dash: undefined },
+    { key: "IFIX",      color: T.teal,     dash: undefined },
+    { key: "INCC",      color: T.amber,    dash: undefined },
+    { key: "Dólar",     color: T.gold,     dash: undefined },
+  ];
+
+  const cacheLabel = cacheTs ? (() => {
+    const d = new Date(cacheTs);
+    return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  })() : null;
+
+  if (loading) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ color: T.gold, fontSize: 28, marginBottom: 12, display: "inline-block", animation: "gbSpin 1.5s linear infinite" }}>◎</div>
+        <div style={{ color: T.muted, fontSize: 13 }}>Carregando índices de mercado...</div>
+        <div style={{ color: T.dim, fontSize: 12, marginTop: 4 }}>Banco Central · brapi.dev</div>
+      </div>
+      <style>{`@keyframes gbSpin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div>
+          <div style={{ color: T.muted, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>Análise</div>
+          <h1 style={{ color: T.text, fontSize: 20, fontWeight: 600, margin: 0, letterSpacing: "-0.02em" }}>Índices de Mercado</h1>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {cacheLabel && <span style={{ color: T.dim, fontSize: 11 }}>Dados de {cacheLabel}</span>}
+          <button style={S.btnGhost} onClick={() => {
+            try { localStorage.removeItem("rently_indices_v2"); } catch {}
+            setIndices(null);
+            loadIndices();
+          }}>↻ Atualizar</button>
+        </div>
+      </div>
+
+      {/* Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(168px, 1fr))", gap: 12 }}>
+        {[
+          { id: "CDI",   label: "CDI",        val: cdi12m,   unit: "acum. 12m",   fonte: "Banco Central" },
+          { id: "Selic", label: "Selic",       val: selicRate, unit: "taxa anual",  fonte: "Banco Central" },
+          { id: "IFIX",  label: "IFIX",        val: ifix12m,  unit: "var. 12m",    fonte: "B3 / brapi.dev" },
+          { id: "INCC",  label: "INCC",        val: incc12m,  unit: "acum. 12m",   fonte: "Banco Central" },
+          { id: "Dólar", label: "Dólar (USD)", val: dolar12m, unit: "var. 12m",    fonte: "Banco Central" },
+        ].map(({ id, label, val, unit, fonte }) => {
+          const color = val == null ? T.dim : val >= 0 ? T.green : T.red;
+          return (
+            <div key={id} style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, padding: "16px 18px" }}>
+              <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", marginBottom: 10 }}>{label}</div>
+              <div style={{ color, fontSize: 22, fontWeight: 700, fontFamily: "'DM Mono', monospace", marginBottom: 4 }}>
+                {val != null ? `${val >= 0 ? "+" : ""}${val.toFixed(1)}%` : "—"}
+              </div>
+              <div style={{ color: T.dim, fontSize: 11 }}>{unit}</div>
+              <div style={{ color: T.dim, fontSize: 10, marginTop: 8 }}>{fonte}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Comparison table */}
+      <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${T.border}` }}>
+          <div style={{ color: T.text, fontSize: 14, fontWeight: 600 }}>Comparativo com o Portfólio</div>
+          {totalVM === 0 && (
+            <div style={{ color: T.amber, fontSize: 12, marginTop: 4 }}>Cadastre o valor de mercado dos imóveis para ver o yield do portfólio</div>
+          )}
+        </div>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: `1px solid ${T.border}` }}>
+              {["Índice / Carteira", "Yield 12m", "Yield mensal", "vs Portfólio"].map((h, i) => (
+                <th key={h} style={{ color: T.muted, fontSize: 11, fontWeight: 600, textAlign: i === 0 ? "left" : "right", padding: "10px 20px 10px " + (i === 0 ? "20px" : "16px") }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {compRows.map((row, i) => {
+              const diff = row.isPort || portYield12m == null || row.yield12m == null ? null : portYield12m - row.yield12m;
+              return (
+                <tr key={row.label} style={{ borderBottom: i < compRows.length - 1 ? `1px solid ${T.border}` : "none", background: row.isPort ? T.goldGlow : "transparent" }}>
+                  <td style={{ padding: "12px 20px", color: row.isPort ? T.gold : T.text, fontSize: 13, fontWeight: row.isPort ? 600 : 400 }}>{row.label}</td>
+                  <td style={{ padding: "12px 16px", textAlign: "right", fontFamily: "'DM Mono', monospace", fontSize: 13, color: T.text }}>{pctFmt(row.yield12m)}</td>
+                  <td style={{ padding: "12px 16px", textAlign: "right", fontFamily: "'DM Mono', monospace", fontSize: 13, color: T.muted }}>{pctFmt(row.mensal)}</td>
+                  <td style={{ padding: "12px 20px 12px 16px", textAlign: "right" }}>
+                    {row.isPort ? <span style={{ color: T.dim, fontSize: 12 }}>base</span> : <DiffBadge pp={diff} />}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Chart */}
+      {chartData.length > 0 && (
+        <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, padding: "20px 20px 12px" }}>
+          <div style={{ color: T.text, fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Evolução — últimos 12 meses</div>
+          <div style={{ color: T.muted, fontSize: 12, marginBottom: 16 }}>Retorno acumulado (%), base 0% no início do período</div>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
+            {CHART_LINES.filter(l => chartData.some(d => d[l.key] != null)).map(l => (
+              <div key={l.key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ width: 18, height: 2, background: l.color, borderRadius: 1, ...(l.dash ? { backgroundImage: `repeating-linear-gradient(90deg, ${l.color} 0, ${l.color} 6px, transparent 6px, transparent 9px)`, background: "none" } : {}) }} />
+                <span style={{ color: T.muted, fontSize: 11 }}>{l.key}</span>
+              </div>
+            ))}
+          </div>
+          <ResponsiveContainer width="100%" height={260}>
+            <AreaChart data={chartData} margin={{ top: 4, right: 16, bottom: 0, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={T.border} vertical={false} />
+              <XAxis dataKey="month" tick={{ fill: T.dim, fontSize: 11 }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fill: T.dim, fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} width={48} />
+              <Tooltip
+                contentStyle={{ background: T.s2, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 12 }}
+                formatter={(val, name) => [val != null ? `${Number(val).toFixed(1)}%` : "—", name]}
+                labelStyle={{ color: T.muted }}
+                itemStyle={{ color: T.text }}
+              />
+              {CHART_LINES.map((l) => (
+                <Area key={l.key} type="monotone" dataKey={l.key} stroke={l.color} fill="none" strokeWidth={2} strokeDasharray={l.dash} dot={false} connectNulls />
+              ))}
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Per-property table */}
+      {PROPS.length > 0 && (
+        <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden" }}>
+          <div style={{ padding: "16px 20px", borderBottom: `1px solid ${T.border}` }}>
+            <div style={{ color: T.text, fontSize: 14, fontWeight: 600 }}>Análise por Imóvel</div>
+            <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>Yield anual (NOI / valor de mercado) vs CDI e Selic</div>
+          </div>
+          {PROPS.filter(p => (p.valorMercado || 0) > 0).length === 0 ? (
+            <div style={{ padding: "24px 20px", color: T.muted, fontSize: 13 }}>
+              Cadastre o valor de mercado nos imóveis para ver a análise individual.
+            </div>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${T.border}` }}>
+                  {["Imóvel", "Yield anual", "vs CDI", "vs Selic"].map((h, i) => (
+                    <th key={h} style={{ color: T.muted, fontSize: 11, fontWeight: 600, textAlign: i === 0 ? "left" : "right", padding: "10px " + (i === 3 ? "20px" : "16px") + " 10px " + (i === 0 ? "20px" : "16px") }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const withVM = PROPS.filter(p => (p.valorMercado || 0) > 0);
+                  return withVM.map((p, i) => {
+                    const pYield = ((p.noi || 0) * 12 / p.valorMercado) * 100;
+                    const vsCDI   = cdi12m    != null ? pYield - cdi12m    : null;
+                    const vsSelic = selicRate != null ? pYield - selicRate : null;
+                    return (
+                      <tr key={p.id} style={{ borderBottom: i < withVM.length - 1 ? `1px solid ${T.border}` : "none" }}>
+                        <td style={{ padding: "12px 16px 12px 20px" }}>
+                          <div style={{ color: T.text, fontSize: 13, fontWeight: 500 }}>{p.name}</div>
+                          <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>{p.neighborhood || p.type}</div>
+                        </td>
+                        <td style={{ padding: "12px 16px", textAlign: "right", fontFamily: "'DM Mono', monospace", fontSize: 13, color: T.text }}>{pYield.toFixed(1)}%</td>
+                        <td style={{ padding: "12px 16px", textAlign: "right" }}><DiffBadge pp={vsCDI} /></td>
+                        <td style={{ padding: "12px 20px 12px 16px", textAlign: "right" }}><DiffBadge pp={vsSelic} /></td>
+                      </tr>
+                    );
+                  });
+                })()}
+                {PROPS.filter(p => !(p.valorMercado > 0)).length > 0 && (
+                  <tr>
+                    <td colSpan={4} style={{ padding: "10px 20px", color: T.dim, fontSize: 11, borderTop: `1px solid ${T.border}` }}>
+                      {PROPS.filter(p => !(p.valorMercado > 0)).length} imóvel(is) sem valor de mercado não exibidos
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const NAV_SECTIONS = [
   {
     label: "PRINCIPAL",
@@ -5560,6 +5936,7 @@ const NAV_SECTIONS = [
   {
     label: "ANÁLISE",
     items: [
+      { id: "indices",    label: "Índices de Mercado",  icon: "◈" },
       { id: "decision",   label: "Decisão por Imóvel", icon: "⬡" },
       { id: "report",     label: "Relatórios",          icon: "◑" },
       { id: "ia",         label: "Assistente IA",        icon: "✦" },
@@ -7360,6 +7737,7 @@ export default function App() {
     obras:     <PageObras PROPS={props} onUpdateProps={handleUpdateProps} />,
     mercado:   <PageValorMercado PROPS={props} onUpdateProps={handleUpdateProps} />,
     leakage:   <PageLeakage PROPS={props} onNavPagamentos={(propId) => { setHighlightPagPropId(propId); nav("pagamentos"); }} />,
+    indices:   <PageIndices PROPS={props} />,
     decision:  <PageDecision PROPS={props} onProp={setSelectedProp} onNav={nav} />,
     detail:    <PageDetail prop={selectedProp} onBack={() => nav("noi")} onEdit={handleEdit} onObras={(prop) => setObrasProps(props.find(p => p.id === prop.id) || prop)} onDelete={handleDeleteImovel} onCancelarContrato={handleCancelarContrato} />,
     report:    <PageReport PROPS={props} />,
