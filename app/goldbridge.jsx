@@ -5915,38 +5915,296 @@ function PageIndices({ PROPS }) {
   );
 }
 
+// ─── PAGE KPIs DA CARTEIRA ────────────────────────────────────────────────────
+function calcularTIR(fluxos) {
+  if (!fluxos || fluxos.length < 4) return null;
+  const calcNPV = (taxa) => fluxos.reduce((npv, fc, t) => npv + fc / Math.pow(1 + taxa, t), 0);
+  let low = -0.99, high = 5, mid = 0;
+  for (let i = 0; i < 1000; i++) {
+    mid = (low + high) / 2;
+    const npv = calcNPV(mid);
+    if (Math.abs(npv) < 0.01) break;
+    if (npv > 0) low = mid; else high = mid;
+  }
+  const tirAnual = (Math.pow(1 + mid, 12) - 1) * 100;
+  return isFinite(tirAnual) ? tirAnual : null;
+}
+
+function PageKPIs({ PROPS, lancamentos }) {
+  const CDI_FALLBACK = 14.75;
+  const [sortCol, setSortCol] = useState("yieldReal");
+  const [sortDir, setSortDir] = useState("desc");
+  const [tooltip, setTooltip] = useState(null);
+
+  const TOOLTIPS = {
+    yieldReal: "Aluguel líquido anualizado ÷ valor de mercado. Representa o retorno bruto sobre o capital imobilizado.",
+    noi: "Net Operating Income: aluguel bruto − IPTU mensal − condomínio − taxa de administração.",
+    capRate: "NOI anualizado ÷ valor de mercado. Métrica padrão do mercado imobiliário.",
+    margemNOI: "NOI ÷ aluguel bruto. Indica eficiência operacional do imóvel.",
+    moi: "Múltiplo do Investimento: total recebido historicamente ÷ valor de compra.",
+    tir: "Taxa Interna de Retorno anualizada, calculada com base no histórico de pagamentos registrados.",
+    payback: "Valor de compra ÷ aluguel líquido anual. Tempo estimado para recuperar o capital.",
+  };
+
+  const computeKPIs = (p) => {
+    const aluguelBruto = p.rent || 0;
+    const iptuMensal = Math.round((p.iptu || 0) / 12);
+    const condoMensal = p.hasCondominio ? (p.condoFee || 0) : 0;
+    const admin = p.admin || Math.round(aluguelBruto * (p.adminPct || 0) / 100);
+    const noi = aluguelBruto - iptuMensal - condoMensal - admin;
+    const valorMercado = p.valorMercado || p.marketValueManual || p.valorCompra || 0;
+    const valorCompra = p.valorCompra || 0;
+
+    const yieldReal = valorMercado > 0 ? (p.aluguelLiquido || noi) * 12 / valorMercado * 100 : 0;
+    const capRate = valorMercado > 0 ? noi * 12 / valorMercado * 100 : 0;
+    const margemNOI = aluguelBruto > 0 ? noi / aluguelBruto * 100 : 0;
+    const payback = valorCompra > 0 && (p.aluguelLiquido || noi) > 0
+      ? valorCompra / ((p.aluguelLiquido || noi) * 12)
+      : null;
+
+    // MOI from monthly_data or pagamentos
+    let totalRecebido = 0;
+    const pagImovel = (lancamentos || []).filter(l => l.imovel_id === p.id && l.tipo === "entrada");
+    totalRecebido = pagImovel.reduce((s, l) => s + Number(l.valor || 0), 0);
+    // also add from monthly_data
+    if (p.monthly_data) {
+      try {
+        const md = typeof p.monthly_data === "string" ? JSON.parse(p.monthly_data) : p.monthly_data;
+        if (Array.isArray(md)) {
+          md.forEach(m => { if (m.received) totalRecebido += Number(m.received || 0); });
+        }
+      } catch(e) {}
+    }
+    const moi = valorCompra > 0 && totalRecebido > 0 ? totalRecebido / valorCompra : null;
+
+    // TIR
+    let tir = null;
+    if (valorCompra > 0 && p.dataCompra) {
+      const fluxos = [-valorCompra];
+      // build monthly cashflows from pagamentos
+      const pagsByMonth = {};
+      pagImovel.forEach(l => {
+        const key = l.data ? l.data.substring(0, 7) : null;
+        if (key) pagsByMonth[key] = (pagsByMonth[key] || 0) + Number(l.valor || 0);
+      });
+      if (Object.keys(pagsByMonth).length >= 3) {
+        const startDate = new Date(p.dataCompra + "-01");
+        const today = new Date();
+        let d = new Date(startDate);
+        while (d <= today) {
+          const key = d.toISOString().substring(0, 7);
+          fluxos.push(pagsByMonth[key] || (p.aluguelLiquido || noi));
+          d.setMonth(d.getMonth() + 1);
+        }
+        tir = calcularTIR(fluxos);
+      }
+    }
+
+    return { noi, yieldReal, capRate, margemNOI, moi, tir, payback, valorMercado, aluguelBruto, valorCompra };
+  };
+
+  const kpisPerImovel = PROPS.map(p => ({ ...p, kpis: computeKPIs(p) }));
+  const ocupados = kpisPerImovel.filter(p => p.status === "Ocupado");
+
+  // Portfolio-level aggregates
+  const totalValorMercado = ocupados.reduce((s, p) => s + p.kpis.valorMercado, 0);
+  const yieldMedio = totalValorMercado > 0
+    ? ocupados.reduce((s, p) => s + p.kpis.yieldReal * p.kpis.valorMercado, 0) / totalValorMercado
+    : 0;
+  const noiTotal = ocupados.reduce((s, p) => s + p.kpis.noi, 0);
+  const capRateMedio = totalValorMercado > 0
+    ? ocupados.reduce((s, p) => s + p.kpis.capRate * p.kpis.valorMercado, 0) / totalValorMercado
+    : 0;
+  const margemMedia = ocupados.length > 0
+    ? ocupados.reduce((s, p) => s + p.kpis.margemNOI, 0) / ocupados.length
+    : 0;
+
+  const withMOI = kpisPerImovel.filter(p => p.kpis.moi !== null);
+  const moiMedio = withMOI.length > 0
+    ? withMOI.reduce((s, p) => s + p.kpis.moi, 0) / withMOI.length
+    : null;
+
+  const withTIR = kpisPerImovel.filter(p => p.kpis.tir !== null);
+  const tirMedia = withTIR.length > 0
+    ? withTIR.reduce((s, p) => s + p.kpis.tir, 0) / withTIR.length
+    : null;
+
+  const withPayback = kpisPerImovel.filter(p => p.kpis.payback !== null);
+  const paybackMedio = withPayback.length > 0
+    ? withPayback.reduce((s, p) => s + p.kpis.payback, 0) / withPayback.length
+    : null;
+
+  const sorted = [...kpisPerImovel].sort((a, b) => {
+    const va = a.kpis[sortCol] ?? -Infinity;
+    const vb = b.kpis[sortCol] ?? -Infinity;
+    return sortDir === "desc" ? vb - va : va - vb;
+  });
+
+  const thStyle = (col) => ({
+    ...S.th, cursor: "pointer", userSelect: "none",
+    color: sortCol === col ? T.gold : T.muted,
+    position: "relative",
+  });
+
+  const KPICard = ({ label, value, sub, highlight, tooltipKey }) => (
+    <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, padding: "18px 20px", flex: 1, minWidth: 180 }}>
+      <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", marginBottom: 8, textTransform: "uppercase" }}>{label}</div>
+      <div style={{ color: T.text, fontSize: 24, fontWeight: 600, letterSpacing: "-0.03em", marginBottom: 4 }}>{value}</div>
+      {sub && <div style={{ color: highlight ? T.green : T.muted, fontSize: 12 }}>{sub}</div>}
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+      <div>
+        <div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>ANÁLISE</div>
+        <h1 style={{ color: T.text, fontSize: 26, fontWeight: 600, margin: 0, letterSpacing: "-0.02em" }}>KPIs da Carteira</h1>
+      </div>
+
+      {/* Seção 1 — KPIs de renda */}
+      <div>
+        <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", marginBottom: 12, textTransform: "uppercase" }}>KPIs de Renda</div>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+          <KPICard
+            label="Yield Real Médio"
+            value={`${yieldMedio.toFixed(2)}% a.a.`}
+            sub={yieldMedio >= CDI_FALLBACK ? `↑ ${(yieldMedio - CDI_FALLBACK).toFixed(2)}pp acima do CDI` : `↓ ${(CDI_FALLBACK - yieldMedio).toFixed(2)}pp abaixo do CDI`}
+            highlight={yieldMedio >= CDI_FALLBACK}
+          />
+          <KPICard
+            label="NOI Mensal Total"
+            value={fmt.brl(noiTotal)}
+            sub={`${ocupados.length} imóveis ocupados`}
+          />
+          <KPICard
+            label="Cap Rate NOI Médio"
+            value={`${capRateMedio.toFixed(2)}% a.a.`}
+            sub="Ponderado por valor de mercado"
+          />
+          <KPICard
+            label="Margem NOI Média"
+            value={`${margemMedia.toFixed(1)}%`}
+            sub={margemMedia >= 55 ? "↑ Acima do padrão (55–70%)" : "↓ Abaixo do padrão (55–70%)"}
+            highlight={margemMedia >= 55}
+          />
+        </div>
+      </div>
+
+      {/* Seção 2 — KPIs de retorno do capital */}
+      <div>
+        <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", marginBottom: 12, textTransform: "uppercase" }}>KPIs de Retorno do Capital</div>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+          <KPICard
+            label="MOI Médio"
+            value={moiMedio !== null ? `${moiMedio.toFixed(2)}x` : "—"}
+            sub={moiMedio !== null ? `${withMOI.length} imóveis com histórico` : "Sem dados suficientes"}
+          />
+          <KPICard
+            label="TIR Histórica Média"
+            value={tirMedia !== null ? `${tirMedia.toFixed(1)}% a.a.` : "Dados insuficientes"}
+            sub={tirMedia !== null ? (tirMedia >= CDI_FALLBACK ? `↑ Acima do CDI (${CDI_FALLBACK}%)` : `↓ Abaixo do CDI (${CDI_FALLBACK}%)`) : `${withTIR.length} imóveis calculados`}
+            highlight={tirMedia !== null && tirMedia >= CDI_FALLBACK}
+          />
+          <KPICard
+            label="Payback Médio"
+            value={paybackMedio !== null ? `${paybackMedio.toFixed(1)} anos` : "—"}
+            sub={paybackMedio !== null ? `${withPayback.length} imóveis com custo cadastrado` : "Sem valor de compra cadastrado"}
+          />
+        </div>
+      </div>
+
+      {/* Seção 3 — Tabela de KPIs por imóvel */}
+      <div>
+        <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", marginBottom: 12, textTransform: "uppercase" }}>KPIs por Imóvel</div>
+        <div style={{ ...S.card, padding: 0, overflow: "hidden" }}>
+          {tooltip && (
+            <div style={{ position: "fixed", background: T.s2, border: `1px solid ${T.border}`, borderRadius: 8, padding: "10px 14px", fontSize: 12, color: T.text, maxWidth: 260, zIndex: 9999, top: tooltip.y + 12, left: tooltip.x + 8, lineHeight: 1.5, boxShadow: "0 4px 16px rgba(0,0,0,0.2)" }}>
+              {tooltip.text}
+            </div>
+          )}
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={{ ...S.th, textAlign: "left", paddingLeft: 20 }}>Imóvel</th>
+                  {[
+                    { col: "yieldReal", label: "Yield Real" },
+                    { col: "noi", label: "NOI/mês" },
+                    { col: "capRate", label: "Cap Rate" },
+                    { col: "margemNOI", label: "Margem NOI" },
+                    { col: "moi", label: "MOI" },
+                    { col: "tir", label: "TIR" },
+                    { col: "payback", label: "Payback" },
+                  ].map(({ col, label }) => (
+                    <th key={col} style={thStyle(col)}
+                      onClick={() => { if (sortCol === col) setSortDir(d => d === "desc" ? "asc" : "desc"); else { setSortCol(col); setSortDir("desc"); } }}
+                      onMouseEnter={e => setTooltip({ text: TOOLTIPS[col], x: e.clientX, y: e.clientY })}
+                      onMouseLeave={() => setTooltip(null)}
+                    >
+                      {label} {sortCol === col ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map(p => {
+                  const k = p.kpis;
+                  const vago = p.status !== "Ocupado";
+                  const rowStyle = { borderTop: `1px solid ${T.border}`, background: vago ? `${T.amber}08` : "transparent" };
+                  const cellStyle = { padding: "12px 14px", fontSize: 13, color: vago ? T.muted : T.text, ...S.mono };
+                  return (
+                    <tr key={p.id} style={rowStyle}>
+                      <td style={{ padding: "12px 14px 12px 20px", fontSize: 13 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ color: T.text, fontWeight: 500 }}>{p.name}</span>
+                          <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: vago ? `${T.amber}22` : `${T.green}22`, color: vago ? T.amber : T.green, fontWeight: 600 }}>
+                            {vago ? "Vago" : "Ocupado"}
+                          </span>
+                        </div>
+                        <div style={{ color: T.muted, fontSize: 11, marginTop: 2 }}>{p.neighborhood}</div>
+                      </td>
+                      <td style={cellStyle}>{vago ? "—" : `${k.yieldReal.toFixed(2)}%`}</td>
+                      <td style={cellStyle}>{vago ? "—" : fmt.brl(k.noi)}</td>
+                      <td style={cellStyle}>{vago ? "—" : `${k.capRate.toFixed(2)}%`}</td>
+                      <td style={cellStyle}>{vago ? "—" : `${k.margemNOI.toFixed(1)}%`}</td>
+                      <td style={cellStyle}>{k.moi !== null ? `${k.moi.toFixed(2)}x` : "—"}</td>
+                      <td style={cellStyle}>{k.tir !== null ? `${k.tir.toFixed(1)}%` : "—"}</td>
+                      <td style={cellStyle}>{k.payback !== null ? `${k.payback.toFixed(1)}a` : "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Disclaimer */}
+      <div style={{ background: T.s2, borderRadius: 10, padding: "14px 18px", fontSize: 12, color: T.muted, lineHeight: 1.6, borderLeft: `3px solid ${T.border}` }}>
+        As métricas apresentadas são estimativas baseadas nos dados cadastrados. TIR e MOI consideram apenas o histórico de pagamentos registrados na plataforma. Para planejamento tributário e decisões de estruturação patrimonial, consulte um contador especializado.
+      </div>
+    </div>
+  );
+}
+
 const NAV_SECTIONS = [
-  {
-    label: "PRINCIPAL",
-    items: [
-      { id: "dashboard",  label: "Visão Geral da Carteira", icon: "⊞" },
-      { id: "noi",        label: "Portfólio de Imóveis",    icon: "◎" },
-      { id: "mercado",    label: "Valuation da Carteira",   icon: "↗" },
-      { id: "fluxo",      label: "Fluxo de Caixa",          icon: "≡" },
-    ]
-  },
   {
     label: "GESTÃO",
     items: [
-      { id: "pagamentos", label: "Pagamentos",   icon: "◷" },
-      { id: "leakage",    label: "Alertas",      icon: "⚑" },
-      { id: "iptu",       label: "IPTU & Cond.", icon: "◈" },
+      { id: "dashboard",  label: "Visão Geral da Carteira", icon: "⊞" },
+      { id: "noi",        label: "Portfólio de Imóveis",    icon: "🏠" },
+      { id: "pagamentos", label: "Pagamentos",               icon: "≡" },
+      { id: "leakage",    label: "Alertas",                  icon: "⚑" },
+      { id: "iptu",       label: "IPTU & Condomínio",        icon: "◈" },
     ]
   },
   {
     label: "ANÁLISE",
     items: [
-      { id: "indices",    label: "Índices de Mercado",  icon: "◈" },
-      { id: "decision",   label: "Decisão por Imóvel", icon: "⬡" },
-      { id: "report",     label: "Relatórios",          icon: "◑" },
-      { id: "ia",         label: "Assistente IA",        icon: "✦" },
-    ]
-  },
-  {
-    label: "IMÓVEIS",
-    items: [
-      { id: "locatarios", label: "Locatários", icon: "◉" },
-      { id: "historico",  label: "Histórico",  icon: "◔" },
+      { id: "kpis",       label: "KPIs da Carteira",         icon: "📊" },
+      { id: "mercado",    label: "Valuation da Carteira",    icon: "⬡" },
+      { id: "decision",   label: "Decisão por Imóvel",       icon: "◎" },
+      { id: "indices",    label: "Índices de Mercado",       icon: "📈" },
     ]
   },
 ];
@@ -7738,6 +7996,7 @@ export default function App() {
     mercado:   <PageValorMercado PROPS={props} onUpdateProps={handleUpdateProps} />,
     leakage:   <PageLeakage PROPS={props} onNavPagamentos={(propId) => { setHighlightPagPropId(propId); nav("pagamentos"); }} />,
     indices:   <PageIndices PROPS={props} />,
+    kpis:      <PageKPIs PROPS={props} lancamentos={lancamentos} />,
     decision:  <PageDecision PROPS={props} onProp={setSelectedProp} onNav={nav} />,
     detail:    <PageDetail prop={selectedProp} onBack={() => nav("noi")} onEdit={handleEdit} onObras={(prop) => setObrasProps(props.find(p => p.id === prop.id) || prop)} onDelete={handleDeleteImovel} onCancelarContrato={handleCancelarContrato} />,
     report:    <PageReport PROPS={props} />,
