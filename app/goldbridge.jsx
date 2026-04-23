@@ -139,6 +139,31 @@ const BENCHMARKS = {
     Comercial:   { iptu_m2: 14, vacancy_days: 45, maintenance_annual_m2: 45, cap_rate: 0.085 },
     Terreno:     { iptu_m2: 4,  vacancy_days: 0,  maintenance_annual_m2: 2,  cap_rate: 0.015 },
   },
+  "Limeira": {
+    Residencial: { iptu_m2: 7,  vacancy_days: 30, maintenance_annual_m2: 30, cap_rate: 0.070 },
+    Comercial:   { iptu_m2: 12, vacancy_days: 45, maintenance_annual_m2: 42, cap_rate: 0.086 },
+    Terreno:     { iptu_m2: 3,  vacancy_days: 0,  maintenance_annual_m2: 2,  cap_rate: 0.014 },
+  },
+  "Santa Bárbara d'Oeste": {
+    Residencial: { iptu_m2: 7,  vacancy_days: 32, maintenance_annual_m2: 30, cap_rate: 0.068 },
+    Comercial:   { iptu_m2: 12, vacancy_days: 48, maintenance_annual_m2: 40, cap_rate: 0.084 },
+    Terreno:     { iptu_m2: 3,  vacancy_days: 0,  maintenance_annual_m2: 2,  cap_rate: 0.014 },
+  },
+  "Paulínia": {
+    Residencial: { iptu_m2: 9,  vacancy_days: 25, maintenance_annual_m2: 35, cap_rate: 0.065 },
+    Comercial:   { iptu_m2: 15, vacancy_days: 38, maintenance_annual_m2: 48, cap_rate: 0.082 },
+    Terreno:     { iptu_m2: 5,  vacancy_days: 0,  maintenance_annual_m2: 3,  cap_rate: 0.018 },
+  },
+  "Bertioga": {
+    Residencial: { iptu_m2: 10, vacancy_days: 40, maintenance_annual_m2: 40, cap_rate: 0.050 },
+    Comercial:   { iptu_m2: 18, vacancy_days: 60, maintenance_annual_m2: 55, cap_rate: 0.065 },
+    Terreno:     { iptu_m2: 6,  vacancy_days: 0,  maintenance_annual_m2: 4,  cap_rate: 0.020 },
+  },
+  "Nova Odessa": {
+    Residencial: { iptu_m2: 6,  vacancy_days: 32, maintenance_annual_m2: 28, cap_rate: 0.070 },
+    Comercial:   { iptu_m2: 10, vacancy_days: 48, maintenance_annual_m2: 38, cap_rate: 0.086 },
+    Terreno:     { iptu_m2: 3,  vacancy_days: 0,  maintenance_annual_m2: 2,  cap_rate: 0.014 },
+  },
 };
 
 function getBenchmark(city, type) {
@@ -379,7 +404,12 @@ const FIPEZAP_M2 = {
   "Vila São Pedro": { res: 4400, com: 3200, var12m: 0.028, fonte: "ZAP Americana 2025" },
   "Vila Vitória": { res: 4400, com: 3200, var12m: 0.028, fonte: "ZAP Americana 2025" },
   "Werner Plaas": { res: 4400, com: 3200, var12m: 0.028, fonte: "ZAP Americana 2025" },
-  "_default_Americana":         { res: 4400, com: 3200, var12m: 0.028, fonte: "AgentImóvel Americana dez/2025" },
+  "_default_Americana":              { res: 4400, com: 3200, var12m: 0.028, fonte: "AgentImóvel Americana dez/2025" },
+  "_default_Limeira":                { res: 4200, com: 3100, var12m: 0.025, fonte: "ZAP/VivaReal Limeira 2025" },
+  "_default_Santa Bárbara d'Oeste":  { res: 4000, com: 3000, var12m: 0.023, fonte: "ZAP/VivaReal SBO 2025" },
+  "_default_Paulínia":               { res: 5200, com: 3800, var12m: 0.030, fonte: "ZAP/VivaReal Paulínia 2025" },
+  "_default_Bertioga":               { res: 6500, com: 5000, var12m: 0.040, fonte: "ZAP/VivaReal Bertioga 2025" },
+  "_default_Nova Odessa":            { res: 3800, com: 2800, var12m: 0.022, fonte: "ZAP/VivaReal Nova Odessa 2025" },
 };
 
 
@@ -389,11 +419,26 @@ const CAMPINAS_BAIRROS = ["Cambuí","Nova Campinas","Centro"];
 const SANTO_ANDRE_BAIRROS = ["Vila Guiomar","Centro"];
 const AMERICANA_BAIRROS = Object.keys(FIPEZAP_M2).filter(k => !k.startsWith("_default") && !SP_BAIRROS.includes(k) && !CAMPINAS_BAIRROS.includes(k) && !SANTO_ANDRE_BAIRROS.includes(k)).sort((a,b) => a.localeCompare(b,"pt-BR"));
 
+const LIMEIRA_BAIRROS = ["Bairro dos Campos","Centro","Chácara das Flores","Jardim Alberto","Jardim Albertina","Jardim Alice","Jardim Alto da Colina","Jardim América","Jardim das Nações","Jardim das Oliveiras","Jardim do Sol","Jardim Emília","Jardim Europa","Jardim Icaraí","Jardim Itaguaçu","Jardim Marta","Jardim Novo Horizonte","Jardim Oriental","Jardim Planalto","Jardim Primavera","Jardim Progresso","Jardim Recreio","Jardim Residencial Santa Cruz","Jardim Santa Fé","Jardim Santa Rosa","Jardim São Bernardo","Jardim São Camilo","Jardim São Jerônimo","Jardim São Marcos","Jardim São Paulo","Jardim Vista Alegre","Nova Limeira","Parque Agrindus","Parque das Figueiras","Parque do Sol","Parque Industrial","Parque Residencial Brandão","Parque Universitário","Residencial Terras de Santa Cruz","Vila Bela","Vila Borsari","Vila Brasil","Vila Itaguaçu","Vila Macuco","Vila Nova","Vila Oratório","Vila Pavan","Vila Queiroz","Vila Sônia"].sort((a,b) => a.localeCompare(b,"pt-BR"));
+
+const SANTA_BARBARA_BAIRROS = ["Bairro dos Pinheiros","Bela Vista","Centro","Jardim Alvorada","Jardim Astúrias","Jardim Baronesa","Jardim Camargo","Jardim Colonial","Jardim das Palmeiras","Jardim dos Oliveiras","Jardim Esplanada","Jardim Europa","Jardim Itamaraty","Jardim Minerva","Jardim Miramar","Jardim Paulista","Jardim Pérola","Jardim Planalto","Jardim Primavera","Jardim Quisisana","Jardim Santa Cruz","Jardim Santa Hermínia","Jardim São Domingos","Jardim São Paulo","Parque das Laranjeiras","Parque das Nações","Parque Residencial Nardini","Parque Santa Bárbara","Planalto do Sol","Residencial São Luiz","Vila Mollon","Vila Pérola","Vila Real","Vila São Pedro"].sort((a,b) => a.localeCompare(b,"pt-BR"));
+
+const PAULINIA_BAIRROS = ["Centro","Jardim Amanda","Jardim Bela Vista","Jardim Boa Esperança","Jardim Conceição","Jardim Copacabana","Jardim Esmeraldas","Jardim Itajaí","Jardim Nossa Senhora do Sion","Jardim Novo","Jardim Planalto","Jardim Primavera","Parque das Nações","Parque das Tulipas","Parque Industrial","Parque Orlanda","Parque Primavera II","Residencial Parque da Liberdade","Residencial Vila Verde","Vila Calouste","Vila Elvira"].sort((a,b) => a.localeCompare(b,"pt-BR"));
+
+const BERTIOGA_BAIRROS = ["Boracéia","Centro","Guaratuba","Ilha de Bertioga","Indaiá","Jardim Guarujá","Jardim Indaiá","Jardim Maracanã","Jardim Rio Verde","Jardim Samambaia","Jardim Vista Linda","Maitinga","Praia da Enseada","Praia de Bertioga","Praia do Indaiá","Riviera de São Lourenço","São Lourenço","Vila Caicara","Vila Itapanhaú","Vista Linda"].sort((a,b) => a.localeCompare(b,"pt-BR"));
+
+const NOVA_ODESSA_BAIRROS = ["Centro","Jardim Alvorada","Jardim Bonança","Jardim dos Ipês","Jardim Europa","Jardim Monte Alegre","Jardim Nova Odessa","Jardim Santa Luzia","Jardim São Paulo","Parque Industrial","Parque Yolanda","Residencial Shangrila","Vila Nova","Vila Santa Luzia"].sort((a,b) => a.localeCompare(b,"pt-BR"));
+
 const BAIRROS_POR_CIDADE = {
   "São Paulo": SP_BAIRROS.sort((a,b) => a.localeCompare(b,"pt-BR")),
   "Campinas": CAMPINAS_BAIRROS.sort((a,b) => a.localeCompare(b,"pt-BR")),
   "Santo André": SANTO_ANDRE_BAIRROS.sort((a,b) => a.localeCompare(b,"pt-BR")),
   "Americana": AMERICANA_BAIRROS,
+  "Limeira": LIMEIRA_BAIRROS,
+  "Santa Bárbara d'Oeste": SANTA_BARBARA_BAIRROS,
+  "Paulínia": PAULINIA_BAIRROS,
+  "Bertioga": BERTIOGA_BAIRROS,
+  "Nova Odessa": NOVA_ODESSA_BAIRROS,
 };
 
 function NeighborhoodSearch({ city, value, onChange }) {
@@ -2474,272 +2519,131 @@ function countMesesEmAberto(prop, hoje) {
 
 // ─── LEAKAGE PAGE ─────────────────────────────────────────────────────────────
 function PageLeakage({ PROPS, onNavPagamentos }) {
-  const INSIGHTS = buildInsights(PROPS);
-  const [expanded, setExpanded] = useState(1);
-  const emDesocupacao = PROPS.filter(p => p.status === "Em desocupação");
   const hoje = new Date();
 
-  // Inadimplentes: ocupados com mês atual atrasado ou mês anterior sem pagamento
-  const getDiaVencLeakage = (p) => p.contratoInicio ? new Date(p.contratoInicio + "T12:00").getDate() : (p.diaVencimento || 10);
-  const isAtrasadoLeakage = (p, ano, mes) => {
-    const pag = (p.pagamentos || {})[`${ano}_${mes}`];
-    if (pag?.status === "pago") return false;
-    if (pag?.status) return false;
-    const diaVenc = getDiaVencLeakage(p);
-    const dataVenc = new Date(ano, mes, diaVenc);
-    const contratoAtivo = p.contratoInicio ? new Date(p.contratoInicio + "T12:00") <= dataVenc : true;
-    if (!contratoAtivo) return false;
-    return dataVenc < hoje;
-  };
-  const mesAtualL = hoje.getMonth(), anoAtualL = hoje.getFullYear();
-  const prevMesL = mesAtualL === 0 ? 11 : mesAtualL - 1;
-  const prevAnoL = mesAtualL === 0 ? anoAtualL - 1 : anoAtualL;
-  const inadimplentes = PROPS.filter(p =>
-    p.status === "Ocupado" && (isAtrasadoLeakage(p, anoAtualL, mesAtualL) || isAtrasadoLeakage(p, prevAnoL, prevMesL))
-  ).map(p => ({
-    ...p,
-    mesAtualAtraso: isAtrasadoLeakage(p, anoAtualL, mesAtualL),
-    mesAnteriorAtraso: isAtrasadoLeakage(p, prevAnoL, prevMesL),
-  }));
+  // Build alerts
+  const urgentes = [];
+  const atencao = [];
+  const informativos = [];
 
-  const alertasVencContrato = PROPS.filter(p => {
-    if (!p.contratoVencimento) return false;
-    const venc = new Date(p.contratoVencimento+"T12:00");
-    const dias = Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
-    return dias >= 0 && dias <= 60;
-  }).map(p => {
-    const venc = new Date(p.contratoVencimento+"T12:00");
-    const dias = Math.round((venc - hoje) / (1000 * 60 * 60 * 24));
-    return { ...p, diasVenc: dias, dataVencFmt: venc.toLocaleDateString("pt-BR") };
-  }).sort((a, b) => a.diasVenc - b.diasVenc);
+  PROPS.forEach(p => {
+    // Imóveis vagos
+    if (p.status === "Vago" || p.status === "Em desocupação") {
+      const diasVagos = p.vagoDesde
+        ? Math.max(0, Math.round((hoje - new Date(p.vagoDesde + "T12:00")) / (1000 * 60 * 60 * 24)))
+        : 0;
+      const iptuMensal = Math.round((p.iptu || 0) / 12);
+      const condoMensal = p.hasCondominio ? (p.condoFee || 0) : 0;
+      const custoAcumulado = Math.round((iptuMensal + condoMensal) * (diasVagos / 30));
+      urgentes.push({
+        id: `vago-${p.id}`,
+        titulo: `${p.name} vago${p.status === "Em desocupação" ? " (em desocupação)" : ""}`,
+        sub: `${diasVagos > 0 ? `Vago há ${diasVagos} dias` : "Imóvel desocupado"}${custoAcumulado > 0 ? ` · Custo acumulado: ${fmt.brl(custoAcumulado)}` : ""}`,
+        acao: "Ver imóvel",
+        onAcao: () => onNavPagamentos(p.id),
+      });
+    }
 
-  const contratosVencidos = PROPS.filter(p => {
-    if (!p.contratoVencimento || p.status !== "Ocupado") return false;
-    const venc = new Date(p.contratoVencimento+"T12:00");
-    return venc < hoje;
-  }).map(p => {
-    const venc = new Date(p.contratoVencimento+"T12:00");
-    const diasVencido = Math.round((hoje - venc) / (1000 * 60 * 60 * 24));
-    const mesesVencido = Math.floor(diasVencido / 30);
-    const tempoVencido = mesesVencido >= 2
-      ? `${mesesVencido} meses`
-      : diasVencido === 1 ? "1 dia" : `${diasVencido} dias`;
-    return { ...p, diasVencido, tempoVencido, dataVencFmt: venc.toLocaleDateString("pt-BR") };
-  }).sort((a, b) => b.diasVencido - a.diasVencido);
+    // Contratos vencendo
+    if (p.contratoInicio && p.contratoAnos) {
+      const inicio = new Date(p.contratoInicio + "-01");
+      const fim = new Date(inicio);
+      fim.setFullYear(fim.getFullYear() + (p.contratoAnos || 1));
+      const diasRestantes = Math.round((fim - hoje) / (1000 * 60 * 60 * 24));
+      if (diasRestantes >= 0 && diasRestantes <= 7) {
+        urgentes.push({
+          id: `contrato-urgente-${p.id}`,
+          titulo: `Contrato ${p.name} vence em ${diasRestantes} dia${diasRestantes !== 1 ? "s" : ""}`,
+          sub: `${p.neighborhood} · ${p.locatarioNome || "Locatário não informado"}`,
+          acao: "Ver imóvel",
+          onAcao: () => onNavPagamentos(p.id),
+        });
+      } else if (diasRestantes > 7 && diasRestantes <= 60) {
+        atencao.push({
+          id: `contrato-atencao-${p.id}`,
+          titulo: `Contrato ${p.name} vence em ${diasRestantes} dias`,
+          sub: `${p.neighborhood} · Planejar renovação`,
+          acao: "Ver imóvel",
+          onAcao: () => onNavPagamentos(p.id),
+        });
+      }
+    }
+  });
 
-  const TIPOS_COMERCIAL = ["Sala Comercial", "Industrial", "Loja", "Galpão", "Salão Comercial", "Terreno"];
-  const rentabilidadeBaixa = PROPS.filter(p => {
-    if (p.status !== "Ocupado" || (p.marketValueManual || 0) <= 0) return false;
-    const rentBruta = (p.rent - (p.descontoAluguel || 0)) / p.marketValueManual * 100;
-    const benchMin = TIPOS_COMERCIAL.includes(p.type) ? 0.6 : 0.4;
-    return rentBruta < benchMin;
-  }).map(p => {
-    const rentBruta = (p.rent - (p.descontoAluguel || 0)) / p.marketValueManual * 100;
-    const isComercial = TIPOS_COMERCIAL.includes(p.type);
-    const benchMin = isComercial ? 0.6 : 0.4;
-    const benchMax = isComercial ? 0.8 : 0.5;
-    const aluguelIdealMin = Math.round(p.marketValueManual * benchMin / 100);
-    const aluguelIdealMax = Math.round(p.marketValueManual * benchMax / 100);
-    return { ...p, rentBruta, benchMin, benchMax, aluguelIdealMin, aluguelIdealMax };
-  }).sort((a, b) => a.rentBruta - b.rentBruta);
+  // Informativo: portfolio vs CDI
+  const ocupados = PROPS.filter(p => p.status === "Ocupado");
+  if (ocupados.length > 0) {
+    const totalVM = ocupados.reduce((s, p) => s + (p.valorMercado || p.marketValueManual || 0), 0);
+    const yieldMedio = totalVM > 0
+      ? ocupados.reduce((s, p) => s + (p.aluguelLiquido || p.rent || 0) * 12 / Math.max(totalVM / ocupados.length, 1), 0) / ocupados.length
+      : 0;
+    if (yieldMedio > 0) {
+      informativos.push({
+        id: "portfolio-yield",
+        titulo: "Yield médio do portfólio",
+        sub: `${yieldMedio.toFixed(2)}% a.a. · ${yieldMedio >= 14.75 ? "Acima do CDI atual (14,75%)" : "Abaixo do CDI atual (14,75%)"}`,
+        acao: "Ver KPIs",
+        onAcao: null,
+      });
+    }
+  }
 
-  const perdaRentMin = rentabilidadeBaixa.reduce((s, p) => s + (p.aluguelIdealMin - (p.rent - (p.descontoAluguel||0))) * 12, 0);
-  const perdaRentMax = rentabilidadeBaixa.reduce((s, p) => s + (p.aluguelIdealMax - (p.rent - (p.descontoAluguel||0))) * 12, 0);
-  const INSIGHTS_DISPLAY = rentabilidadeBaixa.length > 0
-    ? [...INSIGHTS.filter(i => i.type !== "aluguel_baixo"), { id: 5, type: "aluguel_baixo", severity: "alta", icon: "", title: "Aluguel Abaixo do Potencial de Mercado", description: `${rentabilidadeBaixa.length} imóvel(is) com rentabilidade abaixo do benchmark de mercado.`, metric: `Receita adicional potencial: ${fmt.brlK(Math.round(perdaRentMax))}/ano`, props: rentabilidadeBaixa, impactMin: Math.round(perdaRentMin), impactMax: Math.round(perdaRentMax), actions: ["Revisar valor do aluguel na próxima renovação de contrato", "Verificar índice de reajuste aplicado (IGPM acumulado)", "Negociar reajuste gradual com o inquilino", "Considerar rescisão e novo contrato a valor de mercado"], benchmark: "Rentabilidade bruta: 0,4% residencial · 0,6% comercial (mínimo)" }]
-    : INSIGHTS;
-  const TOTAL_MIN = INSIGHTS_DISPLAY.reduce((s, i) => s + i.impactMin, 0);
-  const TOTAL_MAX = INSIGHTS_DISPLAY.reduce((s, i) => s + i.impactMax, 0);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div><div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>DIAGNÓSTICO</div><h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Alertas</h1></div>
-
-      {emDesocupacao.length > 0 && (
-        <div style={{ background: T.amber+"18", border: `1px solid ${T.amber}55`, borderRadius: 14, padding: 20 }}>
-          <div style={{ color: T.amber, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>IMÓVEIS EM DESOCUPAÇÃO ({emDesocupacao.length})</div>
-          {emDesocupacao.map(p => (
-            <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${T.amber}22` }}>
-              <div>
-                <div style={{ color: T.text, fontWeight: 600 }}>{p.name}</div>
-                <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>{p.neighborhood} · Entrega prevista: {p.desocupacaoDataEntrega ? new Date(p.desocupacaoDataEntrega+"-01").toLocaleDateString("pt-BR",{month:"long",year:"numeric"}) : "a definir"}</div>
-              </div>
-              <span style={S.badge(T.amber)}>Em desocupação</span>
-            </div>
-          ))}
+  const NIVEL = ({ cor, label, icone, items }) => {
+    if (items.length === 0) return null;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+          <span style={{ color: cor, fontSize: 10 }}>●</span>
+          <span style={{ color: cor, fontWeight: 600, fontSize: 13, letterSpacing: "0.02em" }}>{label}</span>
+          <span style={{ background: cor + "22", color: cor, fontSize: 11, fontWeight: 600, borderRadius: 10, padding: "1px 8px", minWidth: 24, textAlign: "center" }}>{items.length}</span>
         </div>
-      )}
-      {(() => {
-        // Inadimplência com escalonamento para imobiliária sem seguro
-        const inad = PROPS.filter(p => p.status === "Ocupado").map(p => {
-          const meses = countMesesEmAberto(p, hoje);
-          return { ...p, mesesEmAberto: meses };
-        }).filter(p => p.mesesEmAberto > 0);
-
-        // Sem seguro de repasse: escalonamento completo
-        const semSeguro = inad.filter(p => p.viaImobiliaria && !p.imobiliariaPossuiSeguro);
-        // Com seguro ou sem imobiliária: alerta simples
-        const outros = inad.filter(p => !(p.viaImobiliaria && !p.imobiliariaPossuiSeguro));
-
-        if (inad.length === 0) return null;
-        return (
-          <div style={{ background: T.amber+"11", border: `1px solid ${T.amber}55`, borderRadius: 14, padding: 20 }}>
-            <div style={{ color: T.amber, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>INADIMPLÊNCIA ({inad.length})</div>
-
-            {semSeguro.map(p => {
-              const totalEmAberto = p.mesesEmAberto * (p.rent - (p.descontoAluguel||0));
-              const acaoJudicial = p.pagamentos?.__acao_judicial;
-              let borderColor = T.amber, bgColor = T.amber+"11", emoji = "🟡", msg = `Aluguel em atraso — 1 mês em aberto`;
-              if (p.mesesEmAberto >= 3) { borderColor = T.red; bgColor = T.red+"11"; emoji = "🔴"; msg = `Ação judicial provável — ${p.mesesEmAberto} meses em aberto · Total em aberto: ${fmt.brl(totalEmAberto)}`; }
-              else if (p.mesesEmAberto === 2) { borderColor = "#FF8C00"; bgColor = "#FF8C0011"; emoji = "🟠"; msg = `2 meses sem receber — acompanhe com a imobiliária`; }
-              return (
-                <div key={p.id} style={{ padding: "12px 14px", background: bgColor, border: `1px solid ${borderColor}44`, borderRadius: 10, marginBottom: 8 }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
-                    <div>
-                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                        <span>{emoji}</span>
-                        <span style={{ color: T.text, fontWeight: 700 }}>{p.name}</span>
-                        {acaoJudicial?.ativo && <span style={{ background: T.red+"22", border:`1px solid ${T.red}44`, color:T.red, borderRadius:6, padding:"1px 8px", fontSize:11, fontWeight:700 }}>⚖️ Ação judicial em andamento</span>}
-                      </div>
-                      <div style={{ color: T.muted, fontSize: 12, marginTop: 4, marginLeft: 22 }}>
-                        {p.neighborhood} · {msg}
-                      </div>
-                      {p.imobiliariaName && <div style={{ color: T.dim, fontSize: 11, marginTop: 2, marginLeft: 22 }}>Via {p.imobiliariaName} · sem seguro de repasse</div>}
-                    </div>
-                    {onNavPagamentos && (
-                      <button style={{ background: T.amber+"22", border:`1px solid ${T.amber}55`, color:T.amber, borderRadius:8, padding:"6px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:700, flexShrink:0 }} onClick={() => onNavPagamentos(p.id)}>Ver →</button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-
-            {outros.map(p => (
-              <div key={p.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 0", borderBottom:`1px solid ${T.amber}22` }}>
-                <div>
-                  <div style={{ color:T.text, fontWeight:600 }}>{p.name}</div>
-                  <div style={{ color:T.muted, fontSize:12, marginTop:2 }}>
-                    {p.neighborhood} · {p.mesesEmAberto} mês{p.mesesEmAberto > 1 ? "es" : ""} em aberto
-                    {p.viaImobiliaria && p.imobiliariaPossuiSeguro && <span style={{ color:T.green, marginLeft:8 }}>· repasse garantido pelo seguro</span>}
-                  </div>
-                </div>
-                {onNavPagamentos && (
-                  <button style={{ background:T.amber+"22", border:`1px solid ${T.amber}55`, color:T.amber, borderRadius:8, padding:"6px 14px", fontSize:12, cursor:"pointer", fontFamily:"inherit", fontWeight:700 }} onClick={() => onNavPagamentos(p.id)}>Ver em Pagamentos →</button>
-                )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {items.map(item => (
+            <div key={item.id} style={{ background: T.s1, border: `1px solid ${cor}30`, borderLeft: `3px solid ${cor}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 16 }}>
+              <span style={{ fontSize: 18, flexShrink: 0 }}>{icone}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: T.text, fontWeight: 500, fontSize: 14 }}>{item.titulo}</div>
+                <div style={{ color: T.muted, fontSize: 12, marginTop: 3 }}>{item.sub}</div>
               </div>
-            ))}
-          </div>
-        );
-      })()}
-      {alertasVencContrato.length > 0 && (
-        <div style={{ background: T.red+"11", border: `1px solid ${T.red}40`, borderRadius: 14, padding: 20 }}>
-          <div style={{ color: T.red, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>CONTRATOS VENCENDO ({alertasVencContrato.length})</div>
-          {alertasVencContrato.map(p => (
-            <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${T.red}22` }}>
-              <div>
-                <div style={{ color: T.text, fontWeight: 600 }}>{p.name}</div>
-                <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
-                  {p.neighborhood} · Vence em <span style={{ color: p.diasVenc <= 15 ? T.red : T.amber, fontWeight: 700 }}>{p.diasVenc} dia{p.diasVenc !== 1 ? "s" : ""}</span> · {p.dataVencFmt}
-                </div>
-              </div>
-              <span style={S.badge(p.diasVenc <= 15 ? T.red : T.amber)}>Reajuste/Renovação</span>
-            </div>
-          ))}
-        </div>
-      )}
-      {contratosVencidos.length > 0 && (
-        <div style={{ background: T.amber+"11", border: `1px solid ${T.amber}55`, borderRadius: 14, padding: 20 }}>
-          <div style={{ color: T.amber, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>CONTRATO VENCIDO — LOCAÇÃO POR PRAZO INDETERMINADO ({contratosVencidos.length})</div>
-          {contratosVencidos.map(p => (
-            <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${T.amber}22` }}>
-              <div>
-                <div style={{ color: T.text, fontWeight: 600 }}>{p.name}</div>
-                <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
-                  {p.neighborhood} · Venceu em <span style={{ color: T.amber, fontWeight: 700 }}>{p.dataVencFmt}</span> · vencido há <span style={{ color: T.amber, fontWeight: 700 }}>{p.tempoVencido}</span>
-                </div>
-              </div>
-              <span style={S.badge(T.amber)}>Prazo indeterminado</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {rentabilidadeBaixa.length > 0 && (
-        <div style={{ background: T.amber+"11", border: `1px solid ${T.amber}55`, borderRadius: 14, padding: 20 }}>
-          <div style={{ color: T.amber, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>RENTABILIDADE ABAIXO DO MERCADO ({rentabilidadeBaixa.length})</div>
-          {rentabilidadeBaixa.map(p => (
-            <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${T.amber}22` }}>
-              <div>
-                <div style={{ color: T.text, fontWeight: 600 }}>{p.name}</div>
-                <div style={{ color: T.muted, fontSize: 12, marginTop: 2 }}>
-                  {p.neighborhood} · Rentabilidade atual: <span style={{ color: T.amber, fontWeight: 700 }}>{p.rentBruta.toFixed(2)}%/mês</span>
-                  {" · "}Benchmark: <span style={{ color: T.text, fontWeight: 700 }}>{p.benchMin.toFixed(1)}%–{p.benchMax.toFixed(1)}%/mês</span>
-                  {" · "}Aluguel ideal: <span style={{ color: T.green, fontWeight: 700 }}>{fmt.brl(p.aluguelIdealMin)}–{fmt.brl(p.aluguelIdealMax)}/mês</span>
-                </div>
-              </div>
-              <span style={S.badge(T.amber)}>Revisar aluguel</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div style={{ ...S.cardGold, display: "flex", gap: 32, alignItems: "center", flexWrap: "wrap" }}>
-        <div><div style={{ color: T.goldDim, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>PERDA ESTIMADA ANUAL</div><div style={{ color: T.red, fontSize: 36, fontWeight: 900, ...S.mono }}>{fmt.brlK(TOTAL_MIN)}</div><div style={{ color: T.muted, fontSize: 13, marginTop: 4 }}>até {fmt.brlK(TOTAL_MAX)}</div></div>
-        <div style={{ width: 1, height: 60, background: T.goldDim }} />
-        <div><div style={{ color: T.goldDim, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>INSIGHTS ATIVOS</div><div style={{ color: T.gold, fontSize: 36, fontWeight: 900, ...S.mono }}>{INSIGHTS_DISPLAY.length}</div></div>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {INSIGHTS_DISPLAY.map(ins => {
-          const open = expanded === ins.id, borderColor = ins.severity === "alta" ? T.red : ins.severity === "média" ? T.amber : T.blue;
-          return (
-            <div key={ins.id} style={{ background: T.s1, border: `1px solid ${open ? borderColor + "60" : T.border}`, borderRadius: 14, overflow: "hidden" }}>
-              <div style={{ padding: 20, cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 16 }} onClick={() => setExpanded(open ? null : ins.id)}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}><span style={{ color: T.text, fontWeight: 800, fontSize: 15 }}>{ins.title}</span><SevBadge s={ins.severity} /></div>
-                  <div style={{ color: T.muted, fontSize: 13 }}>{ins.description}</div>
-                  {ins.metric && <div style={{ marginTop: 8, padding: "5px 10px", background: T.s2, borderRadius: 6, display: "inline-block" }}><span style={{ color: T.gold, fontSize: 12, fontWeight: 700 }}>{ins.metric}</span></div>}
-                </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}><div style={{ color: T.red, ...S.mono, fontWeight: 900, fontSize: 15 }}>{fmt.brlK(ins.impactMin)}</div><div style={{ color: T.muted, fontSize: 10, marginTop: 2 }}>a {fmt.brlK(ins.impactMax)}/ano</div><div style={{ color: T.muted, fontSize: 16, marginTop: 6 }}>{open ? "▲" : "▼"}</div></div>
-              </div>
-              {open && (
-                <div style={{ borderTop: `1px solid ${T.border}`, padding: 20, background: T.s0 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: ins.props.length > 0 ? "1fr 1fr" : "1fr", gap: 20 }}>
-                    {ins.props.length > 0 && (
-                      <div>
-                        <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>IMÓVEIS AFETADOS</div>
-                        {ins.props.map(p => (
-                          <div key={p.id} style={{ padding: "10px 14px", background: T.s1, borderRadius: 8, marginBottom: 8 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between" }}>
-                              <div><div style={{ color: T.goldBright, fontWeight: 600, fontSize: 13 }}>{p.name}</div><div style={{ color: T.dim, fontSize: 11 }}>{p.neighborhood}</div></div>
-                              <div style={{ textAlign: "right" }}>
-                                
-                                {ins.type === "vacancy" && <div style={{ color: T.amber, fontSize: 13, fontWeight: 700 }}>{p.vacancyDays}d</div>}
-                                {ins.type === "maintenance" && <div style={{ color: T.amber, fontSize: 13, fontWeight: 700 }}>+{p.maintDelta}%</div>}
-                                {ins.type === "noi" && <div style={{ color: T.red, fontSize: 13, fontWeight: 700 }}>{fmt.pct(p.noiPct)}</div>}
-                                {ins.type === "aluguel_baixo" && <div style={{ color: T.amber, fontSize: 13, fontWeight: 700 }}>{fmt.brl(p.rent - (p.descontoAluguel||0))}/mês</div>}
-                                {ins.type === "aluguel_baixo" && <div style={{ color: T.dim, fontSize: 11 }}>{p.rentBruta?.toFixed(2)}% · mín {p.benchMin?.toFixed(1)}%</div>}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <div>
-                      <div style={{ color: T.muted, fontSize: 11, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>PLANO DE AÇÃO</div>
-                      {ins.actions.map((a, i) => (
-                        <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8, padding: "10px 14px", background: T.s1, borderRadius: 8 }}>
-                          <div style={{ minWidth: 22, height: 22, borderRadius: "50%", background: T.goldGlow, border: `1px solid ${T.goldDim}`, display: "flex", alignItems: "center", justifyContent: "center", color: T.gold, fontSize: 10, fontWeight: 800, flexShrink: 0 }}>{i + 1}</div>
-                          <span style={{ color: T.text, fontSize: 13, lineHeight: 1.5 }}>{a}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+              {item.onAcao && (
+                <button onClick={item.onAcao} style={{ background: cor + "18", border: `1px solid ${cor}44`, color: cor, borderRadius: 7, padding: "6px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, whiteSpace: "nowrap" }}>
+                  {item.acao}
+                </button>
               )}
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
+    );
+  };
+
+  const totalAlertas = urgentes.length + atencao.length + informativos.length;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>GESTÃO</div>
+          <h1 style={{ color: T.text, fontSize: 26, fontWeight: 600, margin: 0, letterSpacing: "-0.02em" }}>Alertas</h1>
+        </div>
+        {totalAlertas > 0 && (
+          <div style={{ display: "flex", gap: 12 }}>
+            {urgentes.length > 0 && <div style={{ background: T.red + "18", border: `1px solid ${T.red}44`, borderRadius: 8, padding: "6px 14px", fontSize: 12, color: T.red, fontWeight: 600 }}>{urgentes.length} urgente{urgentes.length !== 1 ? "s" : ""}</div>}
+            {atencao.length > 0 && <div style={{ background: T.amber + "18", border: `1px solid ${T.amber}44`, borderRadius: 8, padding: "6px 14px", fontSize: 12, color: T.amber, fontWeight: 600 }}>{atencao.length} atenção</div>}
+          </div>
+        )}
+      </div>
+
+      {totalAlertas === 0 && (
+        <div style={{ ...S.card, textAlign: "center", padding: "60px 20px", color: T.muted }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>✓</div>
+          Nenhum alerta no momento. Portfólio em ordem.
+        </div>
+      )}
+
+      <NIVEL cor={T.red} label="URGENTE" icone="🔴" items={urgentes} />
+      <NIVEL cor={T.amber} label="ATENÇÃO" icone="🟡" items={atencao} />
+      <NIVEL cor={T.green} label="INFORMATIVO" icone="🟢" items={informativos} />
     </div>
   );
 }
@@ -3027,140 +2931,236 @@ function ScoreRing({ score, color, size=56 }) {
   return <svg width={size} height={size}><circle cx={size/2} cy={size/2} r={r} fill="none" stroke={T.s3} strokeWidth={5} /><circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={5} strokeDasharray={`${filled} ${circ}`} strokeLinecap="round" transform={`rotate(-90 ${size/2} ${size/2})`} /><text x={size/2} y={size/2+5} textAnchor="middle" fill={color} fontSize={size===56?14:11} fontWeight={800} fontFamily="'DM Mono', monospace">{score}</text></svg>;
 }
 
-function PageDecision({ PROPS }) {
-  const TIPOS_COM = ["Sala Comercial", "Industrial", "Loja", "Galpão", "Salão Comercial", "Terreno"];
-  const [filterRec, setFilterRec] = useState("");
+function PageDecision({ PROPS, onProp, onNav }) {
+  const [selectedId, setSelectedId] = useState(null);
+  const [aiRec, setAiRec] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const CDI = 14.75;
+  const SELIC = 14.75;
+  const IFIX = 8.1;
 
-  const propsComVM = PROPS.filter(p => (p.marketValueManual || 0) > 0);
-  const mediaRentabilidade = propsComVM.length > 0
-    ? propsComVM.reduce((s, p) => s + ((p.rent - (p.descontoAluguel||0)) / p.marketValueManual) * 100, 0) / propsComVM.length
-    : null;
-  const mediaVacancia = PROPS.length > 0
-    ? PROPS.reduce((s, p) => s + (p.vacancyDays || 0), 0) / PROPS.length
-    : 0;
+  const prop = selectedId ? PROPS.find(p => p.id === selectedId) : null;
 
-  const analise = PROPS.map(p => {
-    const temVM = (p.marketValueManual || 0) > 0;
-    const rentBrutaMensal = temVM ? ((p.rent - (p.descontoAluguel||0)) / p.marketValueManual) * 100 : null;
-    const isCom = TIPOS_COM.includes(p.type);
-    const bmMin = isCom ? 0.6 : 0.4;
-    const bmMax = isCom ? 0.8 : 0.5;
-    const rentAbaixoBm = rentBrutaMensal !== null ? rentBrutaMensal < bmMin : null;
-    const vacAcimaMed = (p.vacancyDays || 0) > mediaVacancia;
-    let recomendacao;
-    if (rentAbaixoBm === null) {
-      recomendacao = vacAcimaMed ? "atencao" : "manter";
-    } else if (!rentAbaixoBm && !vacAcimaMed) {
-      recomendacao = "manter";
-    } else if (rentAbaixoBm && vacAcimaMed) {
-      recomendacao = "revisar";
-    } else {
-      recomendacao = "atencao";
+  const calcKPIs = (p) => {
+    if (!p) return {};
+    const aluguelBruto = p.rent || 0;
+    const iptuMensal = Math.round((p.iptu || 0) / 12);
+    const condoMensal = p.hasCondominio ? (p.condoFee || 0) : 0;
+    const admin = p.admin || Math.round(aluguelBruto * (p.adminPct || 0) / 100);
+    const noi = aluguelBruto - iptuMensal - condoMensal - admin;
+    const valorMercado = p.valorMercado || p.marketValueManual || p.valorCompra || 0;
+    const aliqLiq = p.aluguelLiquido || (aluguelBruto - admin - iptuMensal - condoMensal);
+    const yieldReal = valorMercado > 0 ? aliqLiq * 12 / valorMercado * 100 : 0;
+    const capRate = valorMercado > 0 ? noi * 12 / valorMercado * 100 : 0;
+
+    // Contrato
+    let diasVencimento = null;
+    if (p.contratoInicio && p.contratoAnos) {
+      const inicio = new Date(p.contratoInicio + "-01");
+      const fim = new Date(inicio);
+      fim.setFullYear(fim.getFullYear() + (p.contratoAnos || 1));
+      diasVencimento = Math.round((fim - new Date()) / (1000 * 60 * 60 * 24));
     }
-    return { ...p, rentBrutaMensal, bmMin, bmMax, isCom, rentAbaixoBm, vacAcimaMed, recomendacao, temVM };
-  });
 
-  const REC_META = {
-    manter:  { label: "Manter",  cor: T.green, icone: "🟢" },
-    atencao: { label: "Atenção", cor: T.amber, icone: "🟡" },
-    revisar: { label: "Revisar", cor: T.red,   icone: "🔴" },
+    // Score
+    const avgYield = PROPS.filter(x => x.status === "Ocupado" && (x.valorMercado || x.marketValueManual || 0) > 0)
+      .reduce((s, x) => s + (x.aluguelLiquido || x.rent || 0) * 12 / (x.valorMercado || x.marketValueManual || 1) * 100, 0) / Math.max(PROPS.filter(x => x.status === "Ocupado").length, 1);
+    const scoreYieldCDI = Math.min((yieldReal / Math.max(CDI, 1)) * 3, 3);
+    const scoreYieldBenchmark = Math.min((yieldReal / Math.max(avgYield, 1)) * 3, 3);
+    const diasVacancia = p.vacancyDays || 0;
+    const scoreVacancia = diasVacancia === 0 ? 2 : Math.max(0, 2 - (diasVacancia / 30) * 0.5);
+    const mesesRestantes = diasVencimento !== null ? Math.max(0, diasVencimento / 30) : 12;
+    const scoreContrato = Math.min((mesesRestantes / 24) * 2, 2);
+    const score = Math.min(scoreYieldCDI + scoreYieldBenchmark + scoreVacancia + scoreContrato, 10);
+
+    // Simulator
+    const valorVenda = valorMercado;
+    const rendimentoCDI = valorVenda * CDI / 100 / 12;
+    const diffMensal = aliqLiq - rendimentoCDI;
+
+    return { noi, yieldReal, capRate, valorMercado, aliqLiq, score, diasVencimento, avgYield, diffMensal, rendimentoCDI };
   };
 
-  const filtered = filterRec ? analise.filter(p => p.recomendacao === filterRec) : analise;
-  const counts = { manter: analise.filter(p=>p.recomendacao==="manter").length, atencao: analise.filter(p=>p.recomendacao==="atencao").length, revisar: analise.filter(p=>p.recomendacao==="revisar").length };
+  const kpis = calcKPIs(prop);
+
+  const fetchAI = async () => {
+    if (!prop) return;
+    setAiLoading(true);
+    setAiRec("");
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{
+            role: "user",
+            content: `Você é um analista de investimentos imobiliários brasileiro. Com base nos dados abaixo, gere um parágrafo curto (máximo 4 linhas) com análise objetiva do desempenho do imóvel e 2-3 pontos de atenção. Não faça recomendações tributárias. Seja direto e use linguagem profissional.\n\nImóvel: ${prop.name} (${prop.neighborhood}, ${prop.city})\nYield real: ${kpis.yieldReal?.toFixed(2)}% a.a.\nCap Rate NOI: ${kpis.capRate?.toFixed(2)}% a.a.\nStatus: ${prop.status}\nDias para vencimento do contrato: ${kpis.diasVencimento !== null ? kpis.diasVencimento : "N/A"}\nComparação com CDI (${CDI}%): ${kpis.yieldReal >= CDI ? "acima" : "abaixo"}\nVacância histórica: ${prop.vacancyDays || 0} dias/ano`
+          }],
+          system: "Você é um analista de investimentos imobiliários. Responda em português, de forma concisa e profissional."
+        }),
+      });
+      const data = await res.json();
+      setAiRec(data.content || data.message || data.choices?.[0]?.message?.content || "");
+    } catch (e) {
+      setAiRec("Não foi possível gerar a análise no momento.");
+    }
+    setAiLoading(false);
+  };
+
+  // Reset AI when prop changes
+  useEffect(() => { setAiRec(""); }, [selectedId]);
+
+  const MetricCard = ({ label, value, compare, positive }) => (
+    <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, padding: "18px 20px", flex: 1, minWidth: 160 }}>
+      <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", marginBottom: 8, textTransform: "uppercase" }}>{label}</div>
+      <div style={{ color: T.text, fontSize: 22, fontWeight: 600, letterSpacing: "-0.02em", marginBottom: 4 }}>{value}</div>
+      {compare && <div style={{ color: positive ? T.green : T.amber, fontSize: 12 }}>{compare}</div>}
+    </div>
+  );
+
+  const ComparativeBar = ({ label, value, maxVal, color }) => {
+    const pct = Math.min((value / maxVal) * 100, 100);
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+        <div style={{ width: 120, color: T.muted, fontSize: 13, textAlign: "right", flexShrink: 0 }}>{label}</div>
+        <div style={{ flex: 1, background: T.s2, borderRadius: 4, height: 8, overflow: "hidden" }}>
+          <div style={{ width: `${pct}%`, background: color, height: "100%", borderRadius: 4, transition: "width 0.3s" }} />
+        </div>
+        <div style={{ width: 60, color: T.text, fontSize: 13, fontWeight: 600, flexShrink: 0, ...S.mono }}>{value.toFixed(2)}%</div>
+      </div>
+    );
+  };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <div>
-        <div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>ANÁLISE DE PORTFÓLIO</div>
-        <h1 style={{ color: T.text, fontSize: 26, fontWeight: 800, margin: 0 }}>Decisão por Imóvel</h1>
+        <div style={{ color: T.muted, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 6 }}>ANÁLISE</div>
+        <h1 style={{ color: T.text, fontSize: 26, fontWeight: 600, margin: 0, letterSpacing: "-0.02em" }}>Decisão por Imóvel</h1>
       </div>
 
-      {/* Nota metodológica */}
-      <div style={{ padding: "14px 18px", background: T.goldGlow, border: `1px solid ${T.gold}40`, borderRadius: 12 }}>
-        <div style={{ color: T.gold, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Como funciona esta análise</div>
-        <div style={{ color: T.muted, fontSize: 12, lineHeight: 1.6 }}>
-          A comparação de portfólio é feita entre os imóveis da sua própria carteira.
-          O benchmark de rentabilidade (<strong>0,4%–0,5%/mês residencial · 0,6%–0,8%/mês comercial</strong>) é uma referência geral do mercado brasileiro.
-          {mediaVacancia > 0 && <span> Vacância média da carteira: <strong>{mediaVacancia.toFixed(0)} dias</strong>.</span>}
-          {mediaRentabilidade !== null && <span> Rentabilidade bruta média da carteira: <strong>{mediaRentabilidade.toFixed(2)}%/mês</strong>.</span>}
+      {/* Seletor */}
+      <select style={{ ...S.sel, maxWidth: 400 }} value={selectedId || ""} onChange={e => setSelectedId(Number(e.target.value) || null)}>
+        <option value="">— Selecione um imóvel —</option>
+        {PROPS.map(p => <option key={p.id} value={p.id}>{p.name} · {p.neighborhood} · {p.status}</option>)}
+      </select>
+
+      {!prop && (
+        <div style={{ ...S.card, textAlign: "center", padding: "60px 20px", color: T.muted }}>
+          Selecione um imóvel para ver a análise de decisão.
         </div>
-      </div>
+      )}
 
-      {/* Filtros por recomendação */}
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        {Object.entries(REC_META).map(([id, meta]) => (
-          <div key={id} onClick={() => setFilterRec(filterRec === id ? "" : id)} style={{ ...S.card, flex: 1, minWidth: 130, cursor: "pointer", border: `1px solid ${filterRec === id ? meta.cor+"80" : T.border}`, background: filterRec === id ? meta.cor+"12" : T.s1 }}>
-            <div style={{ color: meta.cor, fontSize: 28, fontWeight: 900, ...S.mono, lineHeight: 1 }}>{counts[id]}</div>
-            <div style={{ color: T.text, fontSize: 13, fontWeight: 700, marginTop: 4 }}>{meta.icone} {meta.label}</div>
-          </div>
-        ))}
-        {filterRec && <button style={{ ...S.btnGhost, alignSelf: "center", padding: "8px 14px", fontSize: 12 }} onClick={() => setFilterRec("")}>✕ Limpar</button>}
-      </div>
-
-      {/* Lista de imóveis */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {filtered.map(p => {
-          const meta = REC_META[p.recomendacao];
-          return (
-            <div key={p.id} style={{ background: T.s1, border: `1px solid ${meta.cor}30`, borderRadius: 14, padding: "16px 20px" }}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
-                {/* Info imóvel */}
-                <div style={{ flex: 2, minWidth: 180 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontSize: 16 }}>{meta.icone}</span>
-                    <span style={{ color: T.goldBright, fontWeight: 700, fontSize: 14 }}>{p.name}</span>
-                    <span style={S.badge(p.type && TIPOS_COM.includes(p.type) ? T.blue : T.teal)}>{p.type}</span>
-                  </div>
-                  <div style={{ color: T.muted, fontSize: 12 }}>{p.neighborhood} · Aluguel: {fmt.brl(p.rent)}/mês · Vacância: {p.vacancyDays}d</div>
-                </div>
-
-                {/* Rentabilidade */}
-                <div style={{ flex: 1, minWidth: 140 }}>
-                  <div style={{ color: T.dim, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>RENT. BRUTA MENSAL</div>
-                  {p.temVM ? (
-                    <>
-                      <div style={{ color: p.rentAbaixoBm ? T.amber : T.green, fontSize: 18, fontWeight: 800, ...S.mono }}>
-                        {p.rentBrutaMensal.toFixed(2)}%
-                      </div>
-                      <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>
-                        Benchmark: {p.bmMin}%–{p.bmMax}%/mês
-                        {p.rentAbaixoBm
-                          ? <span style={{ color: T.amber }}> · abaixo</span>
-                          : <span style={{ color: T.green }}> · dentro/acima</span>}
-                      </div>
-                    </>
-                  ) : (
-                    <div>
-                      <div style={{ color: T.dim, fontSize: 13 }}>—</div>
-                      <div style={{ color: T.dim, fontSize: 10, marginTop: 2 }}>Cadastre o valor de mercado para ver o benchmark</div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Vacância vs média */}
-                <div style={{ flex: 1, minWidth: 140 }}>
-                  <div style={{ color: T.dim, fontSize: 10, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>VACÂNCIA VS MÉDIA</div>
-                  <div style={{ color: p.vacAcimaMed ? T.amber : T.green, fontSize: 18, fontWeight: 800, ...S.mono }}>
-                    {p.vacancyDays}d
-                  </div>
-                  <div style={{ color: T.dim, fontSize: 11, marginTop: 2 }}>
-                    Média carteira: {mediaVacancia.toFixed(0)}d
-                    {p.vacAcimaMed
-                      ? <span style={{ color: T.amber }}> · acima</span>
-                      : <span style={{ color: T.green }}> · abaixo/igual</span>}
-                  </div>
-                </div>
-
-                {/* Recomendação */}
-                <div style={{ alignSelf: "center" }}>
-                  <span style={{ ...S.badge(meta.cor), fontSize: 12, padding: "6px 14px" }}>{meta.label}</span>
-                </div>
+      {prop && (
+        <>
+          {/* Score */}
+          <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, padding: "20px 24px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>Score do Imóvel</div>
+              <div style={{ color: kpis.score >= 7 ? T.green : kpis.score >= 5 ? T.amber : T.red, fontSize: 20, fontWeight: 600 }}>
+                {kpis.score?.toFixed(1)}/10
               </div>
             </div>
-          );
-        })}
-      </div>
+            <div style={{ background: T.s2, borderRadius: 6, height: 10, overflow: "hidden" }}>
+              <div style={{ width: `${(kpis.score / 10) * 100}%`, background: kpis.score >= 7 ? T.green : kpis.score >= 5 ? T.amber : T.red, height: "100%", borderRadius: 6, transition: "width 0.4s" }} />
+            </div>
+            <div style={{ color: T.muted, fontSize: 12, marginTop: 8 }}>
+              {kpis.score >= 7 ? "Acima da média — imóvel com boa performance" : kpis.score >= 5 ? "Performance moderada" : "Abaixo da média — requer atenção"}
+            </div>
+          </div>
+
+          {/* Métricas */}
+          <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+            <MetricCard
+              label="Yield Real"
+              value={`${kpis.yieldReal?.toFixed(2)}% a.a.`}
+              compare={kpis.yieldReal >= CDI ? `↑ CDI +${(kpis.yieldReal - CDI).toFixed(2)}pp` : `↓ CDI −${(CDI - kpis.yieldReal).toFixed(2)}pp`}
+              positive={kpis.yieldReal >= CDI}
+            />
+            <MetricCard
+              label="Cap Rate NOI"
+              value={`${kpis.capRate?.toFixed(2)}% a.a.`}
+              compare={kpis.capRate >= 6 ? "↑ Acima do padrão (6%)" : "↓ Abaixo do padrão"}
+              positive={kpis.capRate >= 6}
+            />
+            <MetricCard
+              label="Contrato"
+              value={kpis.diasVencimento !== null ? `${kpis.diasVencimento}d` : "—"}
+              compare={kpis.diasVencimento !== null ? (kpis.diasVencimento < 60 ? "Atenção: vence em breve" : "Contrato ativo") : "Sem contrato"}
+              positive={kpis.diasVencimento === null || kpis.diasVencimento >= 60}
+            />
+          </div>
+
+          {/* Comparativo */}
+          <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, padding: "20px 24px" }}>
+            <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 16 }}>Análise Comparativa</div>
+            {(() => {
+              const vals = [kpis.yieldReal || 0, CDI, SELIC, IFIX, kpis.avgYield || 0];
+              const maxVal = Math.max(...vals, 1) * 1.2;
+              return (
+                <>
+                  <ComparativeBar label="Este imóvel" value={kpis.yieldReal || 0} maxVal={maxVal} color={T.gold} />
+                  <ComparativeBar label="CDI" value={CDI} maxVal={maxVal} color={T.muted} />
+                  <ComparativeBar label="Selic" value={SELIC} maxVal={maxVal} color={T.muted} />
+                  <ComparativeBar label="IFIX" value={IFIX} maxVal={maxVal} color={T.blue} />
+                  <ComparativeBar label="Média portfólio" value={kpis.avgYield || 0} maxVal={maxVal} color={T.teal} />
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Simulador */}
+          <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, padding: "20px 24px" }}>
+            <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 16 }}>Simulador: Manter ou Vender?</div>
+            {kpis.valorMercado > 0 ? (
+              <>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+                  <div style={{ flex: 1, minWidth: 160, background: T.s2, borderRadius: 10, padding: "14px 18px" }}>
+                    <div style={{ color: T.muted, fontSize: 11, marginBottom: 6 }}>Valor estimado de venda</div>
+                    <div style={{ color: T.text, fontSize: 18, fontWeight: 600, ...S.mono }}>{fmt.brl(kpis.valorMercado)}</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 160, background: T.s2, borderRadius: 10, padding: "14px 18px" }}>
+                    <div style={{ color: T.muted, fontSize: 11, marginBottom: 6 }}>Se investir no CDI ({CDI}%)</div>
+                    <div style={{ color: T.muted, fontSize: 18, fontWeight: 600, ...S.mono }}>{fmt.brl(kpis.rendimentoCDI)}/mês</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 160, background: T.s2, borderRadius: 10, padding: "14px 18px" }}>
+                    <div style={{ color: T.muted, fontSize: 11, marginBottom: 6 }}>Aluguel líquido atual</div>
+                    <div style={{ color: T.green, fontSize: 18, fontWeight: 600, ...S.mono }}>{fmt.brl(kpis.aliqLiq)}/mês</div>
+                  </div>
+                </div>
+                <div style={{ background: kpis.diffMensal >= 0 ? T.greenDim : T.redDim, borderRadius: 10, padding: "14px 18px", border: `1px solid ${kpis.diffMensal >= 0 ? T.green : T.red}33` }}>
+                  <span style={{ color: kpis.diffMensal >= 0 ? T.green : T.red, fontWeight: 600 }}>
+                    {kpis.diffMensal >= 0
+                      ? `Manter alugado é ${fmt.brl(Math.abs(kpis.diffMensal))}/mês mais rentável que vender e aplicar no CDI.`
+                      : `Vender e aplicar no CDI geraria ${fmt.brl(Math.abs(kpis.diffMensal))}/mês a mais do que o aluguel atual.`}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div style={{ color: T.muted, fontSize: 13 }}>Cadastre o valor de mercado do imóvel para ver a simulação.</div>
+            )}
+          </div>
+
+          {/* Recomendação IA */}
+          <div style={{ background: T.s1, border: `1px solid ${T.border}`, borderRadius: 12, padding: "20px 24px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <div style={{ color: T.muted, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>Recomendação da IA</div>
+              <button onClick={fetchAI} disabled={aiLoading} style={{ background: T.goldGlow, border: `1px solid ${T.goldDim}`, color: T.gold, borderRadius: 7, padding: "6px 14px", fontSize: 12, fontWeight: 500, cursor: aiLoading ? "wait" : "pointer", fontFamily: "inherit" }}>
+                {aiLoading ? "Analisando..." : aiRec ? "↻ Reanalisar" : "✦ Gerar análise"}
+              </button>
+            </div>
+            {aiRec ? (
+              <div style={{ color: T.text, fontSize: 14, lineHeight: 1.7 }}>{aiRec}</div>
+            ) : (
+              <div style={{ color: T.muted, fontSize: 13 }}>Clique em "Gerar análise" para obter uma recomendação baseada nos dados do imóvel.</div>
+            )}
+          </div>
+
+          {/* Disclaimer */}
+          <div style={{ background: T.s2, borderRadius: 10, padding: "14px 18px", fontSize: 12, color: T.muted, lineHeight: 1.6, borderLeft: `3px solid ${T.border}` }}>
+            Métricas calculadas com base nos dados cadastrados na plataforma. TIR considera apenas o histórico de pagamentos registrados. Para decisões de estruturação patrimonial e planejamento tributário, consulte um contador especializado.
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -6729,8 +6729,8 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
 
   const [form, setForm] = useState({
     name: "", address: "", neighborhood: "Itaim Bibi", city: "São Paulo",
-    type: "Apartamento", status: "Vago", size: "",
-    iptu: "", maintMonthly: "", insurance: "", valorCompra: "", valorMercado: "",
+    type: "Apartamento", status: "Vago", size: "", areaTerreno: "",
+    iptu: "", maintMonthly: "", insurance: "", valorCompra: "", valorMercado: "", valorVenal: "",
     iptuVencimento: "",
     iptuParcelas: 10,
     // Aluguel (só se ocupado)
@@ -6741,6 +6741,8 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
     // Locatário
     locatarioNome: "", locatarioCPF: "", locatarioTelefone: "", locatarioEmail: "", locatarioGarantia: "Fiador", viaImobiliaria: false,
     imobiliariaName: "", imobiliariaPossuiSeguro: false, contratoVencimento: "", clausula12Meses: false,
+    // Observações
+    observacoes: "",
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const alugado = form.status === "Ocupado";
@@ -6789,7 +6791,8 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
       noi, noiPct, leakage, iptuBenchmark, iptuDelta, maintBenchmark, maintDelta,
       vacancyBenchmark: bm.vacancy_days, vacancyDelta, monthlyData, isProblematic: false,
       obras: [], prestadores: [], pagamentos: {}, valorMercado: parseFloat(form.valorMercado)||0,
-      valorCompra: parseFloat(form.valorCompra)||0, anoCompra: null,
+      valorCompra: parseFloat(form.valorCompra)||0, valorVenal: parseFloat(form.valorVenal)||0, anoCompra: null,
+      areaTerreno: parseFloat(form.areaTerreno)||0, observacoes: form.observacoes||"",
       indiceReajuste: form.indiceReajuste, iptuVencimento: form.iptuVencimento, iptuParcelas: Number(form.iptuParcelas)||10,
       descontoAluguel, contratoAnos: parseFloat(form.contratoAnos)||1,
       contratoInicio: form.contratoInicio, hasCondominio: form.hasCondominio,
@@ -6868,7 +6871,7 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
               <div>
                 <label style={S.label}>CIDADE</label>
                 <select style={S.sel} value={form.city} onChange={e=>set("city",e.target.value)}>
-                  {["São Paulo","Campinas","Santo André","Americana"].map(o=><option key={o}>{o}</option>)}
+                  {["São Paulo","Campinas","Santo André","Americana","Limeira","Santa Bárbara d'Oeste","Paulínia","Bertioga","Nova Odessa"].map(o=><option key={o}>{o}</option>)}
                 </select>
               </div>
               <div>
@@ -6882,8 +6885,12 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
                 </select>
               </div>
               <div>
-                <label style={S.label}>ÁREA (m²)</label>
+                <label style={S.label}>ÁREA CONSTRUÍDA (m²)</label>
                 <input type="number" style={S.input} value={form.size} placeholder="Ex: 85" onChange={e=>set("size",e.target.value)} />
+              </div>
+              <div>
+                <label style={S.label}>ÁREA DO TERRENO (m²)</label>
+                <input type="number" style={S.input} value={form.areaTerreno} placeholder="Ex: 200" onChange={e=>set("areaTerreno",e.target.value)} />
               </div>
               <div>
                 <label style={S.label}>IPTU ANUAL (R$)</label>
@@ -6921,6 +6928,10 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
                   <div>
                     <label style={S.label}>VALOR DE MERCADO ATUAL (R$)</label>
                     <input type="number" style={S.input} value={form.valorMercado} placeholder="Ex: 650.000" onChange={e=>set("valorMercado",e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={S.label}>VALOR VENAL (R$)</label>
+                    <input type="number" style={S.input} value={form.valorVenal} placeholder="Ex: 420.000" onChange={e=>set("valorVenal",e.target.value)} />
                   </div>
                 </div>
               )}
@@ -7118,6 +7129,17 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
 
           <div style={{ padding: 12, background: T.s2, borderRadius: 8 }}>
             <div style={{ color: T.dim, fontSize: 12 }}>Despesas não preenchidas são calculadas automaticamente com base nos benchmarks do bairro.</div>
+          </div>
+
+          {/* OBSERVAÇÕES */}
+          <div>
+            <Section title="OBSERVAÇÕES" />
+            <textarea
+              style={{ ...S.input, minHeight: 90, resize: "vertical", fontFamily: "inherit", lineHeight: 1.5 }}
+              value={form.observacoes}
+              placeholder="Anotações gerais sobre o imóvel (características, histórico, pendências, informações adicionais...)"
+              onChange={e => set("observacoes", e.target.value)}
+            />
           </div>
         </div>
         </div> {/* end manual tab wrapper */}
@@ -7746,7 +7768,8 @@ export default function App() {
           fundoReserva: r.fundo_reserva||0, chamadaExtra: r.chamada_extra||0, chamadaExtraParcelas: r.chamada_extra_parcelas||0, chamadaExtraParcelaAtual: r.chamada_extra_parcela_atual||0, taxasExtras: r.taxas_extras||0,
           descontoAluguel: r.desconto_aluguel||0, contratoAnos: r.contrato_anos||1,
           contratoInicio: r.contrato_inicio||"", contratoVencimento: r.contrato_vencimento||null, marketValueManual: r.market_value_manual||0,
-          valorMercado: r.valor_mercado||0, valorCompra: r.valor_compra||0, anoCompra: r.ano_compra||null,
+          valorMercado: r.valor_mercado||0, valorCompra: r.valor_compra||0, valorVenal: r.valor_venal||0, anoCompra: r.ano_compra||null,
+          areaTerreno: r.area_terreno||0, observacoes: r.observacoes||"",
           obras: r.obras||[], prestadores: r.prestadores||[], pagamentos: r.pagamentos||{},
           monthlyData: r.monthly_data||[], diaVencimento: r.dia_vencimento||10,
           proximoReajuste: r.proximo_reajuste||"",
@@ -7779,7 +7802,8 @@ export default function App() {
     fundo_reserva: prop.fundoReserva||0, chamada_extra: prop.chamadaExtra||0, chamada_extra_parcelas: prop.chamadaExtraParcelas||0, chamada_extra_parcela_atual: prop.chamadaExtraParcelaAtual||0, taxas_extras: prop.taxasExtras||0,
     desconto_aluguel: prop.descontoAluguel||0, contrato_anos: prop.contratoAnos||1,
     contrato_inicio: prop.contratoInicio||null, contrato_vencimento: prop.contratoVencimento||null, market_value_manual: prop.marketValueManual||0,
-    valor_mercado: prop.valorMercado||0, valor_compra: prop.valorCompra||0, ano_compra: prop.anoCompra||null,
+    valor_mercado: prop.valorMercado||0, valor_compra: prop.valorCompra||0, valor_venal: prop.valorVenal||0, ano_compra: prop.anoCompra||null,
+    area_terreno: prop.areaTerreno||0, observacoes: prop.observacoes||"",
     obras: prop.obras||[], prestadores: prop.prestadores||[], pagamentos: prop.pagamentos||{},
     monthly_data: prop.monthlyData||[], dia_vencimento: prop.diaVencimento||10,
     condo_pago_por: prop.condoPagoPor||"proprietario", regime_fiscal: prop.regimeFiscal||"PF", admin_pct: prop.adminPct != null ? Number(prop.adminPct) : 8,
