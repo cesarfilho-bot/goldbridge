@@ -6727,8 +6727,28 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
     }
   };
 
+  const [cepLoading, setCepLoading] = useState(false);
+
+  const handleCep = async (raw) => {
+    const digits = raw.replace(/\D/g, "");
+    const formatted = digits.length > 5 ? digits.slice(0,5) + "-" + digits.slice(5,8) : digits;
+    set("cep", formatted);
+    if (digits.length !== 8) return;
+    setCepLoading(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        if (data.logradouro) set("address", data.logradouro + (data.complemento ? ", " + data.complemento : ""));
+        if (data.bairro) set("neighborhood", data.bairro);
+        if (data.localidade) set("city", data.localidade);
+      }
+    } catch (_) {}
+    setCepLoading(false);
+  };
+
   const [form, setForm] = useState({
-    name: "", address: "", neighborhood: "Itaim Bibi", city: "São Paulo",
+    name: "", address: "", neighborhood: "Itaim Bibi", city: "São Paulo", cep: "",
     type: "Apartamento", status: "Vago", size: "", areaTerreno: "",
     iptu: "", maintMonthly: "", insurance: "", valorCompra: "", valorMercado: "", valorVenal: "",
     iptuVencimento: "",
@@ -6784,7 +6804,7 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
       return { month: m, receita: rent, despesas: exp, noi: rent - exp };
     });
     onSave({
-      id: nextId, name: form.name, address: form.address,
+      id: nextId, name: form.name, address: form.address, cep: form.cep,
       neighborhood: form.neighborhood, city: form.city, state: "SP",
       type: form.type, status: form.status, size, rent, iptu, maintMonthly,
       insurance, admin, adminPct, vacancyDays, vacancyCost, totalIncome, totalExpenses,
@@ -6864,9 +6884,24 @@ function AddImovelModal({ onSave, onClose, nextId, userId }) {
                 <label style={S.label}>NOME DO IMÓVEL *</label>
                 <input style={S.input} value={form.name} placeholder="Ex: Apartamento Jardins, Sala Faria Lima..." onChange={e=>set("name",e.target.value)} autoFocus />
               </div>
-              <div style={{ gridColumn: "1/-1" }}>
-                <label style={S.label}>ENDEREÇO</label>
-                <input style={S.input} value={form.address} placeholder="Ex: Rua Oscar Freire, 1200" onChange={e=>set("address",e.target.value)} />
+              <div style={{ gridColumn: "1/-1", display: "grid", gridTemplateColumns: "160px 1fr", gap: 12 }}>
+                <div>
+                  <label style={S.label}>CEP</label>
+                  <div style={{ position: "relative" }}>
+                    <input
+                      style={S.input}
+                      value={form.cep}
+                      placeholder="00000-000"
+                      maxLength={9}
+                      onChange={e => handleCep(e.target.value)}
+                    />
+                    {cepLoading && <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, border: `2px solid ${T.gold}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />}
+                  </div>
+                </div>
+                <div>
+                  <label style={S.label}>ENDEREÇO</label>
+                  <input style={S.input} value={form.address} placeholder="Preenchido automaticamente pelo CEP" onChange={e=>set("address",e.target.value)} />
+                </div>
               </div>
               <div>
                 <label style={S.label}>CIDADE</label>
@@ -7760,7 +7795,7 @@ export default function App() {
       if (loadErr) { console.error("Erro ao carregar imóveis:", loadErr); setDbLoading(false); return; }
       if (rows && rows.length > 0) {
         const mapped = rows.map(r => recalcProp({
-          id: r.id, name: r.name, address: r.address||"", neighborhood: r.neighborhood||"",
+          id: r.id, name: r.name, address: r.address||"", cep: r.cep||"", neighborhood: r.neighborhood||"",
           city: r.city||"São Paulo", type: r.type||"Residencial", status: r.status||"Ocupado",
           size: r.size||0, rent: r.rent||0, iptu: r.iptu||0, maintMonthly: r.maint_monthly||0,
           insurance: r.insurance||0, admin: r.admin||0, vacancyDays: r.vacancy_days||0,
@@ -7794,7 +7829,7 @@ export default function App() {
 
   const toDB = (prop) => ({
     portfolio_id: portfolioId, user_id: user.id,
-    name: prop.name, address: prop.address, neighborhood: prop.neighborhood,
+    name: prop.name, address: prop.address, cep: prop.cep||"", neighborhood: prop.neighborhood,
     city: prop.city, type: prop.type, status: prop.status, size: prop.size,
     rent: prop.rent, iptu: prop.iptu, maint_monthly: prop.maintMonthly,
     insurance: prop.insurance, admin: prop.admin, vacancy_days: prop.vacancyDays,
